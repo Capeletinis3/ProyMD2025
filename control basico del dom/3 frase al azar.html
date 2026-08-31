@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>3. Frase al azar</title>
+</head>
+<body>
+    <h1>3. Título con frase al azar</h1>
+
+    <h3 id="titulo3">Frase al azar</h3>
+    <button onclick="fraseAlAzar()">Cambiar frase</button>
+
+    <script>
+        const listaFrases = [
+            "El que persevera, triunfa.",
+            "Programar es resolver problemas.",
+            "Paso a paso se llega lejos.",
+            "El DOM conecta HTML con JavaScript.",
+            "La práctica hace al programador."
+        ];
+
+        function fraseAlAzar() {
+            const indice = Math.floor(Math.random() * listaFrases.length);
+            document.getElementById("titulo3").textContent = listaFrases[indice];
+        }
+    </script>
+
+    <hr>
+    <h2>Explicación</h2>
+    <p><strong>¿Por qué usé lo que usé?</strong> Uso un <strong>array</strong> (<code>listaFrases</code>)
+    porque necesito guardar varias frases juntas y poder elegir una de ellas por su posición (índice). Uso
+    <code>Math.random()</code> porque es la forma que tiene JavaScript de generar un número al azar.</p>
+    <p><strong>¿Para qué sirve cada función/método?</strong> <code>Math.random()</code> devuelve un decimal
+    entre 0 (incluido) y 1 (no incluido). Lo multiplico por <code>listaFrases.length</code> (la cantidad de
+    frases) para obtener un número entre 0 y 5 (sin llegar a 5). <code>Math.floor()</code> redondea ese
+    decimal para abajo y así obtengo un índice válido del array (0 a 4).</p>
+    <p><strong>¿Hay más formas de hacerlo?</strong> Sí, podría usar <code>Math.trunc()</code> en vez de
+    <code>Math.floor()</code> (con números positivos dan el mismo resultado). También se podría armar una
+    función genérica que reciba cualquier array y devuelva un elemento al azar, para reutilizarla en otros
+    ejercicios.</p>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>4. Contador sin bajar de 0</title>
+</head>
+<body>
+    <h1>4. Contador que no baja de 0</h1>
+
+    <p>Valor: <span id="contador4">0</span></p>
+    <button onclick="restar1()">-</button>
+    <button onclick="sumar1()">+</button>
+
+    <script>
+        let contador4 = 0;
+
+        function actualizarContador4() {
+            document.getElementById("contador4").textContent = contador4;
+        }
+
+        function sumar1() {
+            contador4 = contador4 + 1;
+            actualizarContador4();
+        }
+
+        function restar1() {
+            if (contador4 > 0) {
+                contador4 = contador4 - 1;
+            }
+            actualizarContador4();
+        }
+    </script>
+
+    <hr>
+    <h2>Explicación</h2>
+    <p><strong>¿Por qué usé lo que usé?</strong> Uso un <strong>condicional</strong> (<code>if</code>) en la
+    función de restar porque tengo que controlar que el contador nunca sea negativo: antes de restar,
+    pregunto si el contador es mayor a 0. En la función de sumar no hace falta condición porque no hay límite
+    para arriba.</p>
+    <p><strong>¿Para qué sirve cada función/método?</strong> Separé <code>actualizarContador4()</code> en una
+    función aparte para no repetir la línea que actualiza el <code>textContent</code> en los dos botones (así
+    evito escribir el mismo código dos veces).</p>
+    <p><strong>¿Hay más formas de hacerlo?</strong> Sí, podría usar <code>Math.max(0, contador4 - 1)</code>
+    en vez del <code>if</code>, que hace lo mismo en una sola línea. También podría deshabilitar el botón "-"
+    (<code>disabled = true</code>) cuando el contador llega a 0, en vez de solo bloquear el número.</p>
+</body>
+</html>

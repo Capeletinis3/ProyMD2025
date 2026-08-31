@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>2. Contador</title>
+</head>
+<body>
+    <h1>2. Contador simple</h1>
+
+    <p>Valor: <span id="contador2">0</span></p>
+    <button onclick="sumarUno()">Sumar 1</button>
+
+    <script>
+        let contador2 = 0;
+
+        function sumarUno() {
+            contador2 = contador2 + 1;
+            document.getElementById("contador2").textContent = contador2;
+        }
+    </script>
+
+    <hr>
+    <h2>Explicación</h2>
+    <p><strong>¿Por qué usé lo que usé?</strong> Necesito una <strong>variable</strong>
+    (<code>contador2</code>) porque el número tiene que "recordarse" entre un click y otro; si lo definiera
+    adentro de la función se reiniciaría siempre en 0. Uso <code>textContent</code> para mostrar ese número
+    actualizado dentro del <code>&lt;span&gt;</code>, y <code>click</code> para disparar la suma.</p>
+    <p><strong>¿Para qué sirve cada función/método?</strong> <code>let</code> declara una variable que puede
+    cambiar de valor (a diferencia de <code>const</code>). <code>textContent</code> reemplaza el contenido de
+    texto del elemento por el valor actual del contador cada vez que se ejecuta la función.</p>
+    <p><strong>¿Hay más formas de hacerlo?</strong> Sí, podría usar el operador de incremento
+    <code>contador2++</code> en vez de <code>contador2 = contador2 + 1</code>, que hace exactamente lo mismo
+    pero más corto. También podría guardar el contador como un atributo <code>data-valor</code> en el HTML en
+    vez de una variable de JS.</p>
+</body>
+</html>

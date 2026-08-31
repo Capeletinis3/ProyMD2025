@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>5. Alert con input</title>
+</head>
+<body>
+    <h1>5. Alert con el texto de un input</h1>
+
+    <input type="text" id="input5" placeholder="Escribí algo...">
+    <button onclick="mostrarAlerta()">Mostrar</button>
+
+    <script>
+        function mostrarAlerta() {
+            const texto = document.getElementById("input5").value;
+            alert(texto);
+        }
+    </script>
+
+    <hr>
+    <h2>Explicación</h2>
+    <p><strong>¿Por qué usé lo que usé?</strong> Uso <code>.value</code> porque es la propiedad que guarda lo
+    que el usuario escribió adentro de un <code>&lt;input&gt;</code> (no es lo mismo que
+    <code>textContent</code>, que se usa para elementos que muestran texto, no para campos de formulario).
+    Uso <code>alert()</code> porque la consigna pide mostrar el texto en una ventana emergente.</p>
+    <p><strong>¿Para qué sirve cada función/método?</strong> <code>document.getElementById("input5").value</code>
+    lee el contenido actual del input en el momento del click. <code>alert(texto)</code> abre una ventana del
+    navegador con ese texto adentro.</p>
+    <p><strong>¿Hay más formas de hacerlo?</strong> Sí, en vez de <code>alert()</code> podría mostrar el texto
+    dentro de un párrafo de la página con <code>textContent</code>, que es menos molesto para el usuario que
+    una ventana emergente. También podría escuchar el evento <code>input</code> para mostrar el texto en
+    vivo, mientras el usuario escribe.</p>
+</body>
+</html>

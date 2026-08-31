@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>6. Botón activar/desactivar</title>
+</head>
+<body>
+    <h1>6. Botón que cambia su propio texto</h1>
+
+    <button id="boton6" onclick="toggleBoton()">Activar</button>
+
+    <script>
+        function toggleBoton() {
+            const boton = document.getElementById("boton6");
+            if (boton.textContent === "Activar") {
+                boton.textContent = "Desactivar";
+            } else {
+                boton.textContent = "Activar";
+            }
+        }
+    </script>
+
+    <hr>
+    <h2>Explicación</h2>
+    <p><strong>¿Por qué usé lo que usé?</strong> Uso un <strong>condicional</strong> para preguntarle al
+    propio botón qué texto tiene en este momento (con <code>textContent</code>) y así decidir a qué texto
+    cambiarlo: es una forma de "toggle" (interruptor) sin necesitar una variable aparte, porque el estado
+    queda guardado en el mismo texto del botón.</p>
+    <p><strong>¿Para qué sirve cada función/método?</strong> <code>boton.textContent === "Activar"</code>
+    compara el texto actual del botón con la palabra "Activar". Según el resultado (verdadero o falso), el
+    <code>if/else</code> decide si pone "Desactivar" o vuelve a poner "Activar".</p>
+    <p><strong>¿Hay más formas de hacerlo?</strong> Sí, podría guardar el estado en una variable booleana
+    (<code>let activado = false;</code>) en vez de leer el texto del botón, lo cual es más prolijo si después
+    quiero usar ese estado en otra parte del código. También se podría usar un atributo
+    <code>data-estado</code> en el HTML para guardar "activo" o "inactivo".</p>
+</body>
+</html>
