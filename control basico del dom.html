@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Control básico del DOM</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; line-height: 1.5; }
+        section { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 25px; }
+        h2 { margin-top: 0; }
+        .explicacion { background: #f4f4f4; padding: 10px; border-left: 4px solid #888; }
+        button { padding: 6px 12px; margin: 5px 0; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Control básico del DOM</h1>
+    <p>Consigna: resolver los siguientes ejercicios con JavaScript y explicar el código utilizado en cada uno.</p>
+
+    <!-- EJERCICIO 1 -->
+    <section>
+        <h2>1. Párrafo que alterna entre dos frases</h2>
+        <p id="parrafo1">Tocame para cambiar de frase</p>
+        <button onclick="cambiarFrase()">Tocar</button>
+
+        <script>
+            let fraseActual = 0;
+            const frases = ["Esta es la primera frase.", "Esta es la segunda frase."];
+
+            function cambiarFrase() {
+                fraseActual = fraseActual === 0 ? 1 : 0;
+                document.getElementById("parrafo1").textContent = frases[fraseActual];
+            }
+        </script>
+
+        <div class="explicacion">
+            <p><strong>¿Por qué usé lo que usé?</strong> Usé <code>textContent</code> porque solo necesito cambiar el
+            texto plano del párrafo, no agregar etiquetas HTML nuevas (para eso existiría <code>innerHTML</code>,
+            pero no hace falta acá y además es menos seguro si el texto viniera de un usuario). Usé <code>click</code>
+            (con el atributo <code>onclick</code>) porque el cambio tiene que pasar cada vez que el usuario toca el
+            párrafo o el botón, no solo, una vez.</p>
+            <p><strong>¿Para qué sirve cada función/método?</strong> <code>document.getElementById()</code> busca el
+            elemento del DOM por su id para poder modificarlo. La variable <code>fraseActual</code> guarda en qué
+            frase estoy parado, y se usa un operador ternario para "alternar" entre 0 y 1 cada click.</p>
+            <p><strong>¿Hay más formas de hacerlo?</strong> Sí. Podría usar <code>addEventListener("click", ...)</code>
+            en vez de <code>onclick</code> en el HTML (es más prolijo porque separa el JS del HTML). También podría
+            guardar un booleano <code>true/false</code> en vez de un número, o usar el operador módulo
+            <code>fraseActual = (fraseActual + 1) % 2</code> para alternar.</p>
+        </div>
+    </section>
+
+    <!-- EJERCICIO 2 -->
+    <section>
+        <h2>2. Contador simple</h2>
+        <p>Valor: <span id="contador2">0</span></p>
+        <button onclick="sumarUno()">Sumar 1</button>
+
+        <script>
+            let contador2 = 0;
+
+            function sumarUno() {
+                contador2 = contador2 + 1;
+                document.getElementById("contador2").textContent = contador2;
+            }
+        </script>
+
+        <div class="explicacion">
+            <p><strong>¿Por qué usé lo que usé?</strong> Necesito una <strong>variable</strong>
+            (<code>contador2</code>) porque el número tiene que "recordarse" entre un click y otro; si lo definiera
+            adentro de la función se reiniciaría siempre en 0. Uso <code>textContent</code> para mostrar ese número
+            actualizado dentro del <code>&lt;span&gt;</code>, y <code>click</code> para disparar la suma.</p>
+            <p><strong>¿Para qué sirve cada función/método?</strong> <code>let</code> declara una variable que puede
+            cambiar de valor (a diferencia de <code>const</code>). <code>textContent</code> reemplaza el contenido de
+            texto del elemento por el valor actual del contador cada vez que se ejecuta la función.</p>
+            <p><strong>¿Hay más formas de hacerlo?</strong> Sí, podría usar el operador de incremento
+            <code>contador2++</code> en vez de <code>contador2 = contador2 + 1</code>, que hace exactamente lo mismo
+            pero más corto. También podría guardar el contador como un atributo <code>data-valor</code> en el HTML en
+            vez de una variable de JS.</p>
+        </div>
+    </section>
+
+    <!-- EJERCICIO 3 -->
+    <section>
+        <h2>3. Título con frase al azar</h2>
+        <h3 id="titulo3">Frase al azar</h3>
+        <button onclick="fraseAlAzar()">Cambiar frase</button>
+
+        <script>
+            const listaFrases = [
+                "El que persevera, triunfa.",
+                "Programar es resolver problemas.",
+                "Paso a paso se llega lejos.",
+                "El DOM conecta HTML con JavaScript.",
+                "La práctica hace al programador."
+            ];
+
+            function fraseAlAzar() {
+                const indice = Math.floor(Math.random() * listaFrases.length);
+                document.getElementById("titulo3").textContent = listaFrases[indice];
+            }
+        </script>
+
+        <div class="explicacion">
+            <p><strong>¿Por qué usé lo que usé?</strong> Uso un <strong>array</strong> (<code>listaFrases</code>)
+            porque necesito guardar varias frases juntas y poder elegir una de ellas por su posición (índice). Uso
+            <code>Math.random()</code> porque es la forma que tiene JavaScript de generar un número al azar.</p>
+            <p><strong>¿Para qué sirve cada función/método?</strong> <code>Math.random()</code> devuelve un decimal
+            entre 0 (incluido) y 1 (no incluido). Lo multiplico por <code>listaFrases.length</code> (la cantidad de
+            frases) para obtener un número entre 0 y 5 (sin llegar a 5). <code>Math.floor()</code> redondea ese
+            decimal para abajo y así obtengo un índice válido del array (0 a 4).</p>
+            <p><strong>¿Hay más formas de hacerlo?</strong> Sí, podría usar <code>Math.trunc()</code> en vez de
+            <code>Math.floor()</code> (con números positivos dan el mismo resultado). También se podría armar una
+            función genérica que reciba cualquier array y devuelva un elemento al azar, para reutilizarla en otros
+            ejercicios.</p>
+        </div>
+    </section>
+
+    <!-- EJERCICIO 4 -->
+    <section>
+        <h2>4. Contador que no baja de 0</h2>
+        <p>Valor: <span id="contador4">0</span></p>
+        <button onclick="restar1()">-</button>
+        <button onclick="sumar1()">+</button>
+
+        <script>
+            let contador4 = 0;
+
+            function actualizarContador4() {
+                document.getElementById("contador4").textContent = contador4;
+            }
+
+            function sumar1() {
+                contador4 = contador4 + 1;
+                actualizarContador4();
+            }
+
+            function restar1() {
+                if (contador4 > 0) {
+                    contador4 = contador4 - 1;
+                }
+                actualizarContador4();
+            }
+        </script>
+
+        <div class="explicacion">
+            <p><strong>¿Por qué usé lo que usé?</strong> Uso un <strong>condicional</strong> (<code>if</code>) en la
+            función de restar porque tengo que controlar que el contador nunca sea negativo: antes de restar,
+            pregunto si el contador es mayor a 0. En la función de sumar no hace falta condición porque no hay límite
+            para arriba.</p>
+            <p><strong>¿Para qué sirve cada función/método?</strong> Separé <code>actualizarContador4()</code> en una
+            función aparte para no repetir la línea que actualiza el <code>textContent</code> en los dos botones (así
+            evito escribir el mismo código dos veces).</p>
+            <p><strong>¿Hay más formas de hacerlo?</strong> Sí, podría usar <code>Math.max(0, contador4 - 1)</code>
+            en vez del <code>if</code>, que hace lo mismo en una sola línea. También podría deshabilitar el botón "-"
+            (<code>disabled = true</code>) cuando el contador llega a 0, en vez de solo bloquear el número.</p>
+        </div>
+    </section>
+
+    <!-- EJERCICIO 5 -->
+    <section>
+        <h2>5. Alert con el texto de un input</h2>
+        <input type="text" id="input5" placeholder="Escribí algo...">
+        <button onclick="mostrarAlerta()">Mostrar</button>
+
+        <script>
+            function mostrarAlerta() {
+                const texto = document.getElementById("input5").value;
+                alert(texto);
+            }
+        </script>
+
+        <div class="explicacion">
+            <p><strong>¿Por qué usé lo que usé?</strong> Uso <code>.value</code> porque es la propiedad que guarda lo
+            que el usuario escribió adentro de un <code>&lt;input&gt;</code> (no es lo mismo que
+            <code>textContent</code>, que se usa para elementos que muestran texto, no para campos de formulario).
+            Uso <code>alert()</code> porque la consigna pide mostrar el texto en una ventana emergente.</p>
+            <p><strong>¿Para qué sirve cada función/método?</strong> <code>document.getElementById("input5").value</code>
+            lee el contenido actual del input en el momento del click. <code>alert(texto)</code> abre una ventana del
+            navegador con ese texto adentro.</p>
+            <p><strong>¿Hay más formas de hacerlo?</strong> Sí, en vez de <code>alert()</code> podría mostrar el texto
+            dentro de un párrafo de la página con <code>textContent</code>, que es menos molesto para el usuario que
+            una ventana emergente. También podría escuchar el evento <code>input</code> para mostrar el texto en
+            vivo, mientras el usuario escribe.</p>
+        </div>
+    </section>
+
+    <!-- EJERCICIO 6 -->
+    <section>
+        <h2>6. Botón que cambia su propio texto</h2>
+        <button id="boton6" onclick="toggleBoton()">Activar</button>
+
+        <script>
+            function toggleBoton() {
+                const boton = document.getElementById("boton6");
+                if (boton.textContent === "Activar") {
+                    boton.textContent = "Desactivar";
+                } else {
+                    boton.textContent = "Activar";
+                }
+            }
+        </script>
+
+        <div class="explicacion">
+            <p><strong>¿Por qué usé lo que usé?</strong> Uso un <strong>condicional</strong> para preguntarle al
+            propio botón qué texto tiene en este momento (con <code>textContent</code>) y así decidir a qué texto
+            cambiarlo: es una forma de "toggle" (interruptor) sin necesitar una variable aparte, porque el estado
+            queda guardado en el mismo texto del botón.</p>
+            <p><strong>¿Para qué sirve cada función/método?</strong> <code>boton.textContent === "Activar"</code>
+            compara el texto actual del botón con la palabra "Activar". Según el resultado (verdadero o falso), el
+            <code>if/else</code> decide si pone "Desactivar" o vuelve a poner "Activar".</p>
+            <p><strong>¿Hay más formas de hacerlo?</strong> Sí, podría guardar el estado en una variable booleana
+            (<code>let activado = false;</code>) en vez de leer el texto del botón, lo cual es más prolijo si después
+            quiero usar ese estado en otra parte del código. También se podría usar un atributo
+            <code>data-estado</code> en el HTML para guardar "activo" o "inactivo".</p>
+        </div>
+    </section>
+
+    <!-- EJERCICIO 7 -->
+    <section>
+        <h2>7. Investigación: DOM y estados</h2>
+        <p><strong>¿Qué es el DOM?</strong> El DOM (Document Object Model / Modelo de Objetos del Documento) es una
+        representación en forma de "árbol" de todos los elementos de una página HTML (etiquetas, textos, atributos).
+        El navegador arma ese árbol cuando carga la página, y JavaScript puede usar ese árbol para leer, agregar,
+        borrar o modificar cualquier parte de la página sin tener que recargarla.</p>
+
+        <p><strong>¿Qué son los estados?</strong> Un estado es el valor que tienen en un momento dado los datos que
+        controlan cómo se ve o se comporta la página (por ejemplo: el número de un contador, si un botón está
+        "activado" o no, el texto que está guardado en una variable). En los ejercicios anteriores, cosas como
+        <code>contador2</code>, <code>contador4</code> o el texto del botón 6 son estados: van cambiando con cada
+        interacción del usuario, y la página se actualiza para reflejar ese cambio.</p>
+
+        <p><strong>¿En qué nos ayuda manipular el DOM con JS?</strong> Nos permite que la página sea interactiva y
+        dinámica: podemos cambiar textos, estilos, mostrar u ocultar elementos, validar formularios, reaccionar a
+        clicks, etc., todo sin tener que recargar ni pedir una página nueva al servidor. Es lo que hace que un sitio
+        web deje de ser algo estático (como un afiche) y se convierta en una aplicación con la que el usuario puede
+        interactuar en tiempo real.</p>
+    </section>
+
+</body>
+</html>
