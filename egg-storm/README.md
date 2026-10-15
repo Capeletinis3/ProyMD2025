@@ -12,6 +12,8 @@ egg-storm/
     ├── shared/   → ReplicatedStorage.Shared           (lo ven servidor y cliente)
     │   ├── Config.luau                                 todos los números de balance
     │   ├── Creatures.luau                              catálogo de mascotas
+    │   ├── Upgrades.luau                               niveles, precios y textos de las mejoras
+    │   ├── Format.luau                                 números lindos (12,345)
     │   └── Remotes.luau                                RemoteEvents (servidor ↔ cliente)
     ├── server/   → ServerScriptService.Server          (solo servidor)
     │   ├── Main.server.luau                            arranca los servicios
@@ -22,11 +24,14 @@ egg-storm/
     │       ├── EggService.luau                         lluvia de huevos, agarrar y llevar
     │       ├── IncubatorService.luau                   incubadoras y apertura de huevos
     │       ├── CreatureService.luau                    mascotas en la base y plata por segundo
-    │       └── CreatureModels.luau                     modelos placeholder de las mascotas
+    │       ├── CreatureModels.luau                     modelos placeholder de las mascotas
+    │       ├── UpgradeService.luau                     compra y aplica las mejoras
+    │       └── BaseFloors.luau                         segundo piso de la base ("Base Floor")
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
         ├── Main.client.luau
         ├── Notifier.luau                               avisos en pantalla
-        └── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
+        ├── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
+        └── UpgradePanel.luau                           ventana de mejoras
 ```
 
 Convención de nombres de Rojo:

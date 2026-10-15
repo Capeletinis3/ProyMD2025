@@ -65,6 +65,14 @@ local function syncCoins(player: Player, profile: Profile)
 	player:SetAttribute("Coins", profile.Coins) -- para la interfaz de la fase 6
 end
 
+-- Copia los niveles de mejoras a atributos del jugador, para que el panel del cliente los pueda leer.
+local function syncLevels(player: Player, profile: Profile)
+	player:SetAttribute("IncubationSpeedLevel", profile.IncubationSpeedLevel)
+	player:SetAttribute("IncubatorCount", profile.IncubatorCount)
+	player:SetAttribute("WalkSpeedLevel", profile.WalkSpeedLevel)
+	player:SetAttribute("BaseLevel", profile.BaseLevel)
+end
+
 -- ===== API pública =====
 
 function PlayerDataService.Load(player: Player): Profile
@@ -76,6 +84,7 @@ function PlayerDataService.Load(player: Player): Profile
 	profiles[player] = profile
 	createLeaderstats(player, profile.Coins)
 	syncCoins(player, profile)
+	syncLevels(player, profile)
 	return profile
 end
 
@@ -86,6 +95,14 @@ end
 function PlayerDataService.Unload(player: Player)
 	-- fase 7: acá se guarda en el DataStore antes de borrar
 	profiles[player] = nil
+end
+
+-- Hay que llamarlo después de cambiar un nivel de mejora en el perfil.
+function PlayerDataService.SyncLevels(player: Player)
+	local profile = profiles[player]
+	if profile then
+		syncLevels(player, profile)
+	end
 end
 
 function PlayerDataService.AddCoins(player: Player, amount: number)

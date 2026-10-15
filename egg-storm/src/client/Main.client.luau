@@ -9,6 +9,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Notifier = require(script.Parent.Notifier)
 local IncubatorPrompts = require(script.Parent.IncubatorPrompts)
+local UpgradePanel = require(script.Parent.UpgradePanel)
 
 local player = Players.LocalPlayer
 
@@ -39,3 +40,4 @@ player:GetAttributeChangedSignal("BaseId"):Connect(onBaseChanged)
 onBaseChanged()
 
 IncubatorPrompts.Start()
+UpgradePanel.Start()

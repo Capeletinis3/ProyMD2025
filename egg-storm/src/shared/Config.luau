@@ -23,6 +23,11 @@ export type IncubationSpeedLevel = {
 	Cost: number,
 }
 
+export type WalkSpeedLevel = {
+	Speed: number,
+	Cost: number,
+}
+
 local Config = {}
 
 -- ===== Servidor =====
@@ -145,8 +150,12 @@ Config.Economy = {
 	IncomeInterval = 1, -- cada cuántos segundos se cobra la plata de las mascotas
 }
 
--- ===== Mejoras (se usan desde la fase 4) =====
+-- ===== Mejoras (fase 4) =====
 Config.Upgrades = {
+	PanelDistance = 12, -- distancia máxima al panel de mejoras para poder comprar (studs)
+	BuyCooldown = 0.3, -- tiempo mínimo entre compras (anti-spam)
+
+	-- Multiplica el tiempo de incubación
 	IncubationSpeed = {
 		{ Multiplier = 1.0, Cost = 0 }, -- nivel 1 (gratis, es el inicial)
 		{ Multiplier = 0.8, Cost = 100 },
@@ -156,8 +165,24 @@ Config.Upgrades = {
 	} :: { IncubationSpeedLevel },
 	MinIncubationTime = 5, -- segundos: ningún huevo tarda menos que esto
 
+	-- Incubadoras extra
 	StartingIncubators = 1,
 	MaxIncubators = 3,
+	ExtraIncubatorCosts = { 250, 1500 }, -- precio de la 2.ª y de la 3.ª incubadora
+
+	-- Velocidad de caminata (el nivel 1 es la velocidad normal de Roblox)
+	WalkSpeed = {
+		{ Speed = 16, Cost = 0 },
+		{ Speed = 20, Cost = 300 },
+		{ Speed = 24, Cost = 1500 },
+		{ Speed = 28, Cost = 6000 },
+	} :: { WalkSpeedLevel },
+
+	-- "Mejorar base": segundo piso con más lugares para mascotas
+	BaseFloor = {
+		Cost = 5000,
+		ExtraCreatureSlots = 6,
+	},
 }
 
 -- ===== Tormenta (se usa en la fase 5) =====

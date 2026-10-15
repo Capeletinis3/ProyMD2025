@@ -15,6 +15,7 @@
 -- no construye nada y usa esa. Solo tiene que respetar la misma estructura:
 --   Map/Bases/BaseN (Model con atributo BaseId) con SpawnPoint, SafeZone y un TextLabel "SignLabel".
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -388,11 +389,39 @@ end
 local function buildSign(model: Model, plotCFrame: CFrame)
 	-- Detrás de la base, mirando hacia el pasillo (la cara Front del cartel mira para el mismo lado que la base)
 	local signZ = cfg.PlotDepth / 2 + 4
+	-- Alto, para que se siga viendo por encima del segundo piso ("mejorar base")
 	for _, x in { -14, 14 } do
-		makePart("SignPost", Vector3.new(1.5, 18, 1.5), plotCFrame * CFrame.new(x, 9, signZ), Color3.fromRGB(90, 60, 40), model)
+		makePart("SignPost", Vector3.new(1.5, 26, 1.5), plotCFrame * CFrame.new(x, 13, signZ), Color3.fromRGB(90, 60, 40), model)
 	end
-	local board = makePart("SignBoard", Vector3.new(32, 8, 1), plotCFrame * CFrame.new(0, 15, signZ), Color3.fromRGB(60, 45, 35), model)
+	local board = makePart("SignBoard", Vector3.new(32, 8, 1), plotCFrame * CFrame.new(0, 23, signZ), Color3.fromRGB(60, 45, 35), model)
 	addText(board, Enum.NormalId.Front, "Free Base", Color3.fromRGB(200, 200, 200), "SignLabel")
+end
+
+-- Panel de mejoras: un poste con una pantalla inclinada. Al acercarte aparece "Open" (abre la ventana de mejoras).
+-- cframe está a nivel del piso de la base y su frente (-Z) mira hacia el pasillo.
+local function buildUpgradePanel(model: Model, baseId: number, cframe: CFrame, color: Color3)
+	local panel = Instance.new("Model")
+	panel.Name = "UpgradePanel"
+	makePart("Post", Vector3.new(1.2, 4, 1.2), cframe * CFrame.new(0, 2, 0), Color3.fromRGB(60, 60, 70), panel)
+	-- Pantalla inclinada hacia atrás, como un atril
+	local screenCFrame = cframe * CFrame.new(0, 5.5, 0) * CFrame.Angles(math.rad(15), 0, 0)
+	local frame = makePart("Frame", Vector3.new(9, 5.6, 0.5), screenCFrame * CFrame.new(0, 0, 0.3), color, panel)
+	frame.Material = Enum.Material.Neon
+	local screen = makePart("Screen", Vector3.new(8.4, 5, 0.6), screenCFrame, Color3.fromRGB(25, 25, 35), panel)
+	addText(screen, Enum.NormalId.Front, "UPGRADES", Color3.fromRGB(255, 220, 80))
+	panel.PrimaryPart = screen
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Open"
+	prompt.ObjectText = "Upgrades"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt:SetAttribute("BaseId", baseId)
+	CollectionService:AddTag(prompt, "UpgradePrompt") -- el cliente abre la ventana y lo esconde en bases ajenas
+	prompt.Parent = screen
+
+	panel.Parent = model
 end
 
 local function buildBase(index: number, position: Vector3, parent: Instance): Model
@@ -446,8 +475,8 @@ local function buildBase(index: number, position: Vector3, parent: Instance): Mo
 	spawnPoint.CanQuery = false
 	spawnPoint.Material = Enum.Material.Neon
 
-	-- Lugar reservado para el panel de mejoras (fase 4): atrás, en el medio
-	makeMarker("UpgradeSpot", Vector3.new(1, 1, 1), plotCFrame * CFrame.new(0, surfaceY, d / 2 - 6), model)
+	-- Panel de mejoras: atrás, en el medio
+	buildUpgradePanel(model, index, plotCFrame * CFrame.new(0, surfaceY, d / 2 - 6), color)
 
 	-- Volumen invisible de la base (para saber si alguien está adentro)
 	makeMarker("SafeZone", Vector3.new(w, 30, d), plotCFrame * CFrame.new(0, 15, 0), model)

@@ -12,6 +12,7 @@ export type Base = {
 	SafeZone: BasePart,
 	SignLabel: TextLabel,
 	Facing: CFrame, -- solo la rotación de la base: su LookVector apunta al pasillo
+	UpgradePanel: BasePart, -- la pantalla del panel de mejoras (para medir distancia al comprar)
 	IncubatorSlots: { BasePart }, -- pads de incubadoras, ordenados por SlotIndex
 	CreatureSlots: { BasePart }, -- pads de mascotas, ordenados por SlotIndex
 	Owner: Player?,
@@ -186,6 +187,9 @@ function BaseService.Init(map: Folder)
 		assert(safeZone and safeZone:IsA("BasePart"), `[BaseService] {model.Name} is missing SafeZone`)
 		assert(signLabel and signLabel:IsA("TextLabel"), `[BaseService] {model.Name} is missing SignLabel`)
 		assert(model.PrimaryPart, `[BaseService] {model.Name} has no PrimaryPart`)
+		local panel = model:FindFirstChild("UpgradePanel")
+		local panelScreen = panel and panel:FindFirstChild("Screen")
+		assert(panelScreen and panelScreen:IsA("BasePart"), `[BaseService] {model.Name} is missing UpgradePanel.Screen`)
 
 		local base: Base = {
 			Id = id,
@@ -194,6 +198,7 @@ function BaseService.Init(map: Folder)
 			SafeZone = safeZone,
 			SignLabel = signLabel,
 			Facing = model.PrimaryPart.CFrame.Rotation,
+			UpgradePanel = panelScreen,
 			IncubatorSlots = collectSlots(model, "IncubatorSlots"),
 			CreatureSlots = collectSlots(model, "CreatureSlots"),
 			Owner = nil,
