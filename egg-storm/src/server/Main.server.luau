@@ -12,6 +12,7 @@ local IncubatorService = require(Services.IncubatorService)
 local UpgradeService = require(Services.UpgradeService)
 local StormService = require(Services.StormService)
 local TutorialService = require(Services.TutorialService)
+local LeaderboardService = require(Services.LeaderboardService)
 
 local map = MapBuilder.Build()
 
@@ -50,5 +51,8 @@ BaseService.Init(map)
 
 -- El ciclo de tormenta (lluvia → aviso → ola → calma) prende y apaga la lluvia de huevos.
 StormService.Init()
+
+-- Tableros de récords del lobby
+LeaderboardService.Init(map)
 
 print("[EggStorm] Server ready")

@@ -16,6 +16,7 @@ python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_phase8.luau   # parti
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_sell.luau     # vender mascotas
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tutorial.luau # tutorial
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_offline.luau  # ganancia mientras no estás
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_leaderboard.luau # tablas de récords
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_stairs.luau > salida.txt   # escalera del piso 2
 python3 dev-tests/render_parts.py salida.txt escalera.png                            # dibujo de la escalera
 python3 dev-tests/bundle.py src <ruta-a-luau> mapa.png                   # dibujo del mapa desde arriba

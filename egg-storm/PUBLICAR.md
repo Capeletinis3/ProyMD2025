@@ -17,7 +17,7 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 - ✅ ~~Tutorial corto~~ **Hecho:** cartel con el paso a seguir + flecha de luz, se guarda el progreso y se puede saltear.
 - ✅ ~~Escalera al segundo piso~~ **Hecho:** escalera por el costado de afuera de la base, con descanso y pasamanos.
 - ✅ ~~Ganancia mientras no estás~~ **Hecho:** 50% de lo normal, tope de 8 horas (`Config.Economy.Offline...`).
-- **Tabla de récords** (OrderedDataStore) con la plata o las mascotas raras.
+- ✅ ~~Tabla de récords~~ **Hecho:** dos tableros en el lobby (plata ganada en total y huevos abiertos), top 10 de todos los servidores.
 
 ## 4. Modelos y sonidos (reemplazar los placeholders)
 - Modelos de mascotas (13), huevos, incubadora y panel de mejoras. Al reemplazarlos, el resto del código sigue igual (ver `CreatureModels.luau` y `MapBuilder.luau`).

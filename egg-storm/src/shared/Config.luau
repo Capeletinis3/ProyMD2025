@@ -171,6 +171,16 @@ Config.Data = {
 	RetryDelay = 1, -- segundos de espera entre reintentos (va creciendo: 1, 2, 3...)
 }
 
+-- ===== Tabla de récords =====
+Config.Leaderboard = {
+	Size = 10, -- cuántos puestos muestra cada tablero
+	UpdateInterval = 120, -- cada cuántos segundos se actualizan (Roblox limita cuántas veces se puede leer/escribir)
+	FirstUpdateDelay = 10, -- la primera actualización, unos segundos después de que arranca el servidor
+	-- Nombres de los OrderedDataStore (si los cambiás, las tablas empiezan de cero)
+	EarnersStoreName = "EggStorm_TopEarners_v1",
+	HatchedStoreName = "EggStorm_EggsHatched_v1",
+}
+
 -- ===== Efectos e interfaz (fase 6) =====
 Config.Effects = {
 	HatchAnimationTime = 3, -- segundos que el huevo tiembla y brilla antes de abrirse

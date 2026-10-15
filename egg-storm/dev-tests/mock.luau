@@ -72,6 +72,7 @@ Color3.fromRGB = function(r, g, b) return Color3.new(r / 255, g / 255, b / 255) 
 
 local dummy = function(...) return { ... } end
 UDim2 = { new = dummy, fromScale = dummy, fromOffset = dummy }
+UDim = { new = dummy }
 ColorSequence = { new = dummy }
 ColorSequenceKeypoint = { new = dummy }
 NumberSequence = { new = dummy }
@@ -111,6 +112,7 @@ Inst.__index = function(self, k)
 		SetAttribute = function(s, k2, v) rawget(s, "_attrs")[k2] = v end,
 		GetAttribute = function(s, k2) return rawget(s, "_attrs")[k2] end,
 		Destroy = function(s) s.Parent = nil end,
+		AddTag = function() end,
 		GetFullName = function(s) local p = rawget(s, "_props").Parent; return (p and p:GetFullName() .. "." or "") .. s.Name end,
 	}
 	if methods[k] then return methods[k] end

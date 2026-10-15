@@ -276,6 +276,24 @@ local function buildLobby(map: Instance)
 	for _, side in { -1, 1 } do
 		buildPalm(Vector3.new(side * (LOBBY_HALF_WIDTH - 12), cfg.FloorY, -10), map)
 	end
+
+	-- Tableros de récords en la pared de adelante del lobby, a cada lado de la entrada del pasillo,
+	-- mirando hacia las bases. Los llena LeaderboardService.
+	local boards = Instance.new("Folder")
+	boards.Name = "Leaderboards"
+	boards.Parent = map
+	local boardSize = Vector3.new(56, 40, 1)
+	if LOBBY_HALF_WIDTH - HALF_WIDTH > boardSize.X + 4 then
+		for _, info in { { Side = -1, Id = "TopEarners" }, { Side = 1, Id = "EggsHatched" } } do
+			local x = info.Side * (HALF_WIDTH + (LOBBY_HALF_WIDTH - HALF_WIDTH) / 2)
+			local position = Vector3.new(x, cfg.FloorY + 40, -0.6) -- alto, para verse por encima de los carteles de las bases
+			local facing = CFrame.lookAt(position, position + Vector3.new(0, 0, -1)) -- la cara Front mira al lobby
+			local frame = makePart("BoardFrame", boardSize + Vector3.new(2, 2, -0.5), facing * CFrame.new(0, 0, 0.35), Color3.fromRGB(255, 205, 60), boards)
+			frame.Material = Enum.Material.Neon
+			local board = makePart("Leaderboard", boardSize, facing, Color3.fromRGB(30, 32, 48), boards)
+			board:SetAttribute("Board", info.Id)
+		end
+	end
 end
 
 local function buildCorridor(map: Instance)

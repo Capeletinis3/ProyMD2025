@@ -31,6 +31,7 @@ egg-storm/
     │       ├── UpgradeService.luau                     compra y aplica las mejoras
     │       ├── BaseFloors.luau                         segundo piso de la base ("Base Floor")
     │       ├── TutorialService.luau                    pasos del tutorial para jugadores nuevos
+    │       ├── LeaderboardService.luau                 tableros de récords del lobby (top 10 de todos los servidores)
     │       └── StormService.luau                       ciclo de tormenta y ola
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
         ├── Main.client.luau

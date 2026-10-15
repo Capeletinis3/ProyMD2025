@@ -18,4 +18,25 @@ function Format.Number(n: number): string
 	return sign .. result
 end
 
+-- Corto para números grandes: 999,999 -> "999,999"; 1440000 -> "1.44M"; 2300000000 -> "2.3B"
+local SUFFIXES: { { Size: number, Letter: string } } = {
+	{ Size = 1e15, Letter = "Qa" },
+	{ Size = 1e12, Letter = "T" },
+	{ Size = 1e9, Letter = "B" },
+	{ Size = 1e6, Letter = "M" },
+}
+function Format.Compact(n: number): string
+	for _, suffix in SUFFIXES do
+		if math.abs(n) >= suffix.Size then
+			-- 2 decimales sin redondear para arriba (el 1e-6 corrige errores chiquitos de los decimales: 2.3 -> 229.9999)
+			local value = math.floor(n / suffix.Size * 100 + 1e-6) / 100
+			local text = string.format("%.2f", value)
+			text = string.gsub(text, "0+$", "")
+			text = string.gsub(text, "%.$", "")
+			return text .. suffix.Letter
+		end
+	end
+	return Format.Number(n)
+end
+
 return Format

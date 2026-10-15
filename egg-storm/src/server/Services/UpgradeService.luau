@@ -104,7 +104,7 @@ function UpgradeService.TryBuy(player: Player, id: UpgradeId)
 		return
 	end
 	if not apply(player, base, id) then
-		PlayerDataService.AddCoins(player, cost) -- algo falló: devolvemos la plata
+		PlayerDataService.AddCoins(player, cost, true) -- algo falló: devolvemos la plata (no cuenta como ganada)
 		return
 	end
 	PlayerDataService.SyncLevels(player)

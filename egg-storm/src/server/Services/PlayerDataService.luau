@@ -38,6 +38,8 @@ export type Profile = {
 	WalkSpeedLevel: number,
 	BaseLevel: number, -- 2 = tiene el segundo piso ("Base Floor")
 	TutorialStep: number, -- en qué paso del tutorial va (ver TutorialService; el último = terminado)
+	TotalEarned: number, -- plata ganada en toda la historia (no baja al gastar; para la tabla de récords)
+	EggsHatched: number, -- huevos abiertos en toda la historia (para la tabla de récords)
 	Creatures: { CreatureData },
 	Incubating: { IncubatingData }, -- se llena al salir (mientras jugás, los huevos viven en IncubatorService)
 }
@@ -74,6 +76,8 @@ local function newProfile(): Profile
 		WalkSpeedLevel = 1,
 		BaseLevel = 1,
 		TutorialStep = 1,
+		TotalEarned = 0,
+		EggsHatched = 0,
 		Creatures = {},
 		Incubating = {},
 	}
@@ -161,6 +165,9 @@ local function profileFromData(data: any): Profile
 			end
 		end
 	end
+	-- Récords. Si son datos de antes de la tabla de récords, arrancamos con algo razonable.
+	profile.TotalEarned = cleanNumber(data.TotalEarned, profile.Coins, 0, 1e15)
+	profile.EggsHatched = cleanNumber(data.EggsHatched, #profile.Creatures, 0, 1e9)
 	return profile
 end
 
@@ -198,6 +205,8 @@ local function dataFromProfile(profile: Profile, incubating: { IncubatingData })
 		WalkSpeedLevel = profile.WalkSpeedLevel,
 		BaseLevel = profile.BaseLevel,
 		TutorialStep = profile.TutorialStep,
+		TotalEarned = profile.TotalEarned,
+		EggsHatched = profile.EggsHatched,
 		Creatures = creatures,
 		Incubating = eggs,
 		SavedAt = os.time(),
@@ -298,6 +307,7 @@ function PlayerDataService.Load(player: Player): Profile?
 		canSave[player] = true
 		offlineCoins, offlineSeconds = offlineEarnings(data, profile)
 		profile.Coins += offlineCoins
+		profile.TotalEarned += offlineCoins
 	elseif RunService:IsStudio() then
 		warn("[PlayerData] Couldn't load data. Playing WITHOUT saving. In Studio, turn on Game Settings > Security > 'Enable Studio Access to API Services'.")
 		profile = newProfile()
@@ -352,13 +362,30 @@ function PlayerDataService.SyncLevels(player: Player)
 	end
 end
 
-function PlayerDataService.AddCoins(player: Player, amount: number)
+-- Suma plata. Cuenta para la tabla de récords ("plata ganada"), salvo que sea una devolución.
+function PlayerDataService.AddCoins(player: Player, amount: number, isRefund: boolean?)
 	local profile = profiles[player]
 	if not profile or amount <= 0 then
 		return
 	end
 	profile.Coins += amount
+	if not isRefund then
+		profile.TotalEarned += amount
+	end
 	syncCoins(player, profile)
+end
+
+-- Suma un huevo abierto (para la tabla de récords).
+function PlayerDataService.RecordHatch(player: Player)
+	local profile = profiles[player]
+	if profile then
+		profile.EggsHatched += 1
+	end
+end
+
+-- true si a este jugador le podemos guardar datos (o sea, si se pudieron leer bien al entrar).
+function PlayerDataService.CanSave(player: Player): boolean
+	return canSave[player] == true
 end
 
 -- Cobra si alcanza la plata. Devuelve true si pudo cobrar. (Lo usan las mejoras.)

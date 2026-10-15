@@ -262,3 +262,34 @@ function ADD_PLAYER(name, userId)
 	game:GetService("Players").PlayerAdded:Fire(p)
 	return p
 end
+
+-- Leaderboards: fake OrderedDataStore + name lookups
+ORDERED = {}
+ORDERED_FAIL = false
+local function orderedStore(name)
+	ORDERED[name] = ORDERED[name] or {}
+	local data = ORDERED[name]
+	return {
+		SetAsync = function(_, key, value)
+			if ORDERED_FAIL then error("OrderedDataStore unavailable (simulated)") end
+			assert(type(value) == "number" and value == math.floor(value), "ordered values must be integers")
+			data[key] = value
+		end,
+		GetSortedAsync = function(_, ascending, size)
+			if ORDERED_FAIL then error("OrderedDataStore unavailable (simulated)") end
+			local list = {}
+			for k, v in data do table.insert(list, { key = k, value = v }) end
+			table.sort(list, function(a, b) if ascending then return a.value < b.value end return a.value > b.value end)
+			local page = {}
+			for i = 1, math.min(size, #list) do page[i] = list[i] end
+			return { GetCurrentPage = function() return page end }
+		end,
+	}
+end
+rawget(game:GetService("DataStoreService"), "_props").GetOrderedDataStore = function(_, name) return orderedStore(name) end
+local playersSvc = game:GetService("Players")
+rawget(playersSvc, "_props").GetNameFromUserIdAsync = function(_, id) return "User" .. id end
+rawget(playersSvc, "_props").GetPlayerByUserId = function(_, id)
+	for _, p in playersSvc:GetPlayers() do if p.UserId == id then return p end end
+	return nil
+end

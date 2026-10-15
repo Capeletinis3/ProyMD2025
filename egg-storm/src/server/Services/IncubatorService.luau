@@ -296,6 +296,7 @@ local function finishHatch(incubator: Incubator, egg: IncubatingEgg, creature: C
 	egg.Part:Destroy()
 	incubator.Egg = nil
 	showEmpty(incubator)
+	PlayerDataService.RecordHatch(incubator.Owner)
 	TutorialService.OnEvent(incubator.Owner, "Hatched")
 end
 

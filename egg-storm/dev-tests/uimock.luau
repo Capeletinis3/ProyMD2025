@@ -74,7 +74,7 @@ function DUMP_GUI(root)
 	end
 	local function walk(obj, px, py, pw, ph, scale, visible)
 		local cls = obj.ClassName
-		if cls == "ScreenGui" then
+		if cls == "ScreenGui" or cls == "SurfaceGui" then
 			if obj.Enabled == false then return end
 			for _, c in obj:GetChildren() do walk(c, 0, 0, pw, ph, 1, true) end
 			return

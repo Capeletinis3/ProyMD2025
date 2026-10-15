@@ -66,5 +66,10 @@ Hacela en Studio antes de publicar. Tarda unos 15 minutos.
 - [ ] Con al menos una mascota, salí del juego, esperá más de 1 minuto y volvé a entrar: aparece "Welcome back!" con la plata ganada y ya está sumada.
 - [ ] Si volvés antes de 1 minuto, no aparece el cartel.
 
+### Tabla de récords
+- [ ] En el lobby, sobre la pared a cada lado de la entrada del pasillo, hay dos tableros: "TOP EARNERS" y "MOST EGGS HATCHED".
+- [ ] A los ~10 segundos de arrancar se llenan (en Studio sin acceso a la API dicen "This server only").
+- [ ] Gastar plata en mejoras no te baja en "TOP EARNERS".
+
 ### Celular
 - [ ] **Test → Device** → elegí un teléfono: la ventana de mejoras, la plata y los avisos entran en la pantalla.
