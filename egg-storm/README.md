@@ -30,7 +30,10 @@ egg-storm/
     │       └── StormService.luau                       ciclo de tormenta y ola
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
         ├── Main.client.luau
+        ├── UIKit.luau                                  estilo común de la interfaz (colores, letra, ajuste a pantalla)
+        ├── Hud.luau                                    plata, plata por segundo y huevo que llevás
         ├── Notifier.luau                               avisos en pantalla
+        ├── HatchReveal.luau                            animación de apertura y cartel "You got..."
         ├── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
         ├── UpgradePanel.luau                           ventana de mejoras
         └── StormClient.luau                            cartel de fase, "WAVE INCOMING", lluvia y la ola

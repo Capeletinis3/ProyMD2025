@@ -12,6 +12,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local UIKit = require(script.Parent.UIKit)
 
 local player = Players.LocalPlayer
 
@@ -75,16 +76,19 @@ local function buildGui()
 	gui.IgnoreGuiInset = true
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	phaseLabel = Instance.new("TextLabel")
-	phaseLabel.AnchorPoint = Vector2.new(0.5, 0)
-	phaseLabel.Position = UDim2.new(0.5, 0, 0, 44)
-	phaseLabel.Size = UDim2.fromOffset(320, 40)
-	phaseLabel.BackgroundTransparency = 1
-	phaseLabel.Font = FONT
-	phaseLabel.TextScaled = true
-	phaseLabel.TextColor3 = Color3.new(1, 1, 1)
-	phaseLabel.Text = ""
-	phaseLabel.Parent = gui
+	-- Cartelito de arriba: fondo oscuro redondeado con la fase y el tiempo
+	local pill = Instance.new("Frame")
+	pill.AnchorPoint = Vector2.new(0.5, 0)
+	pill.Position = UDim2.new(0.5, 0, 0, 62)
+	pill.Size = UDim2.fromOffset(300, 46)
+	pill.BackgroundColor3 = UIKit.Colors.Panel
+	pill.BackgroundTransparency = 0.15
+	pill.Parent = gui
+	UIKit.Corner(pill, 23)
+	UIKit.FitToScreen(pill, Vector2.new(300, 46), Vector2.new(24, 0))
+
+	phaseLabel = UIKit.Label(pill, "", UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 26)
+	phaseLabel.TextXAlignment = Enum.TextXAlignment.Center
 	stroke(phaseLabel, 2)
 
 	banner = Instance.new("TextLabel")

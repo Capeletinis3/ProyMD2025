@@ -1,8 +1,10 @@
 --!strict
 -- UpgradePanel: la ventana de mejoras que se abre desde el panel de tu base.
--- Muestra cada mejora con su nivel, qué cambia y cuánto cuesta. El botón "Buy" solo PIDE la compra:
--- el servidor decide si se puede (ver UpgradeService). La ventana se actualiza sola cuando cambian
--- tus niveles o tu plata (el servidor los publica como atributos del jugador).
+-- Ventana ancha de tamaño fijo (680x500) que se achica entera en pantallas chicas (UIKit.FitToScreen),
+-- con columnas separadas para que los textos nunca se pisen:
+--   [ícono] [nombre]        [Lv 2/5]            [  Buy 500  ]
+--           [descripción de qué cambia...]
+-- El botón "Buy" solo PIDE la compra: el servidor decide si se puede (ver UpgradeService).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -12,42 +14,38 @@ local RunService = game:GetService("RunService")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Format = require(ReplicatedStorage.Shared.Format)
+local UIKit = require(script.Parent.UIKit)
 
 local player = Players.LocalPlayer
 local buyRemote = Remotes.Event("BuyUpgrade")
+local C = UIKit.Colors
 
 local UpgradePanel = {}
 
 local CLOSE_DISTANCE = 20 -- si te alejás más que esto del panel, la ventana se cierra sola
-local FONT = Enum.Font.FredokaOne
+local WIDTH, HEIGHT = 680, 500
+local ROW_HEIGHT, ROW_GAP, HEADER = 88, 12, 84
+
+local ICONS: { [string]: string } = {
+	IncubationSpeed = "⏩",
+	ExtraIncubator = "🥚",
+	WalkSpeed = "👟",
+	BaseFloor = "🏠",
+}
+local ICON_COLORS: { [string]: Color3 } = {
+	IncubationSpeed = Color3.fromRGB(255, 150, 60),
+	ExtraIncubator = Color3.fromRGB(90, 190, 255),
+	WalkSpeed = Color3.fromRGB(120, 220, 120),
+	BaseFloor = Color3.fromRGB(200, 130, 255),
+}
 
 type Row = { Level: TextLabel, Description: TextLabel, Button: TextButton }
 
 local gui: ScreenGui
 local coinsLabel: TextLabel
-local rows: { [Upgrades.UpgradeId]: Row } = {}
+local rows: { [string]: Row } = {}
 local openPanelPart: BasePart? = nil
 local lastClick = 0
-
-local function corner(parent: Instance, radius: number)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, radius)
-	c.Parent = parent
-end
-
-local function label(parent: Instance, text: string, size: UDim2, position: UDim2, color: Color3, align: Enum.TextXAlignment?): TextLabel
-	local l = Instance.new("TextLabel")
-	l.BackgroundTransparency = 1
-	l.Size = size
-	l.Position = position
-	l.Font = FONT
-	l.TextScaled = true
-	l.TextColor3 = color
-	l.TextXAlignment = align or Enum.TextXAlignment.Left
-	l.Text = text
-	l.Parent = parent
-	return l
-end
 
 local function currentState(): Upgrades.State
 	local function attr(name: string): number
@@ -65,7 +63,7 @@ end
 local function refresh()
 	local coins = player:GetAttribute("Coins")
 	local coinValue = if typeof(coins) == "number" then coins else 0
-	coinsLabel.Text = `Coins: {Format.Number(coinValue)}`
+	coinsLabel.Text = Format.Number(coinValue)
 
 	local state = currentState()
 	for id, row in rows do
@@ -75,12 +73,12 @@ local function refresh()
 		row.Description.Text = Upgrades.Describe(id, state)
 		if cost == nil then
 			row.Button.Text = "MAX"
-			row.Button.BackgroundColor3 = Color3.fromRGB(110, 110, 120)
+			row.Button.BackgroundColor3 = C.Gray
 			row.Button.AutoButtonColor = false
 		else
-			row.Button.Text = `Buy: {Format.Number(cost)}`
+			row.Button.Text = `Buy  {Format.Number(cost)}`
 			local canAfford = coinValue >= cost
-			row.Button.BackgroundColor3 = if canAfford then Color3.fromRGB(70, 200, 90) else Color3.fromRGB(200, 80, 80)
+			row.Button.BackgroundColor3 = if canAfford then C.Green else C.Red
 			row.Button.AutoButtonColor = canAfford
 		end
 	end
@@ -97,74 +95,87 @@ local function open(panelPart: BasePart)
 	gui.Enabled = true
 end
 
+local function buildRow(parent: Instance, index: number, id: string)
+	local rowWidth = WIDTH - 48
+	local row = Instance.new("Frame")
+	row.Size = UDim2.fromOffset(rowWidth, ROW_HEIGHT)
+	row.Position = UDim2.fromOffset(24, HEADER + (index - 1) * (ROW_HEIGHT + ROW_GAP))
+	row.BackgroundColor3 = C.Row
+	row.Parent = parent
+	UIKit.Corner(row, 14)
+
+	-- Ícono
+	local icon = Instance.new("TextLabel")
+	icon.Size = UDim2.fromOffset(64, 64)
+	icon.Position = UDim2.fromOffset(12, 12)
+	icon.BackgroundColor3 = ICON_COLORS[id] or C.Gray
+	icon.Text = ICONS[id] or "?"
+	icon.TextSize = 34
+	icon.Font = UIKit.Font
+	icon.Parent = row
+	UIKit.Corner(icon, 12)
+
+	-- Columna de textos (de x=88 a x=448): nombre + nivel arriba, descripción abajo
+	UIKit.Label(row, Upgrades.DisplayNames[id], UDim2.fromOffset(250, 34), UDim2.fromOffset(88, 10), 26)
+
+	local level = UIKit.Label(row, "Lv 1/1", UDim2.fromOffset(84, 28), UDim2.fromOffset(346, 13), 18, C.Accent)
+	level.TextXAlignment = Enum.TextXAlignment.Center
+	level.BackgroundTransparency = 0
+	level.BackgroundColor3 = Color3.fromRGB(30, 32, 48)
+	UIKit.Corner(level, 14)
+
+	local description = UIKit.Label(row, "", UDim2.fromOffset(354, 28), UDim2.fromOffset(88, 48), 18, C.SubText)
+
+	-- Botón (de x=460 a x=620)
+	local button = UIKit.Button(row, "", UDim2.fromOffset(160, 60), UDim2.fromOffset(rowWidth - 172, 14), 22, C.Green)
+	button.Activated:Connect(function()
+		-- Pequeña pausa entre clics para no mandar 20 pedidos al servidor
+		if os.clock() - lastClick < 0.3 then
+			return
+		end
+		lastClick = os.clock()
+		buyRemote:FireServer(id)
+	end)
+
+	rows[id] = { Level = level, Description = description, Button = button }
+end
+
 local function build()
 	gui = Instance.new("ScreenGui")
 	gui.Name = "UpgradePanel"
 	gui.ResetOnSpawn = false
 	gui.Enabled = false
+	gui.DisplayOrder = 5
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local frame = Instance.new("Frame")
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
 	frame.Position = UDim2.fromScale(0.5, 0.5)
-	frame.Size = UDim2.fromScale(0.9, 0.75)
-	frame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+	frame.Size = UDim2.fromOffset(WIDTH, HEIGHT)
+	frame.BackgroundColor3 = C.Panel
 	frame.Parent = gui
-	corner(frame, 16)
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 3
-	stroke.Color = Color3.fromRGB(255, 220, 80)
-	stroke.Parent = frame
-	-- En pantallas grandes no pasa de este tamaño
-	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(520, 440)
-	limit.Parent = frame
+	UIKit.Corner(frame, 20)
+	UIKit.Stroke(frame, 4, C.Accent)
+	UIKit.FitToScreen(frame, Vector2.new(WIDTH, HEIGHT))
 
-	label(frame, "UPGRADES", UDim2.fromScale(0.5, 0.11), UDim2.fromScale(0.04, 0.03), Color3.fromRGB(255, 220, 80))
-	coinsLabel = label(frame, "Coins: 0", UDim2.fromScale(0.36, 0.07), UDim2.fromScale(0.5, 0.05), Color3.fromRGB(120, 255, 120), Enum.TextXAlignment.Right)
+	-- Encabezado: título a la izquierda, plata a la derecha, X en la esquina
+	UIKit.Label(frame, "UPGRADES", UDim2.fromOffset(300, 50), UDim2.fromOffset(28, 18), 40, C.Accent)
 
-	local closeButton = Instance.new("TextButton")
-	closeButton.Size = UDim2.fromScale(0.08, 0.1)
-	closeButton.Position = UDim2.fromScale(0.89, 0.03)
-	closeButton.BackgroundColor3 = Color3.fromRGB(200, 70, 70)
-	closeButton.Font = FONT
-	closeButton.TextScaled = true
-	closeButton.TextColor3 = Color3.new(1, 1, 1)
-	closeButton.Text = "X"
-	closeButton.Parent = frame
-	corner(closeButton, 8)
+	local coinsPill = Instance.new("Frame")
+	coinsPill.Size = UDim2.fromOffset(210, 44)
+	coinsPill.Position = UDim2.fromOffset(WIDTH - 210 - 84, 21)
+	coinsPill.BackgroundColor3 = Color3.fromRGB(22, 24, 38)
+	coinsPill.Parent = frame
+	UIKit.Corner(coinsPill, 22)
+	local coinIcon = UIKit.Label(coinsPill, "🪙", UDim2.fromOffset(36, 36), UDim2.fromOffset(8, 4), 26)
+	coinIcon.TextXAlignment = Enum.TextXAlignment.Center
+	coinsLabel = UIKit.Label(coinsPill, "0", UDim2.fromOffset(156, 44), UDim2.fromOffset(46, 0), 24, C.Gold)
+
+	local closeButton = UIKit.Button(frame, "X", UDim2.fromOffset(52, 52), UDim2.fromOffset(WIDTH - 70, 17), 28, C.Red)
 	closeButton.Activated:Connect(close)
 
 	for i, id in Upgrades.Order do
-		local row = Instance.new("Frame")
-		row.Size = UDim2.fromScale(0.92, 0.18)
-		row.Position = UDim2.fromScale(0.04, 0.17 + (i - 1) * 0.205)
-		row.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-		row.Parent = frame
-		corner(row, 10)
-
-		label(row, Upgrades.DisplayNames[id], UDim2.fromScale(0.5, 0.45), UDim2.fromScale(0.03, 0.06), Color3.new(1, 1, 1))
-		local level = label(row, "Lv 1/1", UDim2.fromScale(0.16, 0.4), UDim2.fromScale(0.5, 0.08), Color3.fromRGB(180, 180, 255))
-		local description = label(row, "", UDim2.fromScale(0.62, 0.36), UDim2.fromScale(0.03, 0.56), Color3.fromRGB(200, 200, 200))
-
-		local button = Instance.new("TextButton")
-		button.Size = UDim2.fromScale(0.3, 0.7)
-		button.Position = UDim2.fromScale(0.68, 0.15)
-		button.Font = FONT
-		button.TextScaled = true
-		button.TextColor3 = Color3.new(1, 1, 1)
-		button.Parent = row
-		corner(button, 8)
-		button.Activated:Connect(function()
-			-- Pequeña pausa entre clics para no mandar 20 pedidos al servidor
-			if os.clock() - lastClick < 0.3 then
-				return
-			end
-			lastClick = os.clock()
-			buyRemote:FireServer(id)
-		end)
-
-		rows[id] = { Level = level, Description = description, Button = button }
+		buildRow(frame, i, id)
 	end
 end
 

@@ -15,6 +15,7 @@ local BaseService = require(script.Parent.BaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local EggService = require(script.Parent.EggService)
 local CreatureService = require(script.Parent.CreatureService)
+local Creatures = require(ReplicatedStorage.Shared.Creatures)
 
 type Base = BaseService.Base
 type Rarity = Config.Rarity
@@ -26,6 +27,7 @@ export type IncubatingEgg = {
 	TotalTime: number, -- segundos que tarda en total (con la mejora de velocidad aplicada)
 	HatchAt: number, -- os.clock() en el que se abre
 	Part: BasePart,
+	Hatching: boolean, -- true mientras corre la animación de apertura (unos segundos antes de que salga la mascota)
 }
 
 export type Incubator = {
@@ -242,6 +244,7 @@ local function startIncubation(incubator: Incubator, rarity: Rarity, remaining: 
 		TotalTime = total,
 		HatchAt = os.clock() + left,
 		Part = eggPart :: BasePart,
+		Hatching = false,
 	}
 	incubator.Title.Text = `{rarity.DisplayName} Egg`
 	incubator.Title.TextColor3 = if rarity.Id == "Secret" then Color3.fromRGB(230, 230, 230) else rarity.Color
@@ -274,33 +277,49 @@ local function burst(position: Vector3, color: Color3, parent: Instance)
 	end)
 end
 
+-- Final de la apertura: sale la mascota y la incubadora queda libre.
+local function finishHatch(incubator: Incubator, egg: IncubatingEgg, creature: Creatures.Creature)
+	-- Si el dueño se fue durante la animación, no hacemos nada (el huevo quedó guardado en su perfil)
+	if incubator.Egg ~= egg or not table.find(getIncubators(incubator.Owner), incubator) then
+		return
+	end
+	local slot = CreatureService.AddCreature(incubator.Owner, creature)
+	if not slot then
+		-- No hay lugar para la mascota: el huevo espera y reintenta en un rato
+		egg.Hatching = false
+		egg.HatchAt = os.clock() + 2
+		incubator.Timer.Text = "No room!"
+		return
+	end
+	burst(egg.Part.Position, egg.Rarity.Color, incubator.Model)
+	egg.Part:Destroy()
+	incubator.Egg = nil
+	showEmpty(incubator)
+end
+
+-- Empieza la apertura: le avisa al dueño (su pantalla hace temblar y brillar el huevo)
+-- y unos segundos después sale la mascota. Así la mascota no aparece antes de la animación.
 local function hatch(incubator: Incubator)
 	local egg = incubator.Egg
-	if not egg then
+	if not egg or egg.Hatching then
 		return
 	end
 	local player = incubator.Owner
-
+	if CreatureService.GetFreeSlotCount(player) <= 0 then
+		egg.HatchAt = os.clock() + 2
+		incubator.Timer.Text = "No room!"
+		return
+	end
 	local creature = CreatureService.RollCreature(egg.Rarity.Id)
 	if not creature then
 		warn(`[IncubatorService] No creatures defined for rarity {egg.Rarity.Id}`)
 		return
 	end
-	local slot = CreatureService.AddCreature(player, creature)
-	if not slot then
-		-- No hay lugar para la mascota: el huevo espera y reintenta en un rato
-		egg.HatchAt = os.clock() + 2
-		incubator.Timer.Text = "No room!"
-		return
-	end
 
-	burst(egg.Part.Position, egg.Rarity.Color, incubator.Model)
-	egg.Part:Destroy()
-	incubator.Egg = nil
-	showEmpty(incubator)
-
-	-- Aviso al dueño (en la fase 6 esto dispara la animación de apertura)
-	hatchedRemote:FireClient(player, creature.DisplayName, egg.Rarity.Id)
+	egg.Hatching = true
+	incubator.Timer.Text = "Hatching!"
+	hatchedRemote:FireClient(player, creature.DisplayName, egg.Rarity.Id, egg.Part)
+	task.delay(Config.Effects.HatchAnimationTime, finishHatch, incubator, egg, creature)
 end
 
 -- ===== API pública =====
@@ -442,7 +461,7 @@ function IncubatorService.RecalculateTimes(player: Player)
 	local now = os.clock()
 	for _, incubator in getIncubators(player) do
 		local egg = incubator.Egg
-		if egg then
+		if egg and not egg.Hatching then
 			local progress = 1 - math.max(0, egg.HatchAt - now) / egg.TotalTime
 			local newTotal = Config.GetIncubationTime(egg.Rarity, speedLevel(player))
 			egg.TotalTime = newTotal
@@ -460,7 +479,7 @@ function IncubatorService.Init()
 			for _, list in incubatorsByPlayer do
 				for _, incubator in list do
 					local egg = incubator.Egg
-					if egg then
+					if egg and not egg.Hatching then
 						local remaining = egg.HatchAt - now
 						if remaining <= 0 then
 							hatch(incubator)

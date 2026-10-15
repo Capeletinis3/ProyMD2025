@@ -150,6 +150,14 @@ Config.Economy = {
 	IncomeInterval = 1, -- cada cuántos segundos se cobra la plata de las mascotas
 }
 
+-- ===== Efectos e interfaz (fase 6) =====
+Config.Effects = {
+	HatchAnimationTime = 3, -- segundos que el huevo tiembla y brilla antes de abrirse
+	RevealDuration = 3, -- segundos que queda el cartel "You got..." (los Legendary y Secret, uno más)
+	-- Sonidos (podés cambiarlos por IDs de la Creator Store, ej: "rbxassetid://1234567"; "" = sin sonido)
+	HatchSoundId = "rbxasset://sounds/electronicpingshort.wav",
+}
+
 -- ===== Mejoras (fase 4) =====
 Config.Upgrades = {
 	PanelDistance = 12, -- distancia máxima al panel de mejoras para poder comprar (studs)

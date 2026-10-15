@@ -5,12 +5,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Notifier = require(script.Parent.Notifier)
 local IncubatorPrompts = require(script.Parent.IncubatorPrompts)
 local UpgradePanel = require(script.Parent.UpgradePanel)
 local StormClient = require(script.Parent.StormClient)
+local Hud = require(script.Parent.Hud)
+local HatchReveal = require(script.Parent.HatchReveal)
 
 local player = Players.LocalPlayer
 
@@ -18,15 +19,6 @@ local player = Players.LocalPlayer
 Remotes.Event("Notify").OnClientEvent:Connect(function(text: unknown)
 	if typeof(text) == "string" then
 		Notifier.Show(text)
-	end
-end)
-
--- Un huevo se abrió (en la fase 6 esto se reemplaza por la animación de apertura)
-Remotes.Event("Hatched").OnClientEvent:Connect(function(creatureName: unknown, rarityId: unknown)
-	if typeof(creatureName) == "string" and typeof(rarityId) == "string" then
-		local rarity = Config.GetRarity(rarityId)
-		local rarityName = if rarity then string.upper(rarity.DisplayName) else rarityId
-		Notifier.Show(`You got: {creatureName}! {rarityName}`, 6)
 	end
 end)
 
@@ -43,3 +35,5 @@ onBaseChanged()
 IncubatorPrompts.Start()
 UpgradePanel.Start()
 StormClient.Start()
+Hud.Start()
+HatchReveal.Start()
