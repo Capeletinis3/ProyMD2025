@@ -10,14 +10,23 @@ egg-storm/
 ├── rokit.toml                ← versión de Rojo del proyecto (si usás Rokit)
 └── src/
     ├── shared/   → ReplicatedStorage.Shared           (lo ven servidor y cliente)
-    │   └── Config.luau                                 todos los números de balance
+    │   ├── Config.luau                                 todos los números de balance
+    │   ├── Creatures.luau                              catálogo de mascotas
+    │   └── Remotes.luau                                RemoteEvents (servidor ↔ cliente)
     ├── server/   → ServerScriptService.Server          (solo servidor)
     │   ├── Main.server.luau                            arranca los servicios
     │   └── Services/
     │       ├── MapBuilder.luau                         arma el mapa placeholder
-    │       └── BaseService.luau                        asigna/libera bases
+    │       ├── BaseService.luau                        asigna/libera bases
+    │       ├── PlayerDataService.luau                  datos de cada jugador (plata, mascotas...)
+    │       ├── EggService.luau                         lluvia de huevos, agarrar y llevar
+    │       ├── IncubatorService.luau                   incubadoras y apertura de huevos
+    │       ├── CreatureService.luau                    mascotas en la base y plata por segundo
+    │       └── CreatureModels.luau                     modelos placeholder de las mascotas
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
-        └── Main.client.luau
+        ├── Main.client.luau
+        ├── Notifier.luau                               avisos en pantalla
+        └── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
 ```
 
 Convención de nombres de Rojo:

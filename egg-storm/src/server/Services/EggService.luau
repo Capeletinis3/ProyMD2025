@@ -350,6 +350,17 @@ function EggService.GetCarriedEgg(player: Player): Egg?
 	return carriedByPlayer[player]
 end
 
+-- El jugador entrega el huevo que lleva (por ejemplo, a una incubadora). Devuelve su rareza.
+function EggService.TakeCarriedEgg(player: Player): Rarity?
+	local egg = carriedByPlayer[player]
+	if not egg then
+		return nil
+	end
+	local rarity = egg.Rarity
+	destroyEgg(egg)
+	return rarity
+end
+
 -- El jugador pierde el huevo que lleva (muerte, ola, salida del juego).
 function EggService.LoseCarriedEgg(player: Player)
 	local egg = carriedByPlayer[player]

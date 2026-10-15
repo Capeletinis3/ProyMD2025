@@ -11,13 +11,20 @@ export type Base = {
 	SpawnPoint: BasePart,
 	SafeZone: BasePart,
 	SignLabel: TextLabel,
+	Facing: CFrame, -- solo la rotación de la base: su LookVector apunta al pasillo
+	IncubatorSlots: { BasePart }, -- pads de incubadoras, ordenados por SlotIndex
+	CreatureSlots: { BasePart }, -- pads de mascotas, ordenados por SlotIndex
 	Owner: Player?,
 }
+
+type BaseCallback = (player: Player, base: Base) -> ()
 
 local BaseService = {}
 
 local bases: { Base } = {}
 local baseByPlayer: { [Player]: Base } = {}
+local assignedCallbacks: { BaseCallback } = {}
+local releasedCallbacks: { BaseCallback } = {}
 
 local function updateSign(base: Base)
 	local owner = base.Owner
@@ -47,6 +54,16 @@ end
 
 function BaseService.GetBases(): { Base }
 	return bases
+end
+
+-- Registrar funciones que se llaman cuando un jugador recibe su base (cargar datos, armar incubadoras...)
+-- y cuando la suelta (guardar, limpiar). Hay que registrarlas ANTES de llamar a Init.
+function BaseService.OnAssigned(callback: BaseCallback)
+	table.insert(assignedCallbacks, callback)
+end
+
+function BaseService.OnReleased(callback: BaseCallback)
+	table.insert(releasedCallbacks, callback)
 end
 
 -- ¿Este punto está dentro de la zona segura de la base? (lo usa la ola en la fase 5)
@@ -92,6 +109,14 @@ local function assignBase(player: Player): boolean
 	base.Model:SetAttribute("OwnerUserId", player.UserId)
 	player:SetAttribute("BaseId", base.Id) -- el cliente lee este atributo para saber cuál es su base
 	updateSign(base)
+	for _, callback in assignedCallbacks do
+		local ok, err = pcall(function()
+			callback(player, base)
+		end)
+		if not ok then
+			warn(`[BaseService] Error setting up base {base.Id}: {err}`)
+		end
+	end
 	return true
 end
 
@@ -99,6 +124,15 @@ local function releaseBase(player: Player)
 	local base = baseByPlayer[player]
 	if not base then
 		return
+	end
+	-- Primero avisamos (para guardar y limpiar la base) y después la liberamos
+	for _, callback in releasedCallbacks do
+		local ok, err = pcall(function()
+			callback(player, base)
+		end)
+		if not ok then
+			warn(`[BaseService] Error releasing base {base.Id}: {err}`)
+		end
 	end
 	baseByPlayer[player] = nil
 	base.Owner = nil
@@ -118,6 +152,22 @@ local function onPlayerAdded(player: Player)
 	end
 end
 
+-- Junta los pads de una carpeta de la base, ordenados por su número (atributo SlotIndex).
+local function collectSlots(model: Model, folderName: string): { BasePart }
+	local folder = model:FindFirstChild(folderName)
+	assert(folder, `[BaseService] {model.Name} is missing {folderName}`)
+	local slots: { BasePart } = {}
+	for _, child in folder:GetChildren() do
+		if child:IsA("BasePart") and typeof(child:GetAttribute("SlotIndex")) == "number" then
+			table.insert(slots, child)
+		end
+	end
+	table.sort(slots, function(a, b)
+		return (a:GetAttribute("SlotIndex") :: number) < (b:GetAttribute("SlotIndex") :: number)
+	end)
+	return slots
+end
+
 -- Lee las bases del mapa y empieza a escuchar a los jugadores.
 function BaseService.Init(map: Folder)
 	local basesFolder = map:FindFirstChild("Bases")
@@ -135,6 +185,7 @@ function BaseService.Init(map: Folder)
 		assert(spawnPoint and spawnPoint:IsA("BasePart"), `[BaseService] {model.Name} is missing SpawnPoint`)
 		assert(safeZone and safeZone:IsA("BasePart"), `[BaseService] {model.Name} is missing SafeZone`)
 		assert(signLabel and signLabel:IsA("TextLabel"), `[BaseService] {model.Name} is missing SignLabel`)
+		assert(model.PrimaryPart, `[BaseService] {model.Name} has no PrimaryPart`)
 
 		local base: Base = {
 			Id = id,
@@ -142,6 +193,9 @@ function BaseService.Init(map: Folder)
 			SpawnPoint = spawnPoint,
 			SafeZone = safeZone,
 			SignLabel = signLabel,
+			Facing = model.PrimaryPart.CFrame.Rotation,
+			IncubatorSlots = collectSlots(model, "IncubatorSlots"),
+			CreatureSlots = collectSlots(model, "CreatureSlots"),
 			Owner = nil,
 		}
 		table.insert(bases, base)

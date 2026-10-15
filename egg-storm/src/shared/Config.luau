@@ -133,6 +133,18 @@ Config.Eggs = {
 	CarryHeight = 2.5, -- cuántos studs sobre la cabeza se lleva el huevo
 }
 
+-- ===== Incubadoras y plata (fase 3) =====
+Config.Incubators = {
+	HoldTime = 0.3, -- cuánto mantener apretada la tecla para poner el huevo
+	Distance = 12, -- distancia máxima para usar la incubadora (studs)
+	Cooldown = 0.5, -- tiempo mínimo entre intentos (anti-spam)
+}
+
+Config.Economy = {
+	StartingCoins = 0,
+	IncomeInterval = 1, -- cada cuántos segundos se cobra la plata de las mascotas
+}
+
 -- ===== Mejoras (se usan desde la fase 4) =====
 Config.Upgrades = {
 	IncubationSpeed = {
@@ -154,5 +166,22 @@ Config.Storm = {
 	WarningDuration = 10,
 	CalmDuration = 20,
 }
+
+-- ===== Ayudantes =====
+local raritiesById: { [string]: Rarity } = {}
+for _, rarity in Config.Rarities do
+	raritiesById[rarity.Id] = rarity
+end
+
+function Config.GetRarity(id: string): Rarity?
+	return raritiesById[id]
+end
+
+-- Segundos que tarda un huevo de esta rareza con el nivel de "Incubation Speed" dado (con el mínimo aplicado).
+function Config.GetIncubationTime(rarity: Rarity, speedLevel: number): number
+	local levels = Config.Upgrades.IncubationSpeed
+	local level = levels[math.clamp(speedLevel, 1, #levels)]
+	return math.max(Config.Upgrades.MinIncubationTime, rarity.BaseIncubationTime * level.Multiplier)
+end
 
 return Config
