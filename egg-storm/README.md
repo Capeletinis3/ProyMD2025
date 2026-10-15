@@ -20,7 +20,7 @@ egg-storm/
     │   └── Services/
     │       ├── MapBuilder.luau                         arma el mapa placeholder
     │       ├── BaseService.luau                        asigna/libera bases
-    │       ├── PlayerDataService.luau                  datos de cada jugador (plata, mascotas...)
+    │       ├── PlayerDataService.luau                  datos de cada jugador y guardado (DataStore)
     │       ├── EggService.luau                         lluvia de huevos, agarrar y llevar
     │       ├── IncubatorService.luau                   incubadoras y apertura de huevos
     │       ├── CreatureService.luau                    mascotas en la base y plata por segundo
@@ -73,3 +73,5 @@ Convención de nombres de Rojo:
 Hay que publicar el lugar una vez (File → Publish to Roblox) para poder cambiar estas opciones:
 - **Máximo 8 jugadores**: Home → Game Settings → Places → (tu lugar) → Max Players = 8.
 - **Guardado (fase 7)**: Game Settings → Security → activar **Enable Studio Access to API Services**.
+  Sin esto, en Studio se puede jugar igual pero **no se guarda nada** (aparece un aviso amarillo en Output).
+  El lugar tiene que estar publicado en Roblox para que el DataStore funcione.

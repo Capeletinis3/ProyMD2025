@@ -150,6 +150,15 @@ Config.Economy = {
 	IncomeInterval = 1, -- cada cuántos segundos se cobra la plata de las mascotas
 }
 
+-- ===== Guardado (fase 7) =====
+Config.Data = {
+	-- Nombre del DataStore. Si lo cambiás, todos empiezan de cero (los datos viejos quedan en el nombre anterior).
+	StoreName = "EggStorm_PlayerData_v1",
+	AutosaveInterval = 60, -- cada cuántos segundos se guarda a todos los que están jugando
+	MaxAttempts = 4, -- cuántas veces se reintenta si Roblox falla al leer o guardar
+	RetryDelay = 1, -- segundos de espera entre reintentos (va creciendo: 1, 2, 3...)
+}
+
 -- ===== Efectos e interfaz (fase 6) =====
 Config.Effects = {
 	HatchAnimationTime = 3, -- segundos que el huevo tiembla y brilla antes de abrirse
