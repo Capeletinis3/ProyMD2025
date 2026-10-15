@@ -1,6 +1,6 @@
 --!strict
 -- Punto de entrada del servidor: arranca cada servicio en orden.
--- A medida que avancemos de fase se van sumando servicios acá (mejoras, tormenta, guardado...).
+-- A medida que avancemos de fase se van sumando servicios acá (guardado...).
 
 local Services = script.Parent.Services
 local MapBuilder = require(Services.MapBuilder)
@@ -10,6 +10,7 @@ local EggService = require(Services.EggService)
 local CreatureService = require(Services.CreatureService)
 local IncubatorService = require(Services.IncubatorService)
 local UpgradeService = require(Services.UpgradeService)
+local StormService = require(Services.StormService)
 
 local map = MapBuilder.Build()
 
@@ -39,7 +40,7 @@ end)
 -- Init de BaseService va al final: recién ahí empieza a repartir bases (y a llamar a lo de arriba).
 BaseService.Init(map)
 
--- Hasta la fase 5 (ciclo de tormenta) llueven huevos todo el tiempo.
-EggService.SetRaining(true)
+-- El ciclo de tormenta (lluvia → aviso → ola → calma) prende y apaga la lluvia de huevos.
+StormService.Init()
 
 print("[EggStorm] Server ready")

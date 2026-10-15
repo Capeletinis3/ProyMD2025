@@ -185,11 +185,21 @@ Config.Upgrades = {
 	},
 }
 
--- ===== Tormenta (se usa en la fase 5) =====
+-- ===== Tormenta y ola (fase 5) =====
+-- Ciclo: lluvia → aviso → ola → calma → lluvia...
 Config.Storm = {
-	RainDuration = 60,
-	WarningDuration = 10,
-	CalmDuration = 20,
+	RainDuration = 60, -- segundos de lluvia de huevos (cielo oscuro)
+	WarningDuration = 10, -- segundos del cartel "WAVE INCOMING"
+	CalmDuration = 20, -- segundos de calma después de la ola
+
+	WaveSpeed = 70, -- studs por segundo (recorre los 825 studs del pasillo en ~12 s)
+	WaveHeight = 35, -- altura de la pared de agua
+	WaveThickness = 30, -- grosor de la pared de agua
+	RespawnTime = 3, -- segundos hasta reaparecer en tu base después de que te agarra la ola
+
+	-- Sonidos (podés cambiarlos por IDs de la Creator Store, ej: "rbxassetid://1234567"; "" = sin sonido)
+	WarningSoundId = "rbxasset://sounds/electronicpingshort.wav",
+	WaveSoundId = "",
 }
 
 -- ===== Ayudantes =====

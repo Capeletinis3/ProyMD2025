@@ -384,6 +384,20 @@ function EggService.ClearWorldEggs()
 	end
 end
 
+-- Borra los huevos del piso que la ola ya alcanzó (los que están en Z >= frontZ).
+function EggService.ClearWorldEggsBeyond(frontZ: number)
+	for _, egg in eggs do
+		if egg.State ~= "Carried" and egg.Part.Position.Z >= frontZ then
+			destroyEgg(egg)
+		end
+	end
+	for _, child in eggsFolder:GetChildren() do
+		if child.Name == "LandingMarker" and child:IsA("BasePart") and child.Position.Z >= frontZ then
+			child:Destroy()
+		end
+	end
+end
+
 -- Prende/apaga la lluvia de huevos (el ciclo de tormenta de la fase 5 va a usar esto).
 function EggService.SetRaining(on: boolean)
 	raining = on

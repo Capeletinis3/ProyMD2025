@@ -10,6 +10,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Notifier = require(script.Parent.Notifier)
 local IncubatorPrompts = require(script.Parent.IncubatorPrompts)
 local UpgradePanel = require(script.Parent.UpgradePanel)
+local StormClient = require(script.Parent.StormClient)
 
 local player = Players.LocalPlayer
 
@@ -41,3 +42,4 @@ onBaseChanged()
 
 IncubatorPrompts.Start()
 UpgradePanel.Start()
+StormClient.Start()
