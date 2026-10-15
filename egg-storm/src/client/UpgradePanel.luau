@@ -184,13 +184,14 @@ local function build()
 	end
 end
 
--- El prompt "Open" solo se ve en tu propia base
+-- El prompt "Open" solo se ve en tu propia base. El del puesto del lobby (atributo Shared) lo ve cualquiera con base.
 local function setupPrompt(prompt: Instance)
 	if not prompt:IsA("ProximityPrompt") then
 		return
 	end
 	local function updateVisibility()
-		prompt.Enabled = prompt:GetAttribute("BaseId") == player:GetAttribute("BaseId")
+		local myBase = player:GetAttribute("BaseId")
+		prompt.Enabled = if prompt:GetAttribute("Shared") then myBase ~= nil else prompt:GetAttribute("BaseId") == myBase
 	end
 	updateVisibility()
 	player:GetAttributeChangedSignal("BaseId"):Connect(updateVisibility)

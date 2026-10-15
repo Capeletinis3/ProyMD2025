@@ -84,7 +84,7 @@ end })
 -- Instances
 ALL_PARTS = {}
 local Inst = {}
-local PART_CLASSES = { Part = true }
+local PART_CLASSES = { Part = true, TrussPart = true }
 local function isA(self, class)
 	if self.ClassName == class then return true end
 	if class == "BasePart" and PART_CLASSES[self.ClassName] then return true end

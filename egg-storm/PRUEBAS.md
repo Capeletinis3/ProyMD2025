@@ -25,7 +25,7 @@ Hacela en Studio antes de publicar. Tarda unos 15 minutos.
 - [ ] "Skip" lo termina en cualquier momento.
 
 ### Bases
-- [ ] Todas las bases son grises e iguales. Jugador 1 aparece en la base 1 y Jugador 2 en la base 2, cada uno con su nombre en el cartel.
+- [ ] Todas las bases son iguales: piso gris con una estantería de metal azul y techo violeta a rayas. Jugador 1 aparece en la base 1 y Jugador 2 en la base 2, cada uno con su nombre en el cartel (arriba del techo).
 - [ ] Cada uno ve el botón "Open" solo en el panel de su propia base.
 
 ### Huevos
@@ -50,15 +50,20 @@ Hacela en Studio antes de publicar. Tarda unos 15 minutos.
 - [ ] Mantener E vende la mascota: desaparece, sube la plata y baja la plata por segundo.
 - [ ] Con todos los lugares llenos, al querer incubar te avisa que vendas una; después de vender, se puede incubar.
 
+### Lobby
+- [ ] Piso de arena con baldosas, dos burbujas de vidrio con algas en las esquinas.
+- [ ] Cartel colgante a la izquierda de la entrada del pasillo: dice cuánto falta para la tormenta / la ola y si hay evento (cambia solo).
+- [ ] Puesto "UPGRADES" a la derecha: apretando "Open" se abre la ventana de mejoras y se puede comprar desde ahí.
+
 ### Mejoras
 - [ ] La ventana de mejoras se lee bien, sin textos encimados.
 - [ ] Comprar cada mejora: Incubation Speed (el tiempo de un huevo incubando baja), Extra Incubator (aparece la incubadora 2), Walk Speed (corrés más rápido), Base Floor (aparece el segundo piso).
 - [ ] Botón rojo si no te alcanza, "MAX" cuando está al máximo.
-- [ ] Con el segundo piso: subir por la escalera del costado, entrar al piso por el hueco de la baranda y vender una mascota de arriba.
+- [ ] Con el segundo piso: aparece el estante del medio (violeta a rayas). Trepar por la escalera de mano del costado, pasar por el hueco de la baranda y vender una mascota de arriba.
 
 ### Tormenta y ola
 - [ ] Con sol los colores se ven bien vivos. Cielo oscuro y lluvia durante "EGG RAIN".
-- [ ] El pasillo es mucho más largo (1500): carteles 250m, 500m... en las paredes, banderines de colores, caracoles en la arena.
+- [ ] El pasillo es mucho más largo (1500) y parece fondo del mar: piso turquesa, paredes azules con corales y algas arriba, algas, corales, cofres y burbujas a los costados, carteles 250m, 500m...
 - [ ] Caminando normal no llegás al fondo y volvés antes de la ola; con las mejoras de Walk Speed sí.
 - [ ] Cartel "WAVE INCOMING" con cuenta regresiva y pitido.
 - [ ] Jugador 1 en el lobby, Jugador 2 en la arena con un huevo: solo muere Jugador 2, pierde el huevo y reaparece en su base.

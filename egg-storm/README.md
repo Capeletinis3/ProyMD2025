@@ -21,7 +21,7 @@ egg-storm/
     ├── server/   → ServerScriptService.Server          (solo servidor)
     │   ├── Main.server.luau                            arranca los servicios
     │   └── Services/
-    │       ├── MapBuilder.luau                         arma el mapa placeholder
+    │       ├── MapBuilder.luau                         arma el mapa placeholder (playa + mar, bases estantería)
     │       ├── BaseService.luau                        asigna/libera bases
     │       ├── PlayerDataService.luau                  datos de cada jugador y guardado (DataStore)
     │       ├── EggService.luau                         lluvia de huevos (rareza + variante), meteoritos, agarrar y llevar
@@ -29,7 +29,7 @@ egg-storm/
     │       ├── CreatureService.luau                    mascotas en la base, plata por segundo y venta
     │       ├── CreatureModels.luau                     modelos placeholder de las mascotas
     │       ├── UpgradeService.luau                     compra y aplica las mejoras
-    │       ├── BaseFloors.luau                         segundo piso de la base ("Base Floor")
+    │       ├── BaseFloors.luau                         estante del medio de la base ("Base Floor") con su escalera
     │       ├── TutorialService.luau                    pasos del tutorial para jugadores nuevos
     │       ├── LeaderboardService.luau                 tableros de récords del lobby (top 10 de todos los servidores)
     │       ├── EventService.luau                       evento especial de cada tormenta (Golden Rain, Lucky Storm...)
@@ -42,6 +42,7 @@ egg-storm/
         ├── HatchReveal.luau                            animación de apertura y cartel "You got..."
         ├── Tutorial.luau                               cartel del tutorial y flecha que guía
         ├── WelcomeBack.luau                            cartel "Welcome back!" con lo que ganaste mientras no estabas
+        ├── EventBoard.luau                             escribe el cartel colgante del lobby (próxima tormenta y evento)
         ├── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
         ├── SellPrompts.luau                            el botón "Sell" de cada mascota solo lo ve su dueño
         ├── UpgradePanel.luau                           ventana de mejoras

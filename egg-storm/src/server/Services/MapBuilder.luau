@@ -1,5 +1,7 @@
 --!strict
 -- MapBuilder: arma el mapa placeholder con Parts simples (estilo bloques/LEGO, colorido).
+-- Tema mezcla playa + mar: lobby de arena con baldosas; pasillo de agua turquesa entre paredes azul océano
+-- con corales y algas arriba. Las bases son estanterías de metal con pisos a rayas.
 --
 -- Forma del mapa (visto desde arriba, en forma de T), eje Z de abajo hacia arriba:
 --
@@ -43,6 +45,18 @@ local function paletteColor(i: number): Color3
 	return PALETTE[(i - 1) % #PALETTE + 1]
 end
 local ACCENT = Color3.fromRGB(255, 200, 60) -- detalles de las bases (todas grises e iguales)
+-- Estantería de las bases (como en el video de referencia)
+local SHELF_FRAME = Color3.fromRGB(35, 45, 110) -- metal azul oscuro
+local SHELF_DECK = Color3.fromRGB(120, 80, 220) -- pisos violeta...
+local SHELF_STRIPE = Color3.fromRGB(205, 185, 255) -- ...con rayas lila
+local SHELF_LEVEL = 12 -- altura del estante del medio (ahí va el piso 2 de la mejora "Base Floor")
+local SHELF_TOP = 26 -- altura del techo de la estantería
+local CORAL_COLORS = {
+	Color3.fromRGB(255, 110, 150),
+	Color3.fromRGB(255, 150, 70),
+	Color3.fromRGB(190, 100, 255),
+	Color3.fromRGB(255, 215, 80),
+}
 local DISTANCE_MARK_EVERY = 250 -- un cartel "250m", "500m"... cada tantos studs
 local BUNTING_EVERY = 150 -- una tira de banderines cruzando el pasillo cada tantos studs
 
@@ -166,7 +180,7 @@ local function buildBeachBall(position: Vector3, color: Color3, parent: Instance
 end
 
 -- Puesto de playa con toldo a rayas. cframe está a nivel del piso y su frente (-Z) mira al camino.
-local function buildKiosk(cframe: CFrame, stripeColor: Color3, parent: Instance)
+local function buildKiosk(cframe: CFrame, stripeColor: Color3, parent: Instance): Model
 	local kiosk = Instance.new("Model")
 	kiosk.Name = "Kiosk"
 	local wood = Color3.fromRGB(150, 100, 60)
@@ -184,6 +198,7 @@ local function buildKiosk(cframe: CFrame, stripeColor: Color3, parent: Instance)
 		makePart("Awning", Vector3.new(1.8, 0.4, 10), cframe * CFrame.new(-5.4 + i * 1.8, 10.4, -0.6) * CFrame.Angles(math.rad(-12), 0, 0), color, kiosk)
 	end
 	kiosk.Parent = parent
+	return kiosk
 end
 
 -- Torre de guardavidas (cerca del agua)
@@ -214,12 +229,73 @@ local function buildRocks(position: Vector3, rng: Random, parent: Instance)
 	end
 end
 
-local function buildCrates(position: Vector3, rng: Random, parent: Instance)
-	local wood = Color3.fromRGB(170, 120, 70)
-	local yaw = CFrame.Angles(0, rng:NextNumber(0, math.pi), 0)
-	makePart("Crate", Vector3.new(4, 4, 4), CFrame.new(position + Vector3.new(0, 2, 0)) * yaw, wood, parent, true)
-	makePart("Crate", Vector3.new(4, 4, 4), CFrame.new(position + Vector3.new(0, 2, 0)) * yaw * CFrame.new(4.2, 0, 0), wood, parent, true)
-	makePart("Crate", Vector3.new(4, 4, 4), CFrame.new(position + Vector3.new(0, 6, 0)) * yaw * CFrame.new(2, 0, 0) * CFrame.Angles(0, 0.3, 0), wood:Lerp(Color3.new(0, 0, 0), 0.1), parent, true)
+-- Cofre del tesoro (abierto, con monedas)
+local function buildChest(position: Vector3, rng: Random, parent: Instance)
+	local chest = Instance.new("Model")
+	chest.Name = "Chest"
+	local wood = Color3.fromRGB(150, 95, 50)
+	local gold = Color3.fromRGB(255, 205, 60)
+	local base = CFrame.new(position) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+	makePart("ChestBox", Vector3.new(6, 3.5, 4), base * CFrame.new(0, 1.75, 0), wood, chest, true)
+	makePart("ChestBand", Vector3.new(6.2, 0.6, 4.2), base * CFrame.new(0, 2.6, 0), gold, chest)
+	makePart("Coins", Vector3.new(5.4, 0.6, 3.4), base * CFrame.new(0, 3.6, 0), gold, chest).Material = Enum.Material.Foil
+	-- Tapa abierta, inclinada hacia atrás
+	makePart("ChestLid", Vector3.new(6, 0.6, 4), base * CFrame.new(0, 3.5, 2) * CFrame.Angles(math.rad(-70), 0, 0) * CFrame.new(0, 0, -2), wood, chest, true)
+	chest.Parent = parent
+end
+
+-- Coral: unas ramas paradas con una bolita en la punta. scale agranda todo.
+local function buildCoral(position: Vector3, rng: Random, parent: Instance, scale: number?)
+	local k = scale or 1
+	local coral = Instance.new("Model")
+	coral.Name = "Coral"
+	local color = CORAL_COLORS[rng:NextInteger(1, #CORAL_COLORS)]
+	for _ = 1, rng:NextInteger(3, 5) do
+		local height = rng:NextNumber(2, 5) * k
+		local tilt = CFrame.Angles(rng:NextNumber(-0.4, 0.4), 0, rng:NextNumber(-0.4, 0.4))
+		local root = CFrame.new(position + Vector3.new(rng:NextNumber(-1.2, 1.2) * k, 0, rng:NextNumber(-1.2, 1.2) * k)) * tilt
+		local branch = makePart("CoralBranch", Vector3.new(0.8 * k, height, 0.8 * k), root * CFrame.new(0, height / 2, 0), color, coral)
+		branch.CanCollide = false
+		local tip = makePart("CoralTip", Vector3.new(1.4, 1.4, 1.4) * k, root * CFrame.new(0, height, 0), color:Lerp(Color3.new(1, 1, 1), 0.25), coral)
+		tip.Shape = Enum.PartType.Ball
+		tip.CanCollide = false
+	end
+	coral.Parent = parent
+end
+
+-- Algas: tiras verdes altas, un poco torcidas
+local function buildSeaweed(position: Vector3, rng: Random, parent: Instance, scale: number?)
+	local k = scale or 1
+	local seaweed = Instance.new("Model")
+	seaweed.Name = "Seaweed"
+	for _ = 1, rng:NextInteger(3, 5) do
+		local height = rng:NextNumber(5, 10) * k
+		local green = Color3.fromRGB(40, rng:NextInteger(170, 220), 80)
+		local root = CFrame.new(position + Vector3.new(rng:NextNumber(-1.5, 1.5) * k, 0, rng:NextNumber(-1.5, 1.5) * k))
+			* CFrame.Angles(0, rng:NextNumber(0, math.pi), rng:NextNumber(-0.25, 0.25))
+		-- Dos tramos: el de arriba se dobla un poco, como si lo moviera el agua
+		local lower = makePart("Seaweed", Vector3.new(0.7 * k, height / 2, 0.3 * k), root * CFrame.new(0, height / 4, 0), green, seaweed)
+		local upper = makePart("Seaweed", Vector3.new(0.6 * k, height / 2, 0.3 * k), root * CFrame.new(0, height / 2, 0) * CFrame.Angles(0, 0, 0.3) * CFrame.new(0, height / 4, 0), green:Lerp(Color3.new(1, 1, 0.6), 0.2), seaweed)
+		lower.CanCollide = false
+		upper.CanCollide = false
+	end
+	seaweed.Parent = parent
+end
+
+-- Burbuja de vidrio con algas y corales adentro (como en el video de referencia)
+local function buildBubbleDome(position: Vector3, diameter: number, rng: Random, parent: Instance)
+	local dome = Instance.new("Model")
+	dome.Name = "BubbleDome"
+	makeColumn("DomeBase", 1, diameter + 1.5, position, Color3.fromRGB(235, 205, 160), dome)
+	local k = diameter / 18
+	buildSeaweed(position + Vector3.new(-diameter * 0.2, 1, 0), rng, dome, k)
+	buildCoral(position + Vector3.new(diameter * 0.2, 1, diameter * 0.1), rng, dome, k * 1.2)
+	buildCoral(position + Vector3.new(0, 1, -diameter * 0.2), rng, dome, k)
+	local glass = makePart("Glass", Vector3.new(diameter, diameter, diameter), CFrame.new(position + Vector3.new(0, diameter / 2, 0)), Color3.fromRGB(190, 240, 255), dome)
+	glass.Shape = Enum.PartType.Ball
+	glass.Material = Enum.Material.Glass
+	glass.Transparency = 0.65
+	dome.Parent = parent
 end
 
 -- ===== Partes del mapa =====
@@ -235,7 +311,7 @@ local function buildWalls(map: Instance)
 	local nearZ = -LOBBY_DEPTH
 	local pillarColor = cfg.WallColor:Lerp(Color3.new(0, 0, 0), 0.2)
 
-	-- Pared con su borde verde arriba. size/position describen el bloque de la pared.
+	-- Pared azul con su borde de arena arriba. size/position describen el bloque de la pared.
 	local function wall(name: string, size: Vector3, position: Vector3)
 		makePart(name, size, CFrame.new(position), cfg.WallColor, walls, true)
 		makePart("Trim", Vector3.new(size.X + 2, 2, size.Z + 2), CFrame.new(position.X, h + 1, position.Z), cfg.WallTrimColor, walls, true)
@@ -272,6 +348,34 @@ local function buildWalls(map: Instance)
 		end
 	end
 	wall("BackWall", Vector3.new(LOBBY_WIDTH + t * 2, h, t), Vector3.new(0, h / 2, nearZ - t / 2))
+
+	-- Corales y algas arriba de las paredes del pasillo (como un acuario)
+	local rng = Random.new(77)
+	local topY = h + 2
+	for _, side in { -1, 1 } do
+		local x = side * (HALF_WIDTH + t / 2)
+		local z = 15 + (if side > 0 then 20 else 0)
+		while z < farZ do
+			local position = Vector3.new(x, topY, z)
+			if rng:NextNumber() < 0.5 then
+				buildCoral(position, rng, walls, 1.6)
+			else
+				buildSeaweed(position, rng, walls, 1.2)
+			end
+			z += rng:NextNumber(30, 45)
+		end
+	end
+	-- ...y sobre la pared de atrás del lobby
+	local x = -LOBBY_HALF_WIDTH + 15
+	while x < LOBBY_HALF_WIDTH - 10 do
+		local position = Vector3.new(x, topY, nearZ - t / 2)
+		if rng:NextNumber() < 0.5 then
+			buildCoral(position, rng, walls, 1.6)
+		else
+			buildSeaweed(position, rng, walls, 1.2)
+		end
+		x += rng:NextNumber(30, 45)
+	end
 end
 
 -- Faroles entre las bases (y en las puntas), en el borde de adelante de la fila
@@ -318,8 +422,83 @@ local function buildFlowerBed(map: Instance)
 	end
 end
 
+-- Cartel colgante con lo que falta para la tormenta y el evento. Lo escribe cada cliente (EventBoard.luau)
+-- leyendo los atributos de la tormenta; acá solo armamos el cartel con dos renglones vacíos.
+local function buildEventBoard(map: Instance)
+	local model = Instance.new("Model")
+	model.Name = "EventBoard"
+	local metal = Color3.fromRGB(50, 55, 70)
+	local poleX = -(HALF_WIDTH + 37) -- entre la entrada del pasillo y el tablero de récords
+	local z = -6
+	local top = cfg.FloorY + 34
+	makePart("Pole", Vector3.new(1.5, top - cfg.FloorY, 1.5), CFrame.new(poleX, cfg.FloorY + (top - cfg.FloorY) / 2, z), metal, model)
+	makePart("Arm", Vector3.new(34, 1.2, 1.2), CFrame.new(poleX + 17, top - 0.6, z), metal, model)
+	local boardX = poleX + 19
+	for _, dx in { -11, 11 } do
+		makePart("Chain", Vector3.new(0.3, 3, 0.3), CFrame.new(boardX + dx, top - 2.7, z), metal, model)
+	end
+	local position = Vector3.new(boardX, top - 10.2, z)
+	local board = makePart("Board", Vector3.new(30, 11, 1), CFrame.lookAt(position, position + Vector3.new(0, 0, -1)), Color3.fromRGB(25, 28, 40), model)
+	board:SetAttribute("EventBoard", true)
+	local frame = makePart("BoardFrame", Vector3.new(31, 12, 0.6), board.CFrame * CFrame.new(0, 0, 0.1), Color3.fromRGB(80, 200, 255), model)
+	frame.Material = Enum.Material.Neon
+	-- Dos renglones en cada cara (la de adelante mira al lobby, la de atrás al pasillo)
+	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = face
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 30
+		gui.Parent = board
+		for i, name in { "Line1", "Line2" } do
+			local label = Instance.new("TextLabel")
+			label.Name = name
+			label.Size = UDim2.fromScale(0.94, 0.42)
+			label.Position = UDim2.fromScale(0.03, 0.06 + (i - 1) * 0.46)
+			label.BackgroundTransparency = 1
+			label.Font = Enum.Font.FredokaOne
+			label.TextScaled = true
+			label.TextColor3 = Color3.new(1, 1, 1)
+			label.Text = ""
+			label.Parent = gui
+		end
+	end
+	model.Parent = map
+end
+
+-- Puesto de mejoras en el lobby: abre la misma ventana que el panel de cada base (para cualquier jugador con base)
+local function buildUpgradeStall(map: Instance)
+	local stalls = Instance.new("Folder")
+	stalls.Name = "UpgradeStalls"
+	stalls.Parent = map
+	local position = Vector3.new(HALF_WIDTH + 40, cfg.FloorY, -16)
+	local kiosk = buildKiosk(CFrame.new(position), Color3.fromRGB(80, 200, 255), stalls)
+	kiosk.Name = "UpgradeStall"
+	local sign = makePart("StallSign", Vector3.new(15, 4, 0.6), CFrame.lookAt(position + Vector3.new(0, 14, -2), position + Vector3.new(0, 14, -3)), Color3.fromRGB(25, 28, 40), kiosk)
+	addText(sign, Enum.NormalId.Front, "UPGRADES", Color3.fromRGB(255, 220, 80))
+	-- Círculo que brilla delante del mostrador
+	local glow = makeColumn("Glow", 0.2, 10, position + Vector3.new(0, 0.05, -10), Color3.fromRGB(80, 220, 255), kiosk)
+	glow.Material = Enum.Material.Neon
+	glow.Transparency = 0.35
+	glow.CanCollide = false
+
+	local counter = kiosk:FindFirstChild("CounterTop")
+	if counter and counter:IsA("BasePart") then
+		counter:SetAttribute("UpgradeStall", true)
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.ActionText = "Open"
+		prompt.ObjectText = "Upgrades"
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 10
+		prompt.RequiresLineOfSight = false
+		prompt:SetAttribute("Shared", true) -- lo ve cualquiera que tenga base (ver UpgradePanel en el cliente)
+		CollectionService:AddTag(prompt, "UpgradePrompt")
+		prompt.Parent = counter
+	end
+end
+
 local function buildLobby(map: Instance)
-	makePart("LobbyFloor", Vector3.new(LOBBY_WIDTH, 2, LOBBY_DEPTH), CFrame.new(0, cfg.FloorY - 1, -LOBBY_DEPTH / 2), cfg.GrassColor, map, true)
+	-- Piso de arena con baldosas (la superficie Studs le da el dibujito de baldosas)
+	makePart("LobbyFloor", Vector3.new(LOBBY_WIDTH, 2, LOBBY_DEPTH), CFrame.new(0, cfg.FloorY - 1, -LOBBY_DEPTH / 2), cfg.LobbyFloorColor, map, true)
 
 	-- Volumen invisible de toda la zona segura (la ola de la fase 5 no hace nada acá adentro)
 	makeMarker("SafeArea", Vector3.new(LOBBY_WIDTH, 60, LOBBY_DEPTH), CFrame.new(0, cfg.FloorY + 30, -LOBBY_DEPTH / 2), map)
@@ -351,6 +530,15 @@ local function buildLobby(map: Instance)
 
 	buildLamps(map)
 	buildFlowerBed(map)
+
+	-- Burbujas de vidrio con algas en las esquinas de adelante
+	local rng = Random.new(12)
+	for _, side in { -1, 1 } do
+		buildBubbleDome(Vector3.new(side * (LOBBY_HALF_WIDTH - 22), cfg.FloorY, -30), 18, rng, map)
+	end
+
+	buildEventBoard(map)
+	buildUpgradeStall(map)
 
 	-- Tableros de récords en la pared de adelante del lobby, a cada lado de la entrada del pasillo,
 	-- mirando hacia las bases. Los llena LeaderboardService.
@@ -431,10 +619,23 @@ local function buildCorridor(map: Instance)
 
 	local length = cfg.CorridorLength
 
-	-- Piso de arena de un solo color
-	makePart("Sand", Vector3.new(cfg.CorridorWidth, 2, length), CFrame.new(0, cfg.FloorY - 1, length / 2), cfg.SandColor, corridor, true)
+	-- Piso turquesa, como agua bajita, con reflejos más claros
+	makePart("WaterFloor", Vector3.new(cfg.CorridorWidth, 2, length), CFrame.new(0, cfg.FloorY - 1, length / 2), cfg.WaterFloorColor, corridor)
+	local ripples = Instance.new("Folder")
+	ripples.Name = "Ripples"
+	ripples.Parent = corridor
+	local rippleRng = Random.new(5)
+	local rippleColor = cfg.WaterFloorColor:Lerp(Color3.new(1, 1, 1), 0.35)
+	for _ = 1, math.floor(length / 8) do
+		local x = rippleRng:NextNumber(-HALF_WIDTH + 6, HALF_WIDTH - 6)
+		local z = rippleRng:NextNumber(5, length - 5)
+		local ripple = makePart("Ripple", Vector3.new(rippleRng:NextNumber(6, 16), 0.05, rippleRng:NextNumber(1, 2.5)), CFrame.new(x, cfg.FloorY + 0.03, z) * CFrame.Angles(0, rippleRng:NextNumber(-0.3, 0.3), 0), rippleColor, ripples)
+		ripple.CanCollide = false
+		ripple.CanQuery = false
+		ripple.CanTouch = false
+	end
 
-	-- Carteles de distancia en las dos paredes (cuanto más lejos, mejores huevos) y una raya en la arena
+	-- Carteles de distancia en las dos paredes (cuanto más lejos, mejores huevos) y una raya en el piso
 	local mark = 0
 	for z = DISTANCE_MARK_EVERY, length - 50, DISTANCE_MARK_EVERY do
 		mark += 1
@@ -481,14 +682,22 @@ local function buildCorridor(map: Instance)
 		local bag: { string } = {}
 		while z < length - 45 do
 			if #bag == 0 then
-				bag = { "Palm", "Palm", "Umbrella", "Umbrella", "Kiosk", "Rocks", "Crates" }
+				bag = { "Seaweed", "Seaweed", "Coral", "Coral", "Rocks", "Chest", "Umbrella", "Dome" }
 				rng:Shuffle(bag)
 			end
 			local item = table.remove(bag) :: string
 			local position = Vector3.new(side * decorX, cfg.FloorY, z)
-			if item == "Palm" then
-				buildPalm(position + Vector3.new(side * 2, 0, 0), decor)
-				z += 26
+			if item == "Seaweed" then
+				buildSeaweed(position + Vector3.new(side * 4, 0, 0), rng, decor, 1.3)
+				buildSeaweed(position + Vector3.new(-side * 3, 0, 5), rng, decor, 0.9)
+				z += 20
+			elseif item == "Coral" then
+				buildCoral(position + Vector3.new(side * 3, 0, 0), rng, decor, 1.5)
+				buildCoral(position + Vector3.new(-side * 4, 0, 6), rng, decor, 1)
+				z += 20
+			elseif item == "Dome" then
+				buildBubbleDome(position + Vector3.new(side * 2, 0, 0), 11, rng, decor)
+				z += 24
 			elseif item == "Umbrella" then
 				buildUmbrella(position + Vector3.new(side * 3, 0, 0), randomColor(), decor)
 				buildTowel(CFrame.new(position + Vector3.new(-side * 3, 0, 1)) * facing, randomColor(), decor)
@@ -496,14 +705,11 @@ local function buildCorridor(map: Instance)
 					buildBeachBall(position + Vector3.new(-side * 7, 0, -4), randomColor(), decor)
 				end
 				z += 24
-			elseif item == "Kiosk" then
-				buildKiosk(CFrame.new(position + Vector3.new(side * 2, 0, 0)) * facing, randomColor(), decor)
-				z += 26
 			elseif item == "Rocks" then
 				buildRocks(position, rng, decor)
 				z += 18
 			else
-				buildCrates(position, rng, decor)
+				buildChest(position, rng, decor)
 				z += 18
 			end
 		end
@@ -533,14 +739,53 @@ local function makePad(name: string, diameter: number, cframe: CFrame, color: Co
 	return pad
 end
 
+-- Piso de estantería: violeta con rayas lila. cframe es el centro de la cara de arriba.
+-- Las rayas no chocan (son solo dibujo); lo que se pisa es el bloque violeta.
+local function shelfDeck(name: string, size: Vector2, cframe: CFrame, parent: Instance): Part
+	local deck = makePart(name, Vector3.new(size.X, 1, size.Y), cframe * CFrame.new(0, -0.5, 0), SHELF_DECK, parent)
+	local stripeWidth = 2.5
+	local x = -size.X / 2 + stripeWidth / 2
+	while x < size.X / 2 do
+		local stripe = makePart("DeckStripe", Vector3.new(stripeWidth, 0.05, size.Y), cframe * CFrame.new(x, 0.025, 0), SHELF_STRIPE, parent)
+		stripe.CanCollide = false
+		stripe.CanQuery = false
+		x += stripeWidth * 2
+	end
+	return deck
+end
+
+-- Estantería de metal sobre la mitad de atrás de la base (como en el video): columnas, vigas y un techo a rayas.
+-- El estante del medio aparece con la mejora "Base Floor" (lo arma BaseFloors).
+local function buildShelf(model: Model, plotCFrame: CFrame)
+	local shelf = Instance.new("Model")
+	shelf.Name = "Shelf"
+	local w, depth = cfg.PlotWidth, cfg.PlotDepth / 2
+	for _, x in { -w / 2 + 0.6, w / 2 - 0.6 } do
+		for _, z in { 0.6, depth - 0.6 } do
+			makePart("ShelfPost", Vector3.new(1.2, SHELF_TOP, 1.2), plotCFrame * CFrame.new(x, SHELF_TOP / 2, z), SHELF_FRAME, shelf)
+		end
+	end
+	-- Vigas a la altura del estante del medio (adelante, atrás y a los costados)
+	for _, y in { SHELF_LEVEL - 0.5, SHELF_TOP - 0.5 } do
+		for _, z in { 0.6, depth - 0.6 } do
+			makePart("ShelfBeam", Vector3.new(w, 1, 1), plotCFrame * CFrame.new(0, y, z), SHELF_FRAME, shelf)
+		end
+		for _, x in { -w / 2 + 0.6, w / 2 - 0.6 } do
+			makePart("ShelfBeam", Vector3.new(1, 1, depth), plotCFrame * CFrame.new(x, y, depth / 2), SHELF_FRAME, shelf)
+		end
+	end
+	shelfDeck("ShelfRoof", Vector2.new(w + 1, depth + 1), plotCFrame * CFrame.new(0, SHELF_TOP + 1, depth / 2), shelf)
+	shelf.Parent = model
+end
+
 local function buildSign(model: Model, plotCFrame: CFrame)
 	-- Detrás de la base, mirando hacia el pasillo (la cara Front del cartel mira para el mismo lado que la base)
 	local signZ = cfg.PlotDepth / 2 + 4
-	-- Alto, para que se siga viendo por encima del segundo piso ("mejorar base")
+	-- Alto, para que se vea por encima del techo de la estantería
 	for _, x in { -14, 14 } do
-		makePart("SignPost", Vector3.new(1.5, 26, 1.5), plotCFrame * CFrame.new(x, 13, signZ), Color3.fromRGB(90, 60, 40), model)
+		makePart("SignPost", Vector3.new(1.5, SHELF_TOP + 9, 1.5), plotCFrame * CFrame.new(x, (SHELF_TOP + 9) / 2, signZ), SHELF_FRAME, model)
 	end
-	local board = makePart("SignBoard", Vector3.new(32, 8, 1), plotCFrame * CFrame.new(0, 23, signZ), Color3.fromRGB(60, 45, 35), model)
+	local board = makePart("SignBoard", Vector3.new(32, 8, 1), plotCFrame * CFrame.new(0, SHELF_TOP + 6, signZ), Color3.fromRGB(25, 28, 40), model)
 	addText(board, Enum.NormalId.Front, "Free Base", Color3.fromRGB(200, 200, 200), "SignLabel")
 end
 
@@ -628,6 +873,7 @@ local function buildBase(index: number, position: Vector3, parent: Instance): Mo
 	-- Volumen invisible de la base (para saber si alguien está adentro)
 	makeMarker("SafeZone", Vector3.new(w, 30, d), plotCFrame * CFrame.new(0, 15, 0), model)
 
+	buildShelf(model, plotCFrame)
 	buildSign(model, plotCFrame)
 
 	model.Parent = parent

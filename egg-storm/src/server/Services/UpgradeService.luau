@@ -1,11 +1,12 @@
 --!strict
--- UpgradeService: cobra y aplica las mejoras que se compran en el panel de la base.
+-- UpgradeService: cobra y aplica las mejoras que se compran en el panel de la base (o en el puesto del lobby).
 -- El cliente solo dice "quiero comprar X". El servidor revisa TODO antes de cobrar:
--- que el nombre de la mejora exista, que sea tu base, que estés cerca del panel,
+-- que el nombre de la mejora exista, que tengas base, que estés cerca de tu panel o del puesto,
 -- que no esté al máximo, que te alcance la plata y que no estés haciendo spam.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -49,7 +50,22 @@ local function isNearPanel(player: Player, base: Base): boolean
 		return false
 	end
 	-- Un margen extra por el lag
-	return (root.Position - base.UpgradePanel.Position).Magnitude <= Config.Upgrades.PanelDistance + 5
+	local maxDistance = Config.Upgrades.PanelDistance + 5
+	if (root.Position - base.UpgradePanel.Position).Magnitude <= maxDistance then
+		return true
+	end
+	-- Puestos de mejoras del lobby (MapBuilder les pone el atributo UpgradeStall al mostrador)
+	local map = Workspace:FindFirstChild("Map")
+	local stalls = map and map:FindFirstChild("UpgradeStalls")
+	if stalls then
+		for _, stall in stalls:GetChildren() do
+			local counter = stall:FindFirstChild("CounterTop")
+			if counter and counter:IsA("BasePart") and counter:GetAttribute("UpgradeStall") and (root.Position - counter.Position).Magnitude <= maxDistance then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 -- Hace el cambio de la mejora (ya cobrada). Devuelve false si no se pudo aplicar.

@@ -15,6 +15,7 @@ local Hud = require(script.Parent.Hud)
 local HatchReveal = require(script.Parent.HatchReveal)
 local Tutorial = require(script.Parent.Tutorial)
 local WelcomeBack = require(script.Parent.WelcomeBack)
+local EventBoard = require(script.Parent.EventBoard)
 
 local player = Players.LocalPlayer
 
@@ -43,3 +44,4 @@ Hud.Start()
 HatchReveal.Start()
 Tutorial.Start()
 WelcomeBack.Start()
+EventBoard.Start()

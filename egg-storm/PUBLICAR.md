@@ -15,9 +15,10 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 ## 3. Cosas de juego que todavía no están
 - ✅ ~~¿Qué pasa cuando se llenan los 14 lugares de mascotas?~~ **Hecho:** ahora se pueden vender mascotas (mantener E sobre una mascota tuya). El precio está en `Config.Economy.SellValueSeconds`.
 - ✅ ~~Tutorial corto~~ **Hecho:** cartel con el paso a seguir + flecha de luz, se guarda el progreso y se puede saltear.
-- ✅ ~~Escalera al segundo piso~~ **Hecho:** escalera por el costado de afuera de la base, con descanso y pasamanos.
+- ✅ ~~Escalera al segundo piso~~ **Hecho:** escalera de mano por el costado de la estantería de la base.
 - ✅ ~~Ganancia mientras no estás~~ **Hecho:** 50% de lo normal, tope de 8 horas (`Config.Economy.Offline...`).
 - ✅ ~~Tabla de récords~~ **Hecho:** dos tableros en el lobby (plata ganada en total y huevos abiertos), top 10 de todos los servidores.
+- ✅ **Mapa playa + mar** (como el video de referencia): bases estantería, pasillo turquesa con corales y algas, cartel colgante de eventos, puesto de mejoras en el lobby y burbujas de vidrio.
 - ✅ **Pulido:** variantes de huevo (Silver x2, Golden x3, Emerald x5, Diamond x10, Rainbow x25), cualquier rareza en cualquier parte del pasillo (lejos un poco mejor), 4 eventos de tormenta, pasillo de 1500 y mapa más colorido. Todo ajustable en `Config.Variants`, `Config.Events` y `Config.Rarities` (`FarBonus`).
 
 ## 4. Modelos y sonidos (reemplazar los placeholders)

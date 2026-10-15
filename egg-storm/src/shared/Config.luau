@@ -70,11 +70,12 @@ Config.Map = {
 	LobbyFrontWalk = 50, -- espacio para caminar entre las bases y la línea segura
 	LobbyBackMargin = 24, -- espacio detrás de las bases (ahí va el cartel con el nombre)
 
-	GrassColor = Color3.fromRGB(80, 220, 70),
-	SandColor = Color3.fromRGB(240, 215, 160),
-	WallColor = Color3.fromRGB(240, 170, 130),
-	WallTrimColor = Color3.fromRGB(90, 200, 90),
-	SeaColor = Color3.fromRGB(40, 150, 255),
+	-- Mezcla playa + mar: lobby de arena con baldosas, pasillo de agua turquesa entre paredes azul océano
+	LobbyFloorColor = Color3.fromRGB(235, 200, 155),
+	WaterFloorColor = Color3.fromRGB(70, 215, 230),
+	WallColor = Color3.fromRGB(35, 110, 215),
+	WallTrimColor = Color3.fromRGB(235, 205, 160),
+	SeaColor = Color3.fromRGB(20, 90, 220),
 
 	-- Todas las bases son grises e iguales (se distinguen por el cartel con el nombre del dueño)
 	BaseColor = Color3.fromRGB(160, 165, 175),
