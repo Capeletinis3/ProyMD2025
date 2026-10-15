@@ -368,12 +368,13 @@ local PAD_HEIGHT = 0.6 -- altura de la plataforma de la base
 local INCUBATOR_PAD_COLOR = Color3.fromRGB(255, 255, 255)
 
 -- Distribución de los pads dentro de la base (coordenadas locales: -Z = adelante, hacia el pasillo).
--- Adelante: 2 filas de 3 pads grandes para las incubadoras. Atrás: 2 filas de 4 pads para criaturas.
+-- Como en el dibujo: incubadoras en la fila de adelante, mascotas en dos columnas a los costados
+-- y el medio libre para caminar. (El segundo piso con más mascotas llega con "mejorar base" en la fase 4.)
 local INCUBATOR_COLUMNS = { -14, 0, 14 }
-local INCUBATOR_ROWS = { -14, -1 }
+local INCUBATOR_ROWS = { -22 }
 local INCUBATOR_PAD_SIZE = 10
-local CREATURE_COLUMNS = { -16.5, -5.5, 5.5, 16.5 }
-local CREATURE_ROWS = { 13, 24 }
+local CREATURE_COLUMNS = { -15.5, 15.5 }
+local CREATURE_ROWS = { -9, 2, 13, 24 }
 local CREATURE_PAD_SIZE = 8
 assert(#INCUBATOR_COLUMNS * #INCUBATOR_ROWS >= Config.Upgrades.MaxIncubators, "[MapBuilder] Not enough incubator pads for MaxIncubators")
 
@@ -424,29 +425,29 @@ local function buildBase(index: number, position: Vector3, parent: Instance): Mo
 		end
 	end
 
-	-- Pads de criaturas
+	-- Pads de mascotas: columna izquierda de adelante hacia atrás, después la derecha
 	local creatureSlots = Instance.new("Folder")
 	creatureSlots.Name = "CreatureSlots"
 	creatureSlots.Parent = model
 	local creaturePadColor = color:Lerp(Color3.new(0, 0, 0), 0.4)
 	slot = 0
-	for _, z in CREATURE_ROWS do
-		for _, x in CREATURE_COLUMNS do
+	for _, x in CREATURE_COLUMNS do
+		for _, z in CREATURE_ROWS do
 			slot += 1
 			local pad = makePad(`CreatureSlot{slot}`, CREATURE_PAD_SIZE, plotCFrame * CFrame.new(x, surfaceY + 0.15, z), creaturePadColor, creatureSlots)
 			pad:SetAttribute("SlotIndex", slot)
 		end
 	end
 
-	-- Lugar donde aparece el jugador (adelante, en el centro)
-	local spawnPoint = makePart("SpawnPoint", Vector3.new(8, 0.2, 8), plotCFrame * CFrame.new(0, surfaceY + 0.1, -d / 2 + 6), Color3.new(1, 1, 1), model)
+	-- Lugar donde aparece el jugador (en el medio libre, mirando al pasillo)
+	local spawnPoint = makePart("SpawnPoint", Vector3.new(8, 0.2, 8), plotCFrame * CFrame.new(0, surfaceY + 0.1, -6), Color3.new(1, 1, 1), model)
 	spawnPoint.Transparency = 0.5
 	spawnPoint.CanCollide = false
 	spawnPoint.CanQuery = false
 	spawnPoint.Material = Enum.Material.Neon
 
-	-- Lugar reservado para el panel de mejoras (fase 4): esquina de adelante a la derecha
-	makeMarker("UpgradeSpot", Vector3.new(1, 1, 1), plotCFrame * CFrame.new(w / 2 - 6, surfaceY, -d / 2 + 5), model)
+	-- Lugar reservado para el panel de mejoras (fase 4): atrás, en el medio
+	makeMarker("UpgradeSpot", Vector3.new(1, 1, 1), plotCFrame * CFrame.new(0, surfaceY, d / 2 - 6), model)
 
 	-- Volumen invisible de la base (para saber si alguien está adentro)
 	makeMarker("SafeZone", Vector3.new(w, 30, d), plotCFrame * CFrame.new(0, 15, 0), model)

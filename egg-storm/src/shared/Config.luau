@@ -43,8 +43,8 @@ Config.Map = {
 	EggSideMargin = 25, -- los huevos no caen en la franja de decoración junto a las paredes
 
 	BaseCount = 8, -- todas en una fila, mirando hacia el pasillo
-	PlotWidth = 48, -- ancho de cada parcela
-	PlotDepth = 60, -- profundidad de cada parcela (adelante incubadoras, atrás criaturas)
+	PlotWidth = 44, -- ancho de cada parcela
+	PlotDepth = 60, -- profundidad de cada parcela (incubadoras adelante, mascotas a los costados)
 	PlotGap = 16, -- espacio entre parcelas (y entre las parcelas de las puntas y la pared)
 	LobbyFrontWalk = 50, -- espacio para caminar entre las bases y la línea segura
 	LobbyBackMargin = 24, -- espacio detrás de las bases (ahí va el cartel con el nombre)
@@ -145,7 +145,7 @@ Config.Upgrades = {
 	MinIncubationTime = 5, -- segundos: ningún huevo tarda menos que esto
 
 	StartingIncubators = 1,
-	MaxIncubators = 6,
+	MaxIncubators = 3,
 }
 
 -- ===== Tormenta (se usa en la fase 5) =====
