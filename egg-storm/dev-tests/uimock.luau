@@ -96,7 +96,7 @@ function DUMP_GUI(root)
 			tostring(bt), tostring(hasCorner),
 			text and text:gsub("\t", " ") or "",
 			tc and string.format("%.3f,%.3f,%.3f", tc.R, tc.G, tc.B) or "-",
-			tostring((obj.TextSize or 14) * s),
+			tostring(if obj.TextScaled and text then math.min(h * 0.8, w / math.max(1, utf8.len(text) or #text) / 0.6) else (obj.TextSize or 14) * s),
 			tostring(obj.TextXAlignment or ""), tostring(s),
 			obj.Name .. "|" .. tostring(obj.Rotation or 0)))
 		for _, c in obj:GetChildren() do walk(c, x, y, w, h, s, true) end

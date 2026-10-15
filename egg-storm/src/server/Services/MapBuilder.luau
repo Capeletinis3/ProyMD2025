@@ -4,8 +4,8 @@
 -- Forma del mapa (visto desde arriba, en forma de T), eje Z de abajo hacia arriba:
 --
 --             ┌──── agua (de acá sale la ola) ────┐         Z = CorridorLength + SeaDepth
---             │  SECRET / LEGENDARY / EPIC / ...  │         pasillo de arena (peligro)
---             │  ... / RARE / COMMON zones        │
+--             │  1250m  (cuanto más lejos, mejor) │         pasillo de arena (peligro), con carteles
+--             │  250m · 500m · 750m · 1000m ...   │         de distancia y banderines de colores
 --   ┌─────────┴──────── arco "SAFE ZONE" ─────────┴────────┐ Z = 0  (línea segura)
 --   │  ↑     ↑     ↑     ↑     ↑     ↑     ↑     ↑        │ lobby verde (seguro)
 --   │ [B1]  [B2]  [B3]  [B4]  [B5]  [B6]  [B7]  [B8]       │ bases mirando al pasillo
@@ -29,6 +29,22 @@ local HALF_WIDTH = cfg.CorridorWidth / 2
 local LOBBY_WIDTH = math.max(cfg.BaseCount * cfg.PlotWidth + (cfg.BaseCount + 1) * cfg.PlotGap, cfg.CorridorWidth)
 local LOBBY_HALF_WIDTH = LOBBY_WIDTH / 2
 local LOBBY_DEPTH = cfg.LobbyFrontWalk + cfg.PlotDepth + cfg.LobbyBackMargin
+
+-- Colores fuertes para la decoración (se van alternando)
+local PALETTE = {
+	Color3.fromRGB(255, 80, 120), -- rosa
+	Color3.fromRGB(80, 170, 255), -- celeste
+	Color3.fromRGB(255, 200, 60), -- amarillo
+	Color3.fromRGB(180, 90, 255), -- violeta
+	Color3.fromRGB(80, 220, 120), -- verde
+	Color3.fromRGB(255, 140, 60), -- naranja
+}
+local function paletteColor(i: number): Color3
+	return PALETTE[(i - 1) % #PALETTE + 1]
+end
+local ACCENT = Color3.fromRGB(255, 200, 60) -- detalles de las bases (todas grises e iguales)
+local DISTANCE_MARK_EVERY = 250 -- un cartel "250m", "500m"... cada tantos studs
+local BUNTING_EVERY = 150 -- una tira de banderines cruzando el pasillo cada tantos studs
 
 -- ===== Ayudantes =====
 
@@ -229,10 +245,17 @@ local function buildWalls(map: Instance)
 	local corridorLength = farZ + t
 	for _, side in { -1, 1 } do
 		wall("CorridorWall", Vector3.new(t, h, corridorLength), Vector3.new(side * (HALF_WIDTH + t / 2), h / 2, corridorLength / 2))
-		-- Columnas más oscuras cada tanto para que la pared no sea un bloque liso
+		-- Columnas cada tanto, y entre columna y columna una franja de color (cada tramo de otro color)
 		local z = 30
+		local i = 0
 		while z < farZ do
+			i += 1
 			makePart("Pillar", Vector3.new(2, h, 6), CFrame.new(side * (HALF_WIDTH - 1), h / 2, z), pillarColor, walls, true)
+			local stripeLength = math.min(54, farZ - z - 3)
+			if stripeLength > 4 then
+				local stripe = makePart("Stripe", Vector3.new(0.6, 5, stripeLength), CFrame.new(side * (HALF_WIDTH - 0.3), 9, z + 3 + stripeLength / 2), paletteColor(i), walls)
+				stripe.CanCollide = false
+			end
 			z += 60
 		end
 	end
@@ -251,6 +274,50 @@ local function buildWalls(map: Instance)
 	wall("BackWall", Vector3.new(LOBBY_WIDTH + t * 2, h, t), Vector3.new(0, h / 2, nearZ - t / 2))
 end
 
+-- Faroles entre las bases (y en las puntas), en el borde de adelante de la fila
+local function buildLamps(map: Instance)
+	local lamps = Instance.new("Folder")
+	lamps.Name = "Lamps"
+	lamps.Parent = map
+	local rowWidth = cfg.BaseCount * cfg.PlotWidth + (cfg.BaseCount - 1) * cfg.PlotGap
+	local z = -cfg.LobbyFrontWalk + 2
+	for i = 0, cfg.BaseCount do
+		local x = -rowWidth / 2 - cfg.PlotGap / 2 + i * (cfg.PlotWidth + cfg.PlotGap)
+		local bottom = Vector3.new(x, cfg.FloorY, z)
+		makeColumn("LampPost", 12, 0.8, bottom, Color3.fromRGB(60, 60, 75), lamps)
+		local bulb = makePart("LampBulb", Vector3.new(2.4, 2.4, 2.4), CFrame.new(bottom + Vector3.new(0, 13, 0)), paletteColor(i + 1), lamps)
+		bulb.Shape = Enum.PartType.Ball
+		bulb.Material = Enum.Material.Neon
+		local light = Instance.new("PointLight")
+		light.Color = bulb.Color
+		light.Range = 16
+		light.Brightness = 1.5
+		light.Parent = bulb
+	end
+end
+
+-- Cantero de flores de colores a lo largo de la pared de atrás del lobby
+local function buildFlowerBed(map: Instance)
+	local bed = Instance.new("Folder")
+	bed.Name = "FlowerBed"
+	bed.Parent = map
+	local z = -LOBBY_DEPTH + 3.5
+	local width = LOBBY_WIDTH - 4
+	makePart("Soil", Vector3.new(width, 1, 5), CFrame.new(0, cfg.FloorY + 0.5, z), Color3.fromRGB(110, 70, 45), bed)
+	local rng = Random.new(7)
+	local x = -width / 2 + 2
+	while x < width / 2 - 2 do
+		local position = Vector3.new(x, cfg.FloorY + 1, z + rng:NextNumber(-1.2, 1.2))
+		local stemHeight = rng:NextNumber(1.5, 3)
+		local stem = makePart("Stem", Vector3.new(0.3, stemHeight, 0.3), CFrame.new(position + Vector3.new(0, stemHeight / 2, 0)), Color3.fromRGB(60, 170, 60), bed)
+		stem.CanCollide = false
+		local flower = makePart("Flower", Vector3.new(1.6, 1.6, 1.6), CFrame.new(position + Vector3.new(0, stemHeight + 0.5, 0)), PALETTE[rng:NextInteger(1, #PALETTE)], bed)
+		flower.Shape = Enum.PartType.Ball
+		flower.CanCollide = false
+		x += rng:NextNumber(2.5, 4)
+	end
+end
+
 local function buildLobby(map: Instance)
 	makePart("LobbyFloor", Vector3.new(LOBBY_WIDTH, 2, LOBBY_DEPTH), CFrame.new(0, cfg.FloorY - 1, -LOBBY_DEPTH / 2), cfg.GrassColor, map, true)
 
@@ -264,8 +331,13 @@ local function buildLobby(map: Instance)
 
 	-- Arco con el cartel SAFE ZONE / DANGER ZONE
 	local archHeight = 34
+	-- Columnas a rayas de colores, como un caramelo
+	local segment = archHeight / 8
 	for _, side in { -1, 1 } do
-		makePart("ArchPillar", Vector3.new(4, archHeight, 4), CFrame.new(side * (HALF_WIDTH - 4), cfg.FloorY + archHeight / 2, 0), Color3.fromRGB(255, 255, 255), map, true)
+		for i = 1, 8 do
+			local color = if i % 2 == 0 then Color3.new(1, 1, 1) else paletteColor((i + 1) // 2)
+			makePart("ArchPillar", Vector3.new(4, segment, 4), CFrame.new(side * (HALF_WIDTH - 4), cfg.FloorY + (i - 0.5) * segment, 0), color, map, true)
+		end
 	end
 	-- La cara Front de esta Part mira al lobby y la Back mira al pasillo
 	local beam = makePart("ArchSign", Vector3.new(cfg.CorridorWidth - 4, 10, 3), CFrame.lookAt(Vector3.new(0, cfg.FloorY + archHeight + 3, 0), Vector3.new(0, cfg.FloorY + archHeight + 3, -1)), Color3.fromRGB(40, 40, 50), map)
@@ -276,6 +348,9 @@ local function buildLobby(map: Instance)
 	for _, side in { -1, 1 } do
 		buildPalm(Vector3.new(side * (LOBBY_HALF_WIDTH - 12), cfg.FloorY, -10), map)
 	end
+
+	buildLamps(map)
+	buildFlowerBed(map)
 
 	-- Tableros de récords en la pared de adelante del lobby, a cada lado de la entrada del pasillo,
 	-- mirando hacia las bases. Los llena LeaderboardService.
@@ -296,6 +371,59 @@ local function buildLobby(map: Instance)
 	end
 end
 
+-- Tiras de banderines de colores que cruzan el pasillo, de pared a pared
+local function buildBunting(corridor: Instance, length: number)
+	local bunting = Instance.new("Folder")
+	bunting.Name = "Bunting"
+	bunting.Parent = corridor
+	local y = cfg.FloorY + 50
+	local i = 0
+	for z = 80, length - 40, BUNTING_EVERY do
+		local rope = makePart("Rope", Vector3.new(cfg.CorridorWidth, 0.3, 0.3), CFrame.new(0, y, z), Color3.new(1, 1, 1), bunting)
+		rope.CanCollide = false
+		rope.CanQuery = false
+		local x = -HALF_WIDTH + 6
+		while x < HALF_WIDTH - 4 do
+			i += 1
+			-- Un cuadrado girado 45° colgando de una punta parece un banderín
+			local flag = makePart("Flag", Vector3.new(3, 3, 0.2), CFrame.new(x, y - 2.1, z) * CFrame.Angles(0, 0, math.rad(45)), paletteColor(i), bunting)
+			flag.CanCollide = false
+			flag.CanQuery = false
+			x += 8
+		end
+	end
+end
+
+-- Caracoles y estrellas de mar de colores tirados en la arena (no molestan al caminar)
+local function buildShells(corridor: Instance, length: number)
+	local shells = Instance.new("Folder")
+	shells.Name = "Shells"
+	shells.Parent = corridor
+	local rng = Random.new(31)
+	for _ = 1, math.floor(length / 10) do
+		local x = rng:NextNumber(-HALF_WIDTH + 4, HALF_WIDTH - 4)
+		local z = rng:NextNumber(10, length - 5)
+		local color = PALETTE[rng:NextInteger(1, #PALETTE)]
+		local base = CFrame.new(x, cfg.FloorY, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+		local parts: { Part } = {}
+		if rng:NextNumber() < 0.7 then
+			local shell = makePart("Shell", Vector3.new(1.6, 0.7, 1.4), base * CFrame.new(0, 0.3, 0), color, shells)
+			shell.Shape = Enum.PartType.Ball
+			table.insert(parts, shell)
+		else
+			-- Estrella de mar: 5 brazos
+			for arm = 0, 4 do
+				table.insert(parts, makePart("Starfish", Vector3.new(0.6, 0.25, 1.6), base * CFrame.Angles(0, math.rad(arm * 72), 0) * CFrame.new(0, 0.12, -0.7), color, shells))
+			end
+		end
+		for _, part in parts do
+			part.CanCollide = false
+			part.CanQuery = false
+			part.CanTouch = false
+		end
+	end
+end
+
 local function buildCorridor(map: Instance)
 	local corridor = Instance.new("Folder")
 	corridor.Name = "Corridor"
@@ -306,19 +434,28 @@ local function buildCorridor(map: Instance)
 	-- Piso de arena de un solo color
 	makePart("Sand", Vector3.new(cfg.CorridorWidth, 2, length), CFrame.new(0, cfg.FloorY - 1, length / 2), cfg.SandColor, corridor, true)
 
-	-- Carteles de cada zona en las dos paredes, mirando hacia el centro del pasillo
-	for _, rarity in Config.Rarities do
-		local z0 = rarity.ZoneStart * length
+	-- Carteles de distancia en las dos paredes (cuanto más lejos, mejores huevos) y una raya en la arena
+	local mark = 0
+	for z = DISTANCE_MARK_EVERY, length - 50, DISTANCE_MARK_EVERY do
+		mark += 1
+		local farthest = z + DISTANCE_MARK_EVERY > length - 50
 		for _, side in { -1, 1 } do
 			-- Separado de la pared lo suficiente para quedar delante de las columnas
-			local signPos = Vector3.new(side * (HALF_WIDTH - 2.6), cfg.FloorY + 26, z0 + 18)
-			local sign = makePart("ZoneSign", Vector3.new(30, 8, 1), CFrame.lookAt(signPos, signPos - Vector3.new(side, 0, 0)), Color3.fromRGB(40, 40, 50), corridor)
-			local label = addText(sign, Enum.NormalId.Front, `{string.upper(rarity.DisplayName)} ZONE`, if rarity.Id == "Secret" then Color3.new(1, 1, 1) else rarity.Color)
-			if rarity.Id == "Secret" then
+			local signPos = Vector3.new(side * (HALF_WIDTH - 2.6), cfg.FloorY + 26, z)
+			local sign = makePart("DistanceSign", Vector3.new(22, 9, 1), CFrame.lookAt(signPos, signPos - Vector3.new(side, 0, 0)), Color3.fromRGB(40, 40, 50), corridor)
+			local label = addText(sign, Enum.NormalId.Front, `{z}m`, if farthest then Color3.new(1, 1, 1) else paletteColor(mark))
+			if farthest then
 				addRainbow(label)
 			end
 		end
+		local line = makePart("DistanceLine", Vector3.new(cfg.CorridorWidth - 2 * cfg.EggSideMargin, 0.1, 1.5), CFrame.new(0, cfg.FloorY + 0.05, z), paletteColor(mark), corridor)
+		line.CanCollide = false
+		line.CanQuery = false
+		line.Transparency = 0.3
 	end
+
+	buildBunting(corridor, length)
+	buildShells(corridor, length)
 
 	-- Agua al fondo
 	local sea = makePart("Sea", Vector3.new(cfg.CorridorWidth, 2, cfg.SeaDepth), CFrame.new(0, cfg.FloorY - 1.5, length + cfg.SeaDepth / 2), cfg.SeaColor, corridor)
@@ -331,16 +468,8 @@ local function buildCorridor(map: Instance)
 	decor.Name = "Decor"
 	decor.Parent = corridor
 	local rng = Random.new(2025)
-	local colors = {
-		Color3.fromRGB(255, 80, 120),
-		Color3.fromRGB(80, 170, 255),
-		Color3.fromRGB(255, 200, 60),
-		Color3.fromRGB(180, 90, 255),
-		Color3.fromRGB(80, 220, 120),
-		Color3.fromRGB(255, 140, 60),
-	}
 	local function randomColor(): Color3
-		return colors[rng:NextInteger(1, #colors)]
+		return PALETTE[rng:NextInteger(1, #PALETTE)]
 	end
 
 	local decorX = HALF_WIDTH - 13 -- centro de la franja de decoración
@@ -445,7 +574,7 @@ end
 local function buildBase(index: number, position: Vector3, parent: Instance): Model
 	-- Mirando hacia el pasillo (+Z del mundo). En coordenadas locales: -Z = adelante, +Z = atrás.
 	local plotCFrame = CFrame.lookAt(position, position + Vector3.new(0, 0, 1))
-	local color = cfg.BaseColors[index] or Color3.new(1, 1, 1)
+	local color = cfg.BaseColor
 	local w, d = cfg.PlotWidth, cfg.PlotDepth
 
 	local model = Instance.new("Model")
@@ -453,7 +582,7 @@ local function buildBase(index: number, position: Vector3, parent: Instance): Mo
 	model:SetAttribute("BaseId", index)
 	model:SetAttribute("OwnerUserId", 0)
 
-	-- Piso del color de la base, con un borde más oscuro
+	-- Piso gris (todas las bases iguales), con un borde más oscuro
 	local edge = makePart("Edge", Vector3.new(w, PAD_HEIGHT, d), plotCFrame * CFrame.new(0, PAD_HEIGHT / 2, 0), color:Lerp(Color3.new(0, 0, 0), 0.25), model, true)
 	model.PrimaryPart = edge
 	makePart("Floor", Vector3.new(w - 3, 0.1, d - 3), plotCFrame * CFrame.new(0, PAD_HEIGHT + 0.05, 0), color, model, true)
@@ -476,7 +605,7 @@ local function buildBase(index: number, position: Vector3, parent: Instance): Mo
 	local creatureSlots = Instance.new("Folder")
 	creatureSlots.Name = "CreatureSlots"
 	creatureSlots.Parent = model
-	local creaturePadColor = color:Lerp(Color3.new(0, 0, 0), 0.4)
+	local creaturePadColor = color:Lerp(Color3.new(0, 0, 0), 0.3)
 	slot = 0
 	for _, x in CREATURE_COLUMNS do
 		for _, z in CREATURE_ROWS do
@@ -494,7 +623,7 @@ local function buildBase(index: number, position: Vector3, parent: Instance): Mo
 	spawnPoint.Material = Enum.Material.Neon
 
 	-- Panel de mejoras: atrás, en el medio
-	buildUpgradePanel(model, index, plotCFrame * CFrame.new(0, surfaceY, d / 2 - 6), color)
+	buildUpgradePanel(model, index, plotCFrame * CFrame.new(0, surfaceY, d / 2 - 6), ACCENT)
 
 	-- Volumen invisible de la base (para saber si alguien está adentro)
 	makeMarker("SafeZone", Vector3.new(w, 30, d), plotCFrame * CFrame.new(0, 15, 0), model)

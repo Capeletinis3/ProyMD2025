@@ -1,12 +1,14 @@
 --!strict
 -- Hud: lo que siempre está en pantalla.
 --   Abajo a la izquierda: tu plata (salta cuando sube) y cuánto ganás por segundo.
---   Arriba de la plata: qué huevo estás llevando (con el color de su rareza).
--- Lee los atributos que publica el servidor: Coins, Income y CarriedEggRarity.
+--   Arriba de la plata: qué huevo estás llevando (con el color de su rareza o variante).
+-- Lee los atributos que publica el servidor: Coins, Income, CarriedEggRarity y CarriedEggVariant,
+-- y StormEvent de Workspace (en "Double Coins" la plata por segundo se muestra x2).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -41,7 +43,12 @@ local function onCoinsChanged()
 end
 
 local function onIncomeChanged()
-	incomeLabel.Text = `+{Format.Number(number("Income"))} / sec`
+	local doubled = Workspace:GetAttribute("StormEvent") == "DoubleCoins"
+	local income = number("Income") * (if doubled then Config.Events.DoubleCoinsMultiplier else 1)
+	incomeLabel.Text = if doubled
+		then `+{Format.Compact(income)} / sec  (x{Config.Events.DoubleCoinsMultiplier}!)`
+		else `+{Format.Compact(income)} / sec`
+	incomeLabel.TextColor3 = if doubled then Color3.fromRGB(255, 200, 60) else Color3.fromRGB(130, 255, 130)
 end
 
 local function onCarryChanged()
@@ -49,8 +56,12 @@ local function onCarryChanged()
 	local rarity = if typeof(rarityId) == "string" then Config.GetRarity(rarityId) else nil
 	carryPill.Visible = rarity ~= nil
 	if rarity then
-		carryLabel.Text = `🥚 Carrying: {rarity.DisplayName} Egg`
-		carryLabel.TextColor3 = if rarity.Id == "Secret" then Color3.fromRGB(230, 200, 255) else rarity.Color
+		local variantId = player:GetAttribute("CarriedEggVariant")
+		local variant = Config.GetVariant(if typeof(variantId) == "string" then variantId else nil)
+		carryLabel.Text = `🥚 Carrying: {Config.WithVariant(variant, rarity.DisplayName .. " Egg")}`
+		carryLabel.TextColor3 = if variant.Id ~= "Normal" then variant.Color
+			elseif rarity.Id == "Secret" then Color3.fromRGB(230, 200, 255)
+			else rarity.Color
 	end
 end
 
@@ -104,6 +115,8 @@ function Hud.Start()
 	player:GetAttributeChangedSignal("Coins"):Connect(onCoinsChanged)
 	player:GetAttributeChangedSignal("Income"):Connect(onIncomeChanged)
 	player:GetAttributeChangedSignal("CarriedEggRarity"):Connect(onCarryChanged)
+	player:GetAttributeChangedSignal("CarriedEggVariant"):Connect(onCarryChanged)
+	Workspace:GetAttributeChangedSignal("StormEvent"):Connect(onIncomeChanged)
 	lastCoins = number("Coins")
 	onCoinsChanged()
 	onIncomeChanged()

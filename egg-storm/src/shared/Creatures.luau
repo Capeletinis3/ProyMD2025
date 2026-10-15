@@ -60,13 +60,14 @@ end
 
 -- Cuánta plata por segundo dan, en total, estas mascotas (lista como la del perfil del jugador).
 -- Lo usan el cobro normal (CreatureService) y la ganancia mientras no estás (PlayerDataService).
-function Creatures.TotalIncome(list: { { CreatureId: string, Slot: number } }): number
+-- La variante (Silver, Golden...) multiplica lo que da cada una.
+function Creatures.TotalIncome(list: { { CreatureId: string, Slot: number, Variant: string } }): number
 	local total = 0
 	for _, entry in list do
 		local creature = byId[entry.CreatureId]
 		local rarity = creature and Config.GetRarity(creature.RarityId)
 		if rarity then
-			total += rarity.CoinsPerSecond
+			total += Config.GetIncome(rarity, Config.GetVariant(entry.Variant))
 		end
 	end
 	return total

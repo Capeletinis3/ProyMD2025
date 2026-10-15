@@ -17,10 +17,13 @@ python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_sell.luau     # vende
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tutorial.luau # tutorial
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_offline.luau  # ganancia mientras no estás
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_leaderboard.luau # tablas de récords
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_variants.luau # variantes, chances por distancia, eventos, meteoritos
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_events.luau   # cada tormenta sortea su evento
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_stairs.luau > salida.txt   # escalera del piso 2
 python3 dev-tests/render_parts.py salida.txt escalera.png                            # dibujo de la escalera
 python3 dev-tests/bundle.py src <ruta-a-luau> mapa.png                   # dibujo del mapa desde arriba
 python3 dev-tests/ui_render.py src <ruta-a-luau> dev-tests/ui_upgrades.luau mejoras.png 1280 720   # interfaz
+python3 dev-tests/ui_render.py src <ruta-a-luau> dev-tests/ui_event.luau evento.png 1280 720         # cartel de evento
 ```
 
 Cada prueba termina con `ALL PASSED` o con la lista de lo que falló.

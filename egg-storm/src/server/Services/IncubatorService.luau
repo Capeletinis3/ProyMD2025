@@ -3,7 +3,7 @@
 -- El jugador llega con un huevo, aprieta "Incubate", el huevo queda adentro con una cuenta regresiva
 -- y al terminar se abre: sale una mascota que va a un pad libre de la base.
 --
--- Cada huevo incubando es un objeto del servidor (IncubatingEgg) con su dueño, rareza y tiempo.
+-- Cada huevo incubando es un objeto del servidor (IncubatingEgg) con su dueño, rareza, variante y tiempo.
 -- Así más adelante es fácil agregar el robo: alcanza con sacar el IncubatingEgg de una incubadora.
 
 local CollectionService = game:GetService("CollectionService")
@@ -20,11 +20,13 @@ local Creatures = require(ReplicatedStorage.Shared.Creatures)
 
 type Base = BaseService.Base
 type Rarity = Config.Rarity
+type Variant = Config.Variant
 
 export type IncubatingEgg = {
 	Id: number,
 	Owner: Player,
 	Rarity: Rarity,
+	Variant: Variant,
 	TotalTime: number, -- segundos que tarda en total (con la mejora de velocidad aplicada)
 	HatchAt: number, -- os.clock() en el que se abre
 	Part: BasePart,
@@ -223,32 +225,29 @@ local function speedLevel(player: Player): number
 	return if profile then profile.IncubationSpeedLevel else 1
 end
 
-local function startIncubation(incubator: Incubator, rarity: Rarity, remaining: number?)
+local function startIncubation(incubator: Incubator, rarity: Rarity, variant: Variant, remaining: number?)
 	local total = Config.GetIncubationTime(rarity, speedLevel(incubator.Owner))
 	local left = math.clamp(remaining or total, 0, total)
 
 	local eggPart = makePart("Egg", Vector3.new(2.4, 3.2, 2.4), CFrame.new(incubator.Dome.Position), rarity.Color, incubator.Model)
 	eggPart.CanCollide = false
-	local mesh = Instance.new("SpecialMesh")
-	mesh.MeshType = Enum.MeshType.Sphere
-	mesh.Parent = eggPart
-	local light = Instance.new("PointLight")
-	light.Color = if rarity.Id == "Secret" then Color3.new(1, 1, 1) else rarity.Color
-	light.Range = 8
-	light.Parent = eggPart
+	EggService.DecorateEgg(eggPart, rarity, variant) -- mismo color, material y brillo que en la arena
 
 	nextEggId += 1
 	incubator.Egg = {
 		Id = nextEggId,
 		Owner = incubator.Owner,
 		Rarity = rarity,
+		Variant = variant,
 		TotalTime = total,
 		HatchAt = os.clock() + left,
 		Part = eggPart :: BasePart,
 		Hatching = false,
 	}
-	incubator.Title.Text = `{rarity.DisplayName} Egg`
-	incubator.Title.TextColor3 = if rarity.Id == "Secret" then Color3.fromRGB(230, 230, 230) else rarity.Color
+	incubator.Title.Text = Config.WithVariant(variant, `{rarity.DisplayName} Egg`)
+	incubator.Title.TextColor3 = if variant.Id ~= "Normal" then variant.Color
+		elseif rarity.Id == "Secret" then Color3.fromRGB(230, 230, 230)
+		else rarity.Color
 	incubator.Timer.Text = formatTime(left)
 	incubator.Prompt:SetAttribute("Available", false)
 end
@@ -284,7 +283,7 @@ local function finishHatch(incubator: Incubator, egg: IncubatingEgg, creature: C
 	if incubator.Egg ~= egg or not table.find(getIncubators(incubator.Owner), incubator) then
 		return
 	end
-	local slot = CreatureService.AddCreature(incubator.Owner, creature)
+	local slot = CreatureService.AddCreature(incubator.Owner, creature, egg.Variant)
 	if not slot then
 		-- No hay lugar para la mascota: el huevo espera y reintenta en un rato
 		egg.Hatching = false
@@ -292,7 +291,7 @@ local function finishHatch(incubator: Incubator, egg: IncubatingEgg, creature: C
 		incubator.Timer.Text = "No room!"
 		return
 	end
-	burst(egg.Part.Position, egg.Rarity.Color, incubator.Model)
+	burst(egg.Part.Position, egg.Part.Color, incubator.Model)
 	egg.Part:Destroy()
 	incubator.Egg = nil
 	showEmpty(incubator)
@@ -321,7 +320,7 @@ local function hatch(incubator: Incubator)
 
 	egg.Hatching = true
 	incubator.Timer.Text = "Hatching!"
-	hatchedRemote:FireClient(player, creature.DisplayName, egg.Rarity.Id, egg.Part)
+	hatchedRemote:FireClient(player, creature.DisplayName, egg.Rarity.Id, egg.Part, egg.Variant.Id)
 	task.delay(Config.Effects.HatchAnimationTime, finishHatch, incubator, egg, creature)
 end
 
@@ -363,11 +362,11 @@ function IncubatorService.TryIncubate(player: Player, incubator: Incubator)
 		return
 	end
 
-	local rarity = EggService.TakeCarriedEgg(player)
-	if not rarity then
+	local rarity, variant = EggService.TakeCarriedEgg(player)
+	if not rarity or not variant then
 		return
 	end
-	startIncubation(incubator, rarity)
+	startIncubation(incubator, rarity, variant)
 	TutorialService.OnEvent(player, "Incubated")
 end
 
@@ -396,7 +395,7 @@ function IncubatorService.SetupBase(player: Player, base: Base)
 		local incubator = list[data.Slot]
 		local rarity = Config.GetRarity(data.RarityId)
 		if incubator and rarity and not incubator.Egg then
-			startIncubation(incubator, rarity, data.Remaining)
+			startIncubation(incubator, rarity, Config.GetVariant(data.Variant), data.Remaining)
 		end
 	end
 	profile.Incubating = {}
@@ -409,7 +408,12 @@ function IncubatorService.GetSnapshot(player: Player): { PlayerDataService.Incub
 	for _, incubator in getIncubators(player) do
 		local egg = incubator.Egg
 		if egg then
-			table.insert(snapshot, { Slot = incubator.Slot, RarityId = egg.Rarity.Id, Remaining = math.max(0, egg.HatchAt - now) })
+			table.insert(snapshot, {
+				Slot = incubator.Slot,
+				RarityId = egg.Rarity.Id,
+				Variant = egg.Variant.Id,
+				Remaining = math.max(0, egg.HatchAt - now),
+			})
 		end
 	end
 	return snapshot

@@ -24,7 +24,7 @@ egg-storm/
     │       ├── MapBuilder.luau                         arma el mapa placeholder
     │       ├── BaseService.luau                        asigna/libera bases
     │       ├── PlayerDataService.luau                  datos de cada jugador y guardado (DataStore)
-    │       ├── EggService.luau                         lluvia de huevos, agarrar y llevar
+    │       ├── EggService.luau                         lluvia de huevos (rareza + variante), meteoritos, agarrar y llevar
     │       ├── IncubatorService.luau                   incubadoras y apertura de huevos
     │       ├── CreatureService.luau                    mascotas en la base, plata por segundo y venta
     │       ├── CreatureModels.luau                     modelos placeholder de las mascotas
@@ -32,6 +32,7 @@ egg-storm/
     │       ├── BaseFloors.luau                         segundo piso de la base ("Base Floor")
     │       ├── TutorialService.luau                    pasos del tutorial para jugadores nuevos
     │       ├── LeaderboardService.luau                 tableros de récords del lobby (top 10 de todos los servidores)
+    │       ├── EventService.luau                       evento especial de cada tormenta (Golden Rain, Lucky Storm...)
     │       └── StormService.luau                       ciclo de tormenta y ola
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
         ├── Main.client.luau
@@ -44,7 +45,7 @@ egg-storm/
         ├── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
         ├── SellPrompts.luau                            el botón "Sell" de cada mascota solo lo ve su dueño
         ├── UpgradePanel.luau                           ventana de mejoras
-        └── StormClient.luau                            cartel de fase, "WAVE INCOMING", lluvia y la ola
+        └── StormClient.luau                            cartel de fase y de evento, "WAVE INCOMING", lluvia y la ola
 ```
 
 Convención de nombres de Rojo:

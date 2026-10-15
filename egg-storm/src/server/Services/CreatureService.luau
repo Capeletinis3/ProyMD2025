@@ -14,9 +14,11 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local BaseService = require(script.Parent.BaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CreatureModels = require(script.Parent.CreatureModels)
+local EventService = require(script.Parent.EventService)
 
 type Base = BaseService.Base
 type Creature = Creatures.Creature
+type Variant = Config.Variant
 
 local CreatureService = {}
 
@@ -27,17 +29,18 @@ local random = Random.new()
 local notifyRemote = Remotes.Event("Notify")
 
 -- Botón "Sell" sobre la mascota. Solo lo ve el dueño (ver SellPrompts en el cliente); el servidor igual valida todo.
-local function addSellPrompt(player: Player, model: Model, creature: Creature, slot: number)
+local function addSellPrompt(player: Player, model: Model, creature: Creature, variant: Variant, slot: number)
 	local body = model.PrimaryPart
 	local rarity = Config.GetRarity(creature.RarityId)
 	if not body or not rarity then
 		return
 	end
-	local rare = creature.RarityId == "Legendary" or creature.RarityId == "Secret"
+	-- Las valiosas piden mantener más tiempo, para no venderlas sin querer
+	local rare = creature.RarityId == "Legendary" or creature.RarityId == "Secret" or variant.Multiplier >= 5
 	local economy = Config.Economy
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Sell"
-	prompt.ObjectText = `{creature.DisplayName} · {Format.Number(Config.GetSellPrice(rarity))} coins`
+	prompt.ObjectText = `{Config.WithVariant(variant, creature.DisplayName)} · {Format.Number(Config.GetSellPrice(rarity, variant))} coins`
 	prompt.HoldDuration = if rare then economy.SellHoldTimeRare else economy.SellHoldTime
 	prompt.MaxActivationDistance = economy.SellDistance
 	prompt.RequiresLineOfSight = false
@@ -49,16 +52,16 @@ local function addSellPrompt(player: Player, model: Model, creature: Creature, s
 	end)
 end
 
-local function spawnModel(player: Player, base: Base, creature: Creature, slot: number)
+local function spawnModel(player: Player, base: Base, creature: Creature, variant: Variant, slot: number)
 	local pad = base.CreatureSlots[slot]
 	if not pad then
 		return
 	end
 	-- Encima del pad, mirando hacia el pasillo (igual que la base)
 	local padTop = pad.Position + Vector3.new(0, pad.Size.X / 2, 0) -- el pad es un cilindro acostado: su grosor es Size.X
-	local model = CreatureModels.Build(creature, CFrame.new(padTop) * base.Facing)
+	local model = CreatureModels.Build(creature, CFrame.new(padTop) * base.Facing, variant)
 	model:SetAttribute("OwnerUserId", player.UserId)
-	addSellPrompt(player, model, creature, slot)
+	addSellPrompt(player, model, creature, variant, slot)
 	model.Parent = base.Model
 
 	local models = modelsByPlayer[player]
@@ -106,8 +109,10 @@ function CreatureService.RollCreature(rarityId: string): Creature?
 	return options[random:NextInteger(1, #options)]
 end
 
--- Le da una mascota al jugador en el primer pad libre. Devuelve el número de pad, o nil si no hay lugar.
-function CreatureService.AddCreature(player: Player, creature: Creature): number?
+-- Le da una mascota (con su variante) al jugador en el primer pad libre.
+-- Devuelve el número de pad, o nil si no hay lugar.
+function CreatureService.AddCreature(player: Player, creature: Creature, variant: Variant?): number?
+	local chosen = variant or Config.GetVariant("Normal")
 	local base = BaseService.GetBase(player)
 	local profile = PlayerDataService.Get(player)
 	if not base or not profile then
@@ -120,8 +125,8 @@ function CreatureService.AddCreature(player: Player, creature: Creature): number
 	end
 	for slot = 1, #base.CreatureSlots do
 		if not used[slot] then
-			table.insert(profile.Creatures, { CreatureId = creature.Id, Slot = slot })
-			spawnModel(player, base, creature, slot)
+			table.insert(profile.Creatures, { CreatureId = creature.Id, Slot = slot, Variant = chosen.Id })
+			spawnModel(player, base, creature, chosen, slot)
 			updateIncomeAttribute(player)
 			return slot
 		end
@@ -158,6 +163,7 @@ function CreatureService.TrySell(who: Player, owner: Player, slot: number, model
 		return
 	end
 	local creature = Creatures.Get(profile.Creatures[index].CreatureId)
+	local variant = Config.GetVariant(profile.Creatures[index].Variant)
 	local rarity = creature and Config.GetRarity(creature.RarityId)
 	if not creature or not rarity then
 		return
@@ -178,10 +184,10 @@ function CreatureService.TrySell(who: Player, owner: Player, slot: number, model
 	table.remove(profile.Creatures, index)
 	models[slot] = nil
 	model:Destroy()
-	local price = Config.GetSellPrice(rarity)
+	local price = Config.GetSellPrice(rarity, variant)
 	PlayerDataService.AddCoins(owner, price)
 	updateIncomeAttribute(owner)
-	notifyRemote:FireClient(owner, `Sold {creature.DisplayName} for {Format.Number(price)} coins!`)
+	notifyRemote:FireClient(owner, `Sold {Config.WithVariant(variant, creature.DisplayName)} for {Format.Number(price)} coins!`)
 end
 
 -- Cuando el jugador recibe su base: pone las mascotas que ya tenía.
@@ -193,7 +199,7 @@ function CreatureService.SetupBase(player: Player, base: Base)
 	for _, data in profile.Creatures do
 		local creature = Creatures.Get(data.CreatureId)
 		if creature then
-			spawnModel(player, base, creature, data.Slot)
+			spawnModel(player, base, creature, Config.GetVariant(data.Variant), data.Slot)
 		end
 	end
 	updateIncomeAttribute(player)
@@ -212,14 +218,16 @@ function CreatureService.ClearBase(player: Player)
 end
 
 function CreatureService.Init()
-	-- Cobro automático: cada IncomeInterval segundos, cada jugador suma la plata de sus mascotas.
+	-- Cobro automático: cada IncomeInterval segundos, cada jugador suma la plata de sus mascotas
+	-- (el doble durante el evento Double Coins).
 	task.spawn(function()
 		while true do
 			task.wait(Config.Economy.IncomeInterval)
+			local multiplier = EventService.IncomeMultiplier()
 			for _, player in Players:GetPlayers() do
 				local income = CreatureService.GetIncomePerSecond(player)
 				if income > 0 then
-					PlayerDataService.AddCoins(player, income * Config.Economy.IncomeInterval)
+					PlayerDataService.AddCoins(player, income * multiplier * Config.Economy.IncomeInterval)
 				end
 			end
 		end

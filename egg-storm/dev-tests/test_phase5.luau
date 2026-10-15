@@ -20,6 +20,10 @@ local function worldEggs()
 	return list
 end
 local function alive(p) return p.Character.Humanoid.Health > 0 end
+local START_Z = Config.Map.CorridorLength + Config.Map.SeaDepth
+local SPEED = Config.Storm.WaveSpeed
+local CAROL_Z = START_Z - 125
+local function arrival(z) return (START_Z - z) / SPEED end -- segundos hasta que la ola llega a z
 
 check(phase() == "Rain", "starts with egg rain")
 check(Players.RespawnTime == Config.Storm.RespawnTime, "respawn time set to " .. tostring(Players.RespawnTime))
@@ -40,7 +44,7 @@ MOVE_TO(alice, egg.Position); egg.ProximityPrompt.Triggered:Fire(alice); ADVANCE
 check(Eggs.GetCarriedEgg(alice) ~= nil, "Alice carries an egg")
 MOVE_TO(alice, Vector3.new(0, 3, 300))
 MOVE_TO(bob, Vector3.new(0, 3, -20))   -- Bob en el lobby
-MOVE_TO(carol, Vector3.new(30, 3, 700)) -- Carol lejos, sin huevo
+MOVE_TO(carol, Vector3.new(30, 3, CAROL_Z)) -- Carol lejos, sin huevo
 MOVE_TO(dave, Vector3.new(0, 3, -1))   -- Dave justo detrás de la línea segura
 
 while phase() ~= "Warning" do ADVANCE(0.05) end
@@ -55,20 +59,20 @@ ADVANCE(5)
 check(allEggs() == count, "no new eggs spawn during the warning")
 while phase() ~= "Wave" do ADVANCE(0.05) end
 check(true, "the wave starts after the warning")
-check(Workspace:GetAttribute("WaveStartZ") == 825 and Workspace:GetAttribute("WaveSpeed") == Config.Storm.WaveSpeed, "wave attributes published")
+check(Workspace:GetAttribute("WaveStartZ") == START_Z and Workspace:GetAttribute("WaveSpeed") == SPEED, "wave attributes published")
 
--- La ola tarda (825 - 700) / 70 = 1.8 s en llegar a Carol
-ADVANCE(1.5)
+local t = arrival(CAROL_Z) - 0.3
+ADVANCE(t)
 check(alive(carol), "Carol is still alive before the wave reaches her")
 -- Huevos: los que están detrás del frente ya no existen, los de adelante sí
-local front = 825 - Config.Storm.WaveSpeed * 1.5
+local front = START_Z - SPEED * t
 local ok = true
 for _, e in worldEggs() do if e.Position.Z >= front then ok = false end end
 check(ok, string.format("eggs behind the wave front (z>=%.0f) were washed away", front))
-ADVANCE(0.5)
-check(not alive(carol), "the wave gets Carol at z=700")
+ADVANCE(0.5); t += 0.5
+check(not alive(carol), "the wave gets Carol at z=" .. CAROL_Z)
 check(alive(alice), "Alice (z=300) still alive while the wave is far")
-ADVANCE(6.5)
+ADVANCE(arrival(300) - t + 0.3)
 check(not alive(alice), "the wave gets Alice at z=300")
 check(Eggs.GetCarriedEgg(alice) == nil and alice:GetAttribute("CarriedEggRarity") == nil, "Alice lost her egg")
 local msg
@@ -80,7 +84,7 @@ check(alive(bob), "Bob in the lobby survives")
 check(alive(dave), "Dave right behind the safe line survives")
 check(#worldEggs() == 0, "no eggs left on the ground after the wave")
 ADVANCE(4)
-check(Lighting.Brightness == 2 and Lighting.FogEnd == 100000, "sun comes back in the calm")
+check(Lighting.Brightness == 2.4 and Lighting.FogEnd == 100000, "sun comes back in the calm")
 ADVANCE(Config.Storm.CalmDuration)
 check(phase() == "Rain", "the cycle starts again")
 

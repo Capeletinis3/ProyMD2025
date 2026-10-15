@@ -4,6 +4,7 @@
 --      cada vez más fuerte y brilla cada vez más (con el color de su rareza).
 --   2) Explota: destello + chispas, y el huevo desaparece.
 --   3) Aparece el cartel grande "YOU GOT / Golden Dragon / LEGENDARY" con rayos de luz girando.
+--      Si el huevo tenía variante, se ve en la línea de la rareza ("GOLDEN LEGENDARY") y en la plata (x3).
 -- Todo esto pasa solo en la pantalla del dueño. El servidor espera el mismo tiempo antes de poner la mascota.
 -- Si se abren varios huevos juntos, los carteles se muestran de a uno (en fila).
 
@@ -18,6 +19,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local UIKit = require(script.Parent.UIKit)
 
 type Rarity = Config.Rarity
+type Variant = Config.Variant
 
 local player = Players.LocalPlayer
 
@@ -30,7 +32,7 @@ local INTENSITY: { [string]: number } = { Common = 0.3, Rare = 0.5, Epic = 0.75,
 local gui: ScreenGui
 local flash: Frame
 local hatchSound: Sound
-local queue: { { Name: string, Rarity: Rarity } } = {}
+local queue: { { Name: string, Rarity: Rarity, Variant: Variant } } = {}
 local showing = false
 
 -- ===== 1 y 2: el huevo tiembla, brilla y explota =====
@@ -75,9 +77,16 @@ local function explode(position: Vector3, color: Color3)
 	end)
 end
 
-local function animateEgg(eggPart: BasePart, rarity: Rarity)
+-- Color del festejo: el de la variante si tiene, si no el de la rareza (blanco para Secret)
+local function revealColor(rarity: Rarity, variant: Variant): Color3
+	return if variant.Id ~= "Normal" then variant.Color
+		elseif rarity.Id == "Secret" then Color3.new(1, 1, 1)
+		else rarity.Color
+end
+
+local function animateEgg(eggPart: BasePart, rarity: Rarity, variant: Variant)
 	local duration = Config.Effects.HatchAnimationTime
-	local color = if rarity.Id == "Secret" then Color3.new(1, 1, 1) else rarity.Color
+	local color = revealColor(rarity, variant)
 	local baseCFrame = eggPart.CFrame
 
 	-- Brillo que crece (solo en esta pantalla: los cambios del cliente no le llegan a nadie más)
@@ -152,10 +161,13 @@ local function makeRays(parent: Instance, color: Color3, intensity: number): Fra
 	return rays
 end
 
-local function showBanner(name: string, rarity: Rarity)
-	local intensity = INTENSITY[rarity.Id] or 0.5
-	local special = rarity.Id == "Legendary" or rarity.Id == "Secret"
-	local color = if rarity.Id == "Secret" then Color3.new(1, 1, 1) else rarity.Color
+local function showBanner(name: string, rarity: Rarity, variant: Variant)
+	local hasVariant = variant.Id ~= "Normal"
+	-- Una variante buena festeja como una rareza alta
+	local intensity = math.max(INTENSITY[rarity.Id] or 0.5, if hasVariant then math.min(1, 0.5 + variant.Multiplier / 20) else 0)
+	local special = rarity.Id == "Legendary" or rarity.Id == "Secret" or variant.Multiplier >= 5
+	local color = revealColor(rarity, variant)
+	local nameColor = if rarity.Id == "Secret" then Color3.new(1, 1, 1) else rarity.Color
 
 	-- Destello en toda la pantalla (más fuerte para las raras)
 	flash.BackgroundColor3 = color
@@ -197,32 +209,44 @@ local function showBanner(name: string, rarity: Rarity)
 		return label
 	end
 	bigLabel("YOU GOT", 92, 40, 34, Color3.new(1, 1, 1), 3)
-	local nameLabel = bigLabel(name, 132, 90, 72, color, 5)
-	local rarityLabel = bigLabel(string.upper(rarity.DisplayName), 222, 56, 46, color, 4)
-	bigLabel(`+{rarity.CoinsPerSecond} coins/sec`, 284, 36, 28, Color3.fromRGB(130, 255, 130), 3)
+	local nameLabel = bigLabel(name, 132, 90, if #name > 16 then 58 else 72, nameColor, 5)
+	local rarityText = string.upper(Config.WithVariant(variant, rarity.DisplayName))
+	local rarityLabel = bigLabel(rarityText, 222, 56, 46, if hasVariant then variant.Color else nameColor, 4)
+	local income = Config.GetIncome(rarity, variant)
+	local incomeText = if hasVariant then `+{income} coins/sec  (x{variant.Multiplier})` else `+{income} coins/sec`
+	bigLabel(incomeText, 284, 36, 28, Color3.fromRGB(130, 255, 130), 3)
 
-	-- Arcoíris animado para las Secret, brillo dorado que pasa para las Legendary
+	-- Arcoíris animado (Secret o variante Rainbow), brillo que pasa (Legendary o cualquier otra variante)
 	local gradients: { UIGradient } = {}
+	local function addRainbow(label: TextLabel)
+		local g = Instance.new("UIGradient")
+		g.Color = UIKit.Rainbow
+		g.Parent = label
+		table.insert(gradients, g)
+	end
+	local function addShine(label: TextLabel, base: Color3)
+		local g = Instance.new("UIGradient")
+		g.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, base),
+			ColorSequenceKeypoint.new(0.45, base),
+			ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 0.85)),
+			ColorSequenceKeypoint.new(0.55, base),
+			ColorSequenceKeypoint.new(1, base),
+		})
+		g.Parent = label
+		table.insert(gradients, g)
+	end
 	if rarity.Id == "Secret" then
-		for _, label in { nameLabel, rarityLabel } do
-			local g = Instance.new("UIGradient")
-			g.Color = UIKit.Rainbow
-			g.Parent = label
-			table.insert(gradients, g)
-		end
+		addRainbow(nameLabel)
 	elseif rarity.Id == "Legendary" then
-		for _, label in { nameLabel, rarityLabel } do
-			local g = Instance.new("UIGradient")
-			g.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, rarity.Color),
-				ColorSequenceKeypoint.new(0.45, rarity.Color),
-				ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 0.85)),
-				ColorSequenceKeypoint.new(0.55, rarity.Color),
-				ColorSequenceKeypoint.new(1, rarity.Color),
-			})
-			g.Parent = label
-			table.insert(gradients, g)
-		end
+		addShine(nameLabel, rarity.Color)
+	end
+	if variant.Id == "Rainbow" or (rarity.Id == "Secret" and not hasVariant) then
+		addRainbow(rarityLabel)
+	elseif hasVariant then
+		addShine(rarityLabel, variant.Color)
+	elseif rarity.Id == "Legendary" then
+		addShine(rarityLabel, rarity.Color)
 	end
 
 	-- Entra con un "pop", los rayos giran y los degradés se mueven
@@ -253,13 +277,13 @@ local function processQueue()
 	while #queue > 0 do
 		local item = table.remove(queue, 1)
 		if item then
-			showBanner(item.Name, item.Rarity)
+			showBanner(item.Name, item.Rarity, item.Variant)
 		end
 	end
 	showing = false
 end
 
-local function onHatched(creatureName: unknown, rarityId: unknown, eggPart: unknown)
+local function onHatched(creatureName: unknown, rarityId: unknown, eggPart: unknown, variantId: unknown)
 	if typeof(creatureName) ~= "string" or typeof(rarityId) ~= "string" then
 		return
 	end
@@ -267,12 +291,13 @@ local function onHatched(creatureName: unknown, rarityId: unknown, eggPart: unkn
 	if not rarity then
 		return
 	end
+	local variant = Config.GetVariant(if typeof(variantId) == "string" then variantId else nil)
 	if typeof(eggPart) == "Instance" and eggPart:IsA("BasePart") then
-		animateEgg(eggPart, rarity)
+		animateEgg(eggPart, rarity, variant)
 	end
 	-- El cartel aparece justo cuando explota el huevo
 	task.delay(Config.Effects.HatchAnimationTime, function()
-		table.insert(queue, { Name = creatureName, Rarity = rarity })
+		table.insert(queue, { Name = creatureName, Rarity = rarity, Variant = variant })
 		processQueue()
 	end)
 end

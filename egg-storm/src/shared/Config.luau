@@ -11,11 +11,27 @@ export type Rarity = {
 	Weight: number, -- probabilidad relativa (los pesos suman 100)
 	BaseIncubationTime: number, -- segundos, antes de aplicar mejoras
 	CoinsPerSecond: number, -- plata que genera la criatura que sale de este huevo
-	-- Tramo del pasillo donde caen estos huevos, como fracción del largo
-	-- (0 = línea de la zona segura, 1 = fondo del pasillo, donde nace la ola).
-	-- Cada rareza tiene su tramo: cuanto más rara, más lejos de las bases. El piso se pinta por tramos.
-	ZoneStart: number,
-	ZoneEnd: number,
+	-- Cualquier rareza puede caer en cualquier parte del pasillo, pero lejos es un poco mejor:
+	-- la chance se multiplica por (1 + FarBonus × distancia), con distancia de 0 (entrada) a 1 (fondo).
+	FarBonus: number,
+}
+
+-- Variantes: un huevo puede ser además Silver, Golden, Emerald... La mascota sale de ese material y gana más.
+export type Variant = {
+	Id: string, -- identificador interno (no cambiar una vez que haya datos guardados)
+	DisplayName: string, -- adjetivo que va antes del nombre: "Golden Rare Egg", "Golden Sun Phoenix"
+	Color: Color3,
+	Material: Enum.Material,
+	Multiplier: number, -- multiplica la plata por segundo (y el precio de venta)
+	Weight: number, -- probabilidad relativa
+}
+
+export type EventInfo = {
+	Id: string,
+	DisplayName: string,
+	Description: string,
+	Color: Color3,
+	Weight: number, -- probabilidad relativa entre eventos
 }
 
 export type IncubationSpeedLevel = {
@@ -41,7 +57,7 @@ Config.MaxPlayers = 8
 Config.Map = {
 	FloorY = 0, -- altura del piso
 	CorridorWidth = 240, -- ancho del pasillo de arena
-	CorridorLength = 800, -- largo del pasillo de arena (zona de peligro)
+	CorridorLength = 1500, -- largo del pasillo de arena (zona de peligro)
 	SeaDepth = 25, -- franja de agua al fondo del pasillo, de donde sale la ola
 	WallHeight = 80,
 	WallThickness = 10,
@@ -56,21 +72,12 @@ Config.Map = {
 
 	GrassColor = Color3.fromRGB(80, 220, 70),
 	SandColor = Color3.fromRGB(240, 215, 160),
-	WallColor = Color3.fromRGB(215, 120, 85),
+	WallColor = Color3.fromRGB(240, 170, 130),
 	WallTrimColor = Color3.fromRGB(90, 200, 90),
 	SeaColor = Color3.fromRGB(40, 150, 255),
 
-	-- Un color por base, en orden (Base1, Base2, ...)
-	BaseColors = {
-		Color3.fromRGB(255, 99, 99), -- rojo
-		Color3.fromRGB(255, 170, 70), -- naranja
-		Color3.fromRGB(255, 230, 90), -- amarillo
-		Color3.fromRGB(120, 220, 120), -- verde
-		Color3.fromRGB(90, 200, 255), -- celeste
-		Color3.fromRGB(110, 130, 255), -- azul
-		Color3.fromRGB(190, 120, 255), -- violeta
-		Color3.fromRGB(255, 130, 210), -- rosa
-	},
+	-- Todas las bases son grises e iguales (se distinguen por el cartel con el nombre del dueño)
+	BaseColor = Color3.fromRGB(160, 165, 175),
 }
 
 -- ===== Huevos (se usan desde la fase 2) =====
@@ -79,63 +86,86 @@ Config.Rarities = {
 		Id = "Common",
 		DisplayName = "Common",
 		Color = Color3.fromRGB(245, 245, 245),
-		Weight = 60,
+		Weight = 75,
 		BaseIncubationTime = 30,
 		CoinsPerSecond = 1,
-		ZoneStart = 0.05,
-		ZoneEnd = 0.4,
+		FarBonus = 0,
 	},
 	{
 		Id = "Rare",
 		DisplayName = "Rare",
 		Color = Color3.fromRGB(70, 140, 255),
-		Weight = 25,
+		Weight = 18,
 		BaseIncubationTime = 60,
 		CoinsPerSecond = 5,
-		ZoneStart = 0.4,
-		ZoneEnd = 0.65,
+		FarBonus = 0.5,
 	},
 	{
 		Id = "Epic",
 		DisplayName = "Epic",
 		Color = Color3.fromRGB(170, 80, 255),
-		Weight = 10,
+		Weight = 5,
 		BaseIncubationTime = 90,
 		CoinsPerSecond = 20,
-		ZoneStart = 0.65,
-		ZoneEnd = 0.83,
+		FarBonus = 1.5,
 	},
 	{
 		Id = "Legendary",
 		DisplayName = "Legendary",
 		Color = Color3.fromRGB(255, 200, 40),
-		Weight = 4.5,
+		Weight = 1.7,
 		BaseIncubationTime = 120,
 		CoinsPerSecond = 100,
-		ZoneStart = 0.83,
-		ZoneEnd = 0.94,
+		FarBonus = 3,
 	},
 	{
 		Id = "Secret",
 		DisplayName = "Secret",
 		Color = Color3.fromRGB(20, 20, 25), -- negro; el brillo arcoíris se agrega con efectos
-		Weight = 0.5,
+		Weight = 0.3,
 		BaseIncubationTime = 180,
 		CoinsPerSecond = 500,
-		ZoneStart = 0.94,
-		ZoneEnd = 1,
+		FarBonus = 5,
 	},
 } :: { Rarity }
 
 Config.Eggs = {
-	SpawnInterval = 2, -- segundos entre huevo y huevo mientras llueve
-	MaxOnGround = 25, -- si ya hay esta cantidad en el piso (o cayendo), no cae ninguno más
+	SpawnInterval = 1.5, -- segundos entre huevo y huevo mientras llueve
+	MaxOnGround = 45, -- si ya hay esta cantidad en el piso (o cayendo), no cae ninguno más
 	FallHeight = 150, -- desde qué altura caen
 	FallTime = 2.5, -- cuánto tarda la caída (segundos)
 	GrabHoldTime = 0.25, -- cuánto hay que mantener apretada la tecla para agarrar
 	GrabDistance = 10, -- distancia máxima para agarrar (studs)
 	GrabCooldown = 0.5, -- tiempo mínimo entre intentos de agarrar (anti-spam)
 	CarryHeight = 2.5, -- cuántos studs sobre la cabeza se lleva el huevo
+}
+
+-- ===== Variantes de huevo =====
+-- Normal es la más común. Las demás cambian el material de la mascota y multiplican su plata.
+Config.Variants = {
+	{ Id = "Normal", DisplayName = "", Color = Color3.new(1, 1, 1), Material = Enum.Material.SmoothPlastic, Multiplier = 1, Weight = 85 },
+	{ Id = "Silver", DisplayName = "Silver", Color = Color3.fromRGB(215, 220, 230), Material = Enum.Material.Foil, Multiplier = 2, Weight = 8 },
+	{ Id = "Golden", DisplayName = "Golden", Color = Color3.fromRGB(255, 200, 50), Material = Enum.Material.Foil, Multiplier = 3, Weight = 4 },
+	{ Id = "Emerald", DisplayName = "Emerald", Color = Color3.fromRGB(40, 210, 110), Material = Enum.Material.Glass, Multiplier = 5, Weight = 2 },
+	{ Id = "Diamond", DisplayName = "Diamond", Color = Color3.fromRGB(150, 235, 255), Material = Enum.Material.Glass, Multiplier = 10, Weight = 0.8 },
+	{ Id = "Rainbow", DisplayName = "Rainbow", Color = Color3.fromRGB(255, 120, 220), Material = Enum.Material.ForceField, Multiplier = 25, Weight = 0.2 },
+} :: { Variant }
+
+-- ===== Eventos de tormenta =====
+-- Al empezar cada tormenta hay ChancePerStorm de que sea especial. El evento dura toda la tormenta (hasta la calma).
+Config.Events = {
+	ChancePerStorm = 0.4,
+	List = {
+		{ Id = "GoldenRain", DisplayName = "GOLDEN RAIN", Description = "Way more Silver, Golden and Emerald eggs!", Color = Color3.fromRGB(255, 205, 60), Weight = 30 },
+		{ Id = "LuckyStorm", DisplayName = "LUCKY STORM", Description = "Epic, Legendary and Secret eggs are 3x more likely!", Color = Color3.fromRGB(110, 255, 140), Weight = 30 },
+		{ Id = "DoubleCoins", DisplayName = "DOUBLE COINS", Description = "All creatures make 2x coins during this storm!", Color = Color3.fromRGB(255, 160, 60), Weight = 25 },
+		{ Id = "MeteorShower", DisplayName = "METEOR SHOWER", Description = "Meteors drop Epic or better eggs. Be the first!", Color = Color3.fromRGB(255, 90, 60), Weight = 15 },
+	} :: { EventInfo },
+	GoldenRainVariantBoost = 6, -- en Golden Rain, la chance de cada variante (no Normal) se multiplica por esto
+	LuckyRarityBoost = 3, -- en Lucky Storm, la chance de Epic/Legendary/Secret se multiplica por esto
+	DoubleCoinsMultiplier = 2,
+	MeteorInterval = 10, -- segundos entre meteoritos (en Meteor Shower)
+	MeteorRarityWeights = { Epic = 70, Legendary = 25, Secret = 5 } :: { [string]: number },
 }
 
 -- ===== Incubadoras y plata (fase 3) =====
@@ -152,7 +182,7 @@ Config.Economy = {
 	-- Vender mascotas (mantener E sobre una mascota tuya)
 	SellValueSeconds = 60, -- precio de venta = esta cantidad de segundos de lo que genera (Common 60, Legendary 6.000...)
 	SellHoldTime = 1.5, -- segundos que hay que mantener la tecla para vender (así no se vende sin querer)
-	SellHoldTimeRare = 3, -- lo mismo, para Legendary y Secret
+	SellHoldTimeRare = 3, -- lo mismo, para Legendary, Secret y variantes Emerald o mejores
 	SellDistance = 16, -- distancia máxima (alcanza para las mascotas del segundo piso desde abajo)
 	SellCooldown = 0.5, -- tiempo mínimo entre ventas (anti-spam)
 
@@ -227,11 +257,13 @@ Config.Upgrades = {
 -- ===== Tormenta y ola (fase 5) =====
 -- Ciclo: lluvia → aviso → ola → calma → lluvia...
 Config.Storm = {
-	RainDuration = 60, -- segundos de lluvia de huevos (cielo oscuro)
+	-- Con el pasillo de 1500 studs, a velocidad normal (16) en una tormenta llegás a ~800 studs y volvés;
+	-- con las mejoras de "Walk Speed" llegás al fondo. Si cambiás CorridorLength, revisá estos números.
+	RainDuration = 90, -- segundos de lluvia de huevos (cielo oscuro)
 	WarningDuration = 10, -- segundos del cartel "WAVE INCOMING"
 	CalmDuration = 20, -- segundos de calma después de la ola
 
-	WaveSpeed = 70, -- studs por segundo (recorre los 825 studs del pasillo en ~12 s)
+	WaveSpeed = 100, -- studs por segundo (recorre los 1525 studs del pasillo en ~15 s)
 	WaveHeight = 35, -- altura de la pared de agua
 	WaveThickness = 30, -- grosor de la pared de agua
 	RespawnTime = 3, -- segundos hasta reaparecer en tu base después de que te agarra la ola
@@ -251,9 +283,38 @@ function Config.GetRarity(id: string): Rarity?
 	return raritiesById[id]
 end
 
--- Cuánto pagan por vender una mascota de esta rareza.
-function Config.GetSellPrice(rarity: Rarity): number
-	return rarity.CoinsPerSecond * Config.Economy.SellValueSeconds
+local variantsById: { [string]: Variant } = {}
+for _, variant in Config.Variants do
+	variantsById[variant.Id] = variant
+end
+
+-- La variante con ese Id (si no existe, Normal).
+function Config.GetVariant(id: string?): Variant
+	return (id and variantsById[id]) or Config.Variants[1]
+end
+
+local eventsById: { [string]: EventInfo } = {}
+for _, event in Config.Events.List do
+	eventsById[event.Id] = event
+end
+
+function Config.GetEvent(id: string?): EventInfo?
+	return if id then eventsById[id] else nil
+end
+
+-- Plata por segundo de una mascota de esta rareza y variante.
+function Config.GetIncome(rarity: Rarity, variant: Variant?): number
+	return rarity.CoinsPerSecond * (if variant then variant.Multiplier else 1)
+end
+
+-- Cuánto pagan por vender una mascota de esta rareza (y variante).
+function Config.GetSellPrice(rarity: Rarity, variant: Variant?): number
+	return Config.GetIncome(rarity, variant) * Config.Economy.SellValueSeconds
+end
+
+-- Nombre con la variante adelante: ("Golden", "Rare Egg") -> "Golden Rare Egg"; Normal no agrega nada.
+function Config.WithVariant(variant: Variant, name: string): string
+	return if variant.DisplayName ~= "" then `{variant.DisplayName} {name}` else name
 end
 
 -- Segundos que tarda un huevo de esta rareza con el nivel de "Incubation Speed" dado (con el mínimo aplicado).

@@ -10,7 +10,7 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 - Dispositivos permitidos: PC, celular, tablet y consola (probar con **Test → Device**).
 
 ## 2. Volver los números de prueba a la normalidad
-- 🔴 Revisá `Config` antes de publicar: `StartingCoins = 0`, `RainDuration = 60`, `CalmDuration = 20`, `MinIncubationTime = 5` y los `BaseIncubationTime` originales (30/60/90/120/180).
+- 🔴 Revisá `Config` antes de publicar: `StartingCoins = 0`, `RainDuration = 90`, `CalmDuration = 20`, `ChancePerStorm = 0.4`, `MinIncubationTime = 5` y los `BaseIncubationTime` originales (30/60/90/120/180).
 
 ## 3. Cosas de juego que todavía no están
 - ✅ ~~¿Qué pasa cuando se llenan los 14 lugares de mascotas?~~ **Hecho:** ahora se pueden vender mascotas (mantener E sobre una mascota tuya). El precio está en `Config.Economy.SellValueSeconds`.
@@ -18,6 +18,7 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 - ✅ ~~Escalera al segundo piso~~ **Hecho:** escalera por el costado de afuera de la base, con descanso y pasamanos.
 - ✅ ~~Ganancia mientras no estás~~ **Hecho:** 50% de lo normal, tope de 8 horas (`Config.Economy.Offline...`).
 - ✅ ~~Tabla de récords~~ **Hecho:** dos tableros en el lobby (plata ganada en total y huevos abiertos), top 10 de todos los servidores.
+- ✅ **Pulido:** variantes de huevo (Silver x2, Golden x3, Emerald x5, Diamond x10, Rainbow x25), cualquier rareza en cualquier parte del pasillo (lejos un poco mejor), 4 eventos de tormenta, pasillo de 1500 y mapa más colorido. Todo ajustable en `Config.Variants`, `Config.Events` y `Config.Rarities` (`FarBonus`).
 
 ## 4. Modelos y sonidos (reemplazar los placeholders)
 - Modelos de mascotas (13), huevos, incubadora y panel de mejoras. Al reemplazarlos, el resto del código sigue igual (ver `CreatureModels.luau` y `MapBuilder.luau`).
@@ -36,5 +37,6 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 ## 7. Lo que quedó para después (ya está preparado en el código)
 - Robo de huevos entre jugadores y defensas: cada huevo incubando ya es un objeto del servidor con dueño, rareza y tiempo (`IncubatorService`).
 - Gamepasses / Robux.
-- Huevos de evento (Halloween, Navidad): se agregan como rarezas nuevas en `Config.Rarities` + mascotas en `Creatures.luau`.
+- Huevos de evento (Halloween, Navidad): se agregan como rarezas nuevas en `Config.Rarities` + mascotas en `Creatures.luau`, o como variantes nuevas en `Config.Variants`.
+- Eventos nuevos de tormenta: se agregan en `Config.Events.List` y su efecto en `EventService.luau`.
 - Trading.

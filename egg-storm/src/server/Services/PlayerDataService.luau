@@ -23,11 +23,13 @@ local Creatures = require(ReplicatedStorage.Shared.Creatures)
 export type CreatureData = {
 	CreatureId: string,
 	Slot: number, -- en qué pad de mascotas está
+	Variant: string, -- "Normal", "Silver", "Golden"... (ver Config.Variants)
 }
 
 export type IncubatingData = {
 	Slot: number, -- en qué incubadora
 	RarityId: string,
+	Variant: string,
 	Remaining: number, -- segundos que le faltaban al salir (el tiempo no corre mientras no estás)
 }
 
@@ -119,6 +121,11 @@ local function validSlot(value: any, max: number): number?
 	return value
 end
 
+-- Una variante que exista (los datos de antes de las variantes no la tienen: quedan "Normal").
+local function cleanVariant(value: any): string
+	return Config.GetVariant(if typeof(value) == "string" then value else nil).Id
+end
+
 local function profileFromData(data: any): Profile
 	local profile = newProfile()
 	if typeof(data) ~= "table" then
@@ -145,7 +152,7 @@ local function profileFromData(data: any): Profile
 				local slot = validSlot(entry.Slot, 1000)
 				if slot and not usedSlots[slot] then
 					usedSlots[slot] = true
-					table.insert(profile.Creatures, { CreatureId = entry.CreatureId, Slot = slot })
+					table.insert(profile.Creatures, { CreatureId = entry.CreatureId, Slot = slot, Variant = cleanVariant(entry.Variant) })
 				end
 			end
 		end
@@ -160,7 +167,7 @@ local function profileFromData(data: any): Profile
 				if slot and not usedIncubators[slot] then
 					usedIncubators[slot] = true
 					local remaining = if typeof(entry.Remaining) == "number" and entry.Remaining == entry.Remaining then math.max(0, entry.Remaining) else 0
-					table.insert(profile.Incubating, { Slot = slot, RarityId = entry.RarityId, Remaining = remaining })
+					table.insert(profile.Incubating, { Slot = slot, RarityId = entry.RarityId, Variant = cleanVariant(entry.Variant), Remaining = remaining })
 				end
 			end
 		end
@@ -191,11 +198,11 @@ end
 local function dataFromProfile(profile: Profile, incubating: { IncubatingData }): { [string]: any }
 	local creatures = {}
 	for _, c in profile.Creatures do
-		table.insert(creatures, { CreatureId = c.CreatureId, Slot = c.Slot })
+		table.insert(creatures, { CreatureId = c.CreatureId, Slot = c.Slot, Variant = c.Variant })
 	end
 	local eggs = {}
 	for _, e in incubating do
-		table.insert(eggs, { Slot = e.Slot, RarityId = e.RarityId, Remaining = math.floor(e.Remaining * 10) / 10 })
+		table.insert(eggs, { Slot = e.Slot, RarityId = e.RarityId, Variant = e.Variant, Remaining = math.floor(e.Remaining * 10) / 10 })
 	end
 	return {
 		Version = DATA_VERSION,

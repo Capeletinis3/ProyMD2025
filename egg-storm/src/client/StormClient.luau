@@ -2,6 +2,7 @@
 -- StormClient: todo lo que el jugador VE y ESCUCHA de la tormenta.
 --   - Arriba de la pantalla: en qué fase estamos y cuánto falta.
 --   - Durante el aviso: cartel grande "WAVE INCOMING" con cuenta regresiva y un pitido por segundo.
+--   - Si la tormenta tiene evento (atributo StormEvent): un cartel grande al empezar y el nombre arriba.
 --   - Lluvia que cae alrededor de la cámara.
 --   - La ola: este cliente la dibuja con la misma fórmula que usa el servidor para decidir a quién agarra,
 --     así se mueve suave (sin los saltitos que tendría si la moviera el servidor).
@@ -9,6 +10,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -36,6 +38,9 @@ local PHASE_COLOR: { [string]: Color3 } = {
 local phaseLabel: TextLabel
 local banner: TextLabel
 local bannerCount: TextLabel
+local eventTitle: TextLabel
+local eventDescription: TextLabel
+local eventShownAt = -math.huge
 local rainEmitter: ParticleEmitter
 local rainHolder: Part
 local warningSound: Sound
@@ -60,6 +65,18 @@ local function remaining(): number
 		return 0
 	end
 	return math.max(0, endsAt - Workspace:GetServerTimeNow())
+end
+
+local NORMAL_RAIN = ColorSequence.new(Color3.fromRGB(190, 210, 255))
+local GOLDEN_RAIN = ColorSequence.new(Color3.fromRGB(255, 215, 90))
+local BANNER_TOP = 124 -- px desde arriba donde empiezan los carteles grandes
+local TUTORIAL_SPACE = 76 -- si el tutorial está activo, su cartel ocupa ese lugar: bajamos los nuestros
+local TUTORIAL_DONE = 5 -- igual que en TutorialService
+local EVENT_BANNER_TIME = 5 -- segundos que se ve el cartel grande del evento
+
+local function currentEvent(): Config.EventInfo?
+	local id = Workspace:GetAttribute("StormEvent")
+	return if typeof(id) == "string" then Config.GetEvent(id) else nil
 end
 
 local function formatTime(seconds: number): string
@@ -91,9 +108,10 @@ local function buildGui()
 	phaseLabel.TextXAlignment = Enum.TextXAlignment.Center
 	stroke(phaseLabel, 2)
 
+	-- Los carteles grandes van debajo del cartelito de arriba (que llega hasta ~110 px), así no se pisan en celulares
 	banner = Instance.new("TextLabel")
-	banner.AnchorPoint = Vector2.new(0.5, 0.5)
-	banner.Position = UDim2.fromScale(0.5, 0.28)
+	banner.AnchorPoint = Vector2.new(0.5, 0)
+	banner.Position = UDim2.new(0.5, 0, 0, BANNER_TOP)
 	banner.Size = UDim2.fromScale(0.8, 0.12)
 	banner.BackgroundTransparency = 1
 	banner.Font = FONT
@@ -105,8 +123,8 @@ local function buildGui()
 	stroke(banner, 4)
 
 	bannerCount = Instance.new("TextLabel")
-	bannerCount.AnchorPoint = Vector2.new(0.5, 0.5)
-	bannerCount.Position = UDim2.fromScale(0.5, 0.4)
+	bannerCount.AnchorPoint = Vector2.new(0.5, 0)
+	bannerCount.Position = UDim2.new(0.5, 0, 0.12, BANNER_TOP + 6)
 	bannerCount.Size = UDim2.fromScale(0.3, 0.12)
 	bannerCount.BackgroundTransparency = 1
 	bannerCount.Font = FONT
@@ -115,6 +133,46 @@ local function buildGui()
 	bannerCount.Visible = false
 	bannerCount.Parent = gui
 	stroke(bannerCount, 4)
+
+	-- Cartel del evento: nombre grande y una línea que explica qué hace
+	eventTitle = Instance.new("TextLabel")
+	eventTitle.AnchorPoint = Vector2.new(0.5, 0)
+	eventTitle.Position = UDim2.new(0.5, 0, 0, BANNER_TOP)
+	eventTitle.Size = UDim2.fromScale(0.75, 0.1)
+	eventTitle.BackgroundTransparency = 1
+	eventTitle.Font = FONT
+	eventTitle.TextScaled = true
+	eventTitle.Visible = false
+	eventTitle.Parent = gui
+	stroke(eventTitle, 4)
+
+	eventDescription = Instance.new("TextLabel")
+	eventDescription.AnchorPoint = Vector2.new(0.5, 0)
+	eventDescription.Position = UDim2.new(0.5, 0, 0.1, BANNER_TOP + 6)
+	eventDescription.Size = UDim2.fromScale(0.7, 0.05)
+	eventDescription.BackgroundTransparency = 1
+	eventDescription.Font = FONT
+	eventDescription.TextScaled = true
+	eventDescription.TextColor3 = Color3.new(1, 1, 1)
+	eventDescription.Visible = false
+	eventDescription.Parent = gui
+	stroke(eventDescription, 3)
+end
+
+-- Cuando empieza una tormenta con evento: el cartel aparece con un "pop"
+local function onEventChanged()
+	local event = currentEvent()
+	if not event then
+		return
+	end
+	eventTitle.Text = `⚡ {event.DisplayName} ⚡`
+	eventTitle.TextColor3 = event.Color
+	eventDescription.Text = event.Description
+	eventShownAt = os.clock()
+	local scale = eventTitle:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+	scale.Scale = 0.3
+	scale.Parent = eventTitle
+	TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 end
 
 local function buildRain()
@@ -136,7 +194,7 @@ local function buildRain()
 	rainEmitter.Speed = NumberRange.new(90, 110)
 	rainEmitter.Lifetime = NumberRange.new(0.7, 0.9)
 	rainEmitter.Size = NumberSequence.new(0.15)
-	rainEmitter.Color = ColorSequence.new(Color3.fromRGB(190, 210, 255))
+	rainEmitter.Color = NORMAL_RAIN
 	rainEmitter.Transparency = NumberSequence.new(0.3)
 	rainEmitter.LightEmission = 0.3
 	rainEmitter.Parent = rainHolder
@@ -207,9 +265,26 @@ local function update()
 	local current = phase()
 	local left = remaining()
 
-	-- Texto de arriba
-	phaseLabel.Text = if current == "Wave" then "WAVE!" else `{PHASE_TEXT[current] or ""}  {formatTime(left)}`
-	phaseLabel.TextColor3 = PHASE_COLOR[current] or Color3.new(1, 1, 1)
+	-- Texto de arriba (durante la lluvia, si hay evento, se ve el nombre del evento)
+	local event = currentEvent()
+	local eventRain = event ~= nil and current == "Rain"
+	phaseLabel.Text = if current == "Wave" then "WAVE!"
+		elseif eventRain and event then `{event.DisplayName}  {formatTime(left)}`
+		else `{PHASE_TEXT[current] or ""}  {formatTime(left)}`
+	phaseLabel.TextColor3 = if eventRain and event then event.Color else PHASE_COLOR[current] or Color3.new(1, 1, 1)
+
+	-- Cartel grande del evento, los primeros segundos
+	local showEvent = event ~= nil and os.clock() - eventShownAt < EVENT_BANNER_TIME and current ~= "Warning"
+	eventTitle.Visible = showEvent
+	eventDescription.Visible = showEvent
+
+	-- Carteles grandes: debajo del cartel del tutorial si está activo
+	local step = player:GetAttribute("TutorialStep")
+	local top = BANNER_TOP + (if typeof(step) == "number" and step < TUTORIAL_DONE then TUTORIAL_SPACE else 0)
+	banner.Position = UDim2.new(0.5, 0, 0, top)
+	bannerCount.Position = UDim2.new(0.5, 0, 0.12, top + 6)
+	eventTitle.Position = UDim2.new(0.5, 0, 0, top)
+	eventDescription.Position = UDim2.new(0.5, 0, 0.1, top + 6)
 
 	-- Cartel grande de aviso, que late
 	local warning = current == "Warning"
@@ -234,6 +309,7 @@ local function update()
 		rainHolder.CFrame = CFrame.new(camera.CFrame.Position + Vector3.new(0, 40, 0))
 	end
 	rainEmitter.Rate = if current == "Rain" or current == "Warning" or current == "Wave" then 600 else 0
+	rainEmitter.Color = if event and event.Id == "GoldenRain" then GOLDEN_RAIN else NORMAL_RAIN
 
 	-- La ola
 	if current == "Wave" then
@@ -271,6 +347,8 @@ function StormClient.Start()
 	buildGui()
 	buildRain()
 	buildSounds()
+	Workspace:GetAttributeChangedSignal("StormEvent"):Connect(onEventChanged)
+	onEventChanged()
 	RunService.RenderStepped:Connect(update)
 end
 
