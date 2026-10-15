@@ -1,0 +1,3 @@
+# Herramientas del proyecto. Con Rokit instalado, `rokit install` baja esta versión exacta de Rojo.
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"
