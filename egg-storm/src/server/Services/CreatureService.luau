@@ -1,12 +1,16 @@
 --!strict
 -- CreatureService: las mascotas de cada jugador.
--- Las pone en los pads de su base, y cada segundo le suma la plata que generan.
+-- Las pone en los pads de su base, cada segundo le suma la plata que generan,
+-- y deja venderlas (mantener E sobre una mascota tuya) para hacer lugar.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Creatures = require(ReplicatedStorage.Shared.Creatures)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Format = require(ReplicatedStorage.Shared.Format)
 local BaseService = require(script.Parent.BaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CreatureModels = require(script.Parent.CreatureModels)
@@ -18,7 +22,32 @@ local CreatureService = {}
 
 -- Modelos que están en el mundo, por jugador y por número de pad
 local modelsByPlayer: { [Player]: { [number]: Model } } = {}
+local lastSell: { [Player]: number } = {}
 local random = Random.new()
+local notifyRemote = Remotes.Event("Notify")
+
+-- Botón "Sell" sobre la mascota. Solo lo ve el dueño (ver SellPrompts en el cliente); el servidor igual valida todo.
+local function addSellPrompt(player: Player, model: Model, creature: Creature, slot: number)
+	local body = model.PrimaryPart
+	local rarity = Config.GetRarity(creature.RarityId)
+	if not body or not rarity then
+		return
+	end
+	local rare = creature.RarityId == "Legendary" or creature.RarityId == "Secret"
+	local economy = Config.Economy
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Sell"
+	prompt.ObjectText = `{creature.DisplayName} · {Format.Number(Config.GetSellPrice(rarity))} coins`
+	prompt.HoldDuration = if rare then economy.SellHoldTimeRare else economy.SellHoldTime
+	prompt.MaxActivationDistance = economy.SellDistance
+	prompt.RequiresLineOfSight = false
+	prompt:SetAttribute("OwnerUserId", player.UserId)
+	CollectionService:AddTag(prompt, "SellPrompt")
+	prompt.Parent = body
+	prompt.Triggered:Connect(function(who)
+		CreatureService.TrySell(who, player, slot, model)
+	end)
+end
 
 local function spawnModel(player: Player, base: Base, creature: Creature, slot: number)
 	local pad = base.CreatureSlots[slot]
@@ -29,6 +58,7 @@ local function spawnModel(player: Player, base: Base, creature: Creature, slot: 
 	local padTop = pad.Position + Vector3.new(0, pad.Size.X / 2, 0) -- el pad es un cilindro acostado: su grosor es Size.X
 	local model = CreatureModels.Build(creature, CFrame.new(padTop) * base.Facing)
 	model:SetAttribute("OwnerUserId", player.UserId)
+	addSellPrompt(player, model, creature, slot)
 	model.Parent = base.Model
 
 	local models = modelsByPlayer[player]
@@ -107,6 +137,61 @@ function CreatureService.AddCreature(player: Player, creature: Creature): number
 	return nil
 end
 
+-- Lo llama el botón "Sell" de una mascota. Valida TODO en el servidor antes de pagar.
+function CreatureService.TrySell(who: Player, owner: Player, slot: number, model: Model)
+	if who ~= owner then
+		notifyRemote:FireClient(who, "That's not your creature!")
+		return
+	end
+	local now = os.clock()
+	if now - (lastSell[owner] or 0) < Config.Economy.SellCooldown then
+		return
+	end
+	lastSell[owner] = now
+
+	-- La mascota tiene que seguir existiendo en ese pad (por si ya se vendió)
+	local models = modelsByPlayer[owner]
+	local profile = PlayerDataService.Get(owner)
+	if not models or models[slot] ~= model or not profile then
+		return
+	end
+	local index: number? = nil
+	for i, data in profile.Creatures do
+		if data.Slot == slot then
+			index = i
+			break
+		end
+	end
+	if not index then
+		return
+	end
+	local creature = Creatures.Get(profile.Creatures[index].CreatureId)
+	local rarity = creature and Config.GetRarity(creature.RarityId)
+	if not creature or not rarity then
+		return
+	end
+
+	-- Tiene que estar vivo y cerca
+	local character = owner.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local body = model.PrimaryPart
+	if not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart") or not body then
+		return
+	end
+	if (root.Position - body.Position).Magnitude > Config.Economy.SellDistance + 5 then
+		return
+	end
+
+	table.remove(profile.Creatures, index)
+	models[slot] = nil
+	model:Destroy()
+	local price = Config.GetSellPrice(rarity)
+	PlayerDataService.AddCoins(owner, price)
+	updateIncomeAttribute(owner)
+	notifyRemote:FireClient(owner, `Sold {creature.DisplayName} for {Format.Number(price)} coins!`)
+end
+
 -- Cuando el jugador recibe su base: pone las mascotas que ya tenía.
 function CreatureService.SetupBase(player: Player, base: Base)
 	local profile = PlayerDataService.Get(player)
@@ -131,6 +216,7 @@ function CreatureService.ClearBase(player: Player)
 		end
 	end
 	modelsByPlayer[player] = nil
+	lastSell[player] = nil
 end
 
 function CreatureService.Init()

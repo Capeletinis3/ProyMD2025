@@ -26,7 +26,7 @@ egg-storm/
     │       ├── PlayerDataService.luau                  datos de cada jugador y guardado (DataStore)
     │       ├── EggService.luau                         lluvia de huevos, agarrar y llevar
     │       ├── IncubatorService.luau                   incubadoras y apertura de huevos
-    │       ├── CreatureService.luau                    mascotas en la base y plata por segundo
+    │       ├── CreatureService.luau                    mascotas en la base, plata por segundo y venta
     │       ├── CreatureModels.luau                     modelos placeholder de las mascotas
     │       ├── UpgradeService.luau                     compra y aplica las mejoras
     │       ├── BaseFloors.luau                         segundo piso de la base ("Base Floor")
@@ -38,6 +38,7 @@ egg-storm/
         ├── Notifier.luau                               avisos en pantalla
         ├── HatchReveal.luau                            animación de apertura y cartel "You got..."
         ├── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
+        ├── SellPrompts.luau                            el botón "Sell" de cada mascota solo lo ve su dueño
         ├── UpgradePanel.luau                           ventana de mejoras
         └── StormClient.luau                            cartel de fase, "WAVE INCOMING", lluvia y la ola
 ```

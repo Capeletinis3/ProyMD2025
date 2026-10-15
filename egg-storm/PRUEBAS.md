@@ -33,6 +33,11 @@ Hacela en Studio antes de publicar. Tarda unos 15 minutos.
 - [ ] Al terminar: el huevo tiembla, brilla, explota y aparece el cartel "YOU GOT ...".
 - [ ] La mascota aparece en un pad y la plata sube cada segundo (abajo a la izquierda y en la lista de jugadores).
 
+### Vender mascotas
+- [ ] Sobre una mascota tuya aparece "Sell" con el precio; sobre las de otro jugador no aparece.
+- [ ] Mantener E vende la mascota: desaparece, sube la plata y baja la plata por segundo.
+- [ ] Con todos los lugares llenos, al querer incubar te avisa que vendas una; después de vender, se puede incubar.
+
 ### Mejoras
 - [ ] La ventana de mejoras se lee bien, sin textos encimados.
 - [ ] Comprar cada mejora: Incubation Speed (el tiempo de un huevo incubando baja), Extra Incubator (aparece la incubadora 2), Walk Speed (corrés más rápido), Base Floor (aparece el segundo piso).

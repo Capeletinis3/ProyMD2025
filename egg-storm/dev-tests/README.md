@@ -13,6 +13,7 @@ python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_phase4.luau   # mejor
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_phase5.luau   # tormenta y ola
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_phase7.luau   # guardado
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_phase8.luau   # partida completa con 2 jugadores
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_sell.luau     # vender mascotas
 python3 dev-tests/bundle.py src <ruta-a-luau> mapa.png                   # dibujo del mapa desde arriba
 python3 dev-tests/ui_render.py src <ruta-a-luau> dev-tests/ui_upgrades.luau mejoras.png 1280 720   # interfaz
 ```

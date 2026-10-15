@@ -142,7 +142,7 @@ MOVE_TO(bob, egg5.Position); prompt5.Triggered:Fire(bob); ADVANCE(0.1)
 local incB = baseB.Model.Incubator1
 MOVE_TO(bob, incB.Base.Position); ADVANCE(1); incB.Base.ProximityPrompt.Triggered:Fire(bob); ADVANCE(0.1)
 local fullMsg = false
-for _, e in REMOTE_LOG do if e.player == bob and e.args[1] == "Your creature spots are full!" then fullMsg = true end end
+for _, e in REMOTE_LOG do if e.player == bob and e.args[1] == "Your creature spots are full! Sell a creature (hold E on it) to make room." then fullMsg = true end end
 check(fullMsg and Eggs.GetCarriedEgg(bob) ~= nil, "full creature spots block incubating")
 
 -- Leaving: base is cleaned and freed, eggs in incubator saved to profile

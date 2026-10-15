@@ -356,7 +356,7 @@ function IncubatorService.TryIncubate(player: Player, incubator: Incubator)
 
 	-- Cada huevo necesita un pad libre para su mascota (contando los que ya se están incubando)
 	if CreatureService.GetFreeSlotCount(player) - countIncubating(player) <= 0 then
-		notifyRemote:FireClient(player, "Your creature spots are full!")
+		notifyRemote:FireClient(player, "Your creature spots are full! Sell a creature (hold E on it) to make room.")
 		return
 	end
 

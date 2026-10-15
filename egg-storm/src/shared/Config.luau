@@ -148,6 +148,13 @@ Config.Incubators = {
 Config.Economy = {
 	StartingCoins = 0,
 	IncomeInterval = 1, -- cada cuántos segundos se cobra la plata de las mascotas
+
+	-- Vender mascotas (mantener E sobre una mascota tuya)
+	SellValueSeconds = 60, -- precio de venta = esta cantidad de segundos de lo que genera (Common 60, Legendary 6.000...)
+	SellHoldTime = 1.5, -- segundos que hay que mantener la tecla para vender (así no se vende sin querer)
+	SellHoldTimeRare = 3, -- lo mismo, para Legendary y Secret
+	SellDistance = 16, -- distancia máxima (alcanza para las mascotas del segundo piso desde abajo)
+	SellCooldown = 0.5, -- tiempo mínimo entre ventas (anti-spam)
 }
 
 -- ===== Guardado (fase 7) =====
@@ -227,6 +234,11 @@ end
 
 function Config.GetRarity(id: string): Rarity?
 	return raritiesById[id]
+end
+
+-- Cuánto pagan por vender una mascota de esta rareza.
+function Config.GetSellPrice(rarity: Rarity): number
+	return rarity.CoinsPerSecond * Config.Economy.SellValueSeconds
 end
 
 -- Segundos que tarda un huevo de esta rareza con el nivel de "Incubation Speed" dado (con el mínimo aplicado).

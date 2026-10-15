@@ -13,7 +13,7 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 - 🔴 Revisá `Config` antes de publicar: `StartingCoins = 0`, `RainDuration = 60`, `CalmDuration = 20`, `MinIncubationTime = 5` y los `BaseIncubationTime` originales (30/60/90/120/180).
 
 ## 3. Cosas de juego que todavía no están
-- 🔴 **¿Qué pasa cuando se llenan los 14 lugares de mascotas?** Hoy no se puede incubar más y el progreso se frena. Opciones: vender mascotas por plata, reemplazar una mascota vieja por la nueva, o más pisos. Hay que elegir una.
+- ✅ ~~¿Qué pasa cuando se llenan los 14 lugares de mascotas?~~ **Hecho:** ahora se pueden vender mascotas (mantener E sobre una mascota tuya). El precio está en `Config.Economy.SellValueSeconds`.
 - **Tutorial corto** para el que entra por primera vez: flechas o carteles "Grab eggs in the sand → bring them to your incubator → come back before the wave!".
 - **Escalera al segundo piso** (hoy es solo de exhibición).
 - **Ganancia mientras no estás** (opcional, muchos juegos así lo tienen).
