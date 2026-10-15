@@ -1,29 +1,26 @@
 --!strict
--- Punto de entrada del cliente. Por ahora solo avisa qué base te tocó.
+-- Punto de entrada del cliente.
 -- (El cliente nunca decide nada importante: solo muestra lo que el servidor le dice.)
 
 local Players = game:GetService("Players")
-local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Notifier = require(script.Parent.Notifier)
 
 local player = Players.LocalPlayer
 
--- SetCore puede fallar si la interfaz de Roblox todavía no cargó, así que reintentamos un rato.
-local function notify(title: string, text: string)
-	for _ = 1, 20 do
-		local ok = pcall(function()
-			StarterGui:SetCore("SendNotification", { Title = title, Text = text, Duration = 6 })
-		end)
-		if ok then
-			return
-		end
-		task.wait(0.5)
+-- Avisos que manda el servidor ("You grabbed a Rare Egg!", etc.)
+Remotes.Event("Notify").OnClientEvent:Connect(function(text: unknown)
+	if typeof(text) == "string" then
+		Notifier.Show(text)
 	end
-end
+end)
 
 local function onBaseChanged()
 	local baseId = player:GetAttribute("BaseId")
 	if typeof(baseId) == "number" then
-		notify("Egg Storm", `Welcome! Your base is #{baseId}.`)
+		Notifier.Show(`Welcome! Your base is #{baseId}.`, 6)
 	end
 end
 

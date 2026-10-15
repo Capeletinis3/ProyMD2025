@@ -11,6 +11,10 @@ export type Rarity = {
 	Weight: number, -- probabilidad relativa (los pesos suman 100)
 	BaseIncubationTime: number, -- segundos, antes de aplicar mejoras
 	CoinsPerSecond: number, -- plata que genera la criatura que sale de este huevo
+	-- Dónde cae, como fracción del radio de la zona de peligro (0 = centro, 1 = borde).
+	-- Las bases están afuera del borde, así que cuanto más chico, más lejos de las bases cae.
+	SpawnRadiusMin: number,
+	SpawnRadiusMax: number,
 }
 
 export type IncubationSpeedLevel = {
@@ -66,6 +70,8 @@ Config.Rarities = {
 		Weight = 60,
 		BaseIncubationTime = 30,
 		CoinsPerSecond = 1,
+		SpawnRadiusMin = 0.4,
+		SpawnRadiusMax = 0.9,
 	},
 	{
 		Id = "Rare",
@@ -74,6 +80,8 @@ Config.Rarities = {
 		Weight = 25,
 		BaseIncubationTime = 60,
 		CoinsPerSecond = 5,
+		SpawnRadiusMin = 0.3,
+		SpawnRadiusMax = 0.85,
 	},
 	{
 		Id = "Epic",
@@ -82,6 +90,8 @@ Config.Rarities = {
 		Weight = 10,
 		BaseIncubationTime = 90,
 		CoinsPerSecond = 20,
+		SpawnRadiusMin = 0.15,
+		SpawnRadiusMax = 0.7,
 	},
 	{
 		Id = "Legendary",
@@ -90,6 +100,8 @@ Config.Rarities = {
 		Weight = 4.5,
 		BaseIncubationTime = 120,
 		CoinsPerSecond = 100,
+		SpawnRadiusMin = 0,
+		SpawnRadiusMax = 0.5,
 	},
 	{
 		Id = "Secret",
@@ -98,8 +110,21 @@ Config.Rarities = {
 		Weight = 0.5,
 		BaseIncubationTime = 180,
 		CoinsPerSecond = 500,
+		SpawnRadiusMin = 0,
+		SpawnRadiusMax = 0.3,
 	},
 } :: { Rarity }
+
+Config.Eggs = {
+	SpawnInterval = 2, -- segundos entre huevo y huevo mientras llueve
+	MaxOnGround = 25, -- si ya hay esta cantidad en el piso (o cayendo), no cae ninguno más
+	FallHeight = 150, -- desde qué altura caen
+	FallTime = 2.5, -- cuánto tarda la caída (segundos)
+	GrabHoldTime = 0.25, -- cuánto hay que mantener apretada la tecla para agarrar
+	GrabDistance = 10, -- distancia máxima para agarrar (studs)
+	GrabCooldown = 0.5, -- tiempo mínimo entre intentos de agarrar (anti-spam)
+	CarryHeight = 2.5, -- cuántos studs sobre la cabeza se lleva el huevo
+}
 
 -- ===== Mejoras (se usan desde la fase 4) =====
 Config.Upgrades = {
