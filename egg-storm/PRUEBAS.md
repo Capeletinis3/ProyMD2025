@@ -62,5 +62,9 @@ Hacela en Studio antes de publicar. Tarda unos 15 minutos.
 - [ ] Con Jugador 1: juntá plata, comprá algo, dejá un huevo incubando. Cerrá todo (Stop) y volvé a empezar: tiene que estar todo igual, incluida la cuenta regresiva del huevo.
 - [ ] En la ventana del servidor (Output) no aparecen errores en rojo.
 
+### Ganancia mientras no estás
+- [ ] Con al menos una mascota, salí del juego, esperá más de 1 minuto y volvé a entrar: aparece "Welcome back!" con la plata ganada y ya está sumada.
+- [ ] Si volvés antes de 1 minuto, no aparece el cartel.
+
 ### Celular
 - [ ] **Test → Device** → elegí un teléfono: la ventana de mejoras, la plata y los avisos entran en la pantalla.

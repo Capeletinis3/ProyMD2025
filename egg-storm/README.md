@@ -39,6 +39,7 @@ egg-storm/
         ├── Notifier.luau                               avisos en pantalla
         ├── HatchReveal.luau                            animación de apertura y cartel "You got..."
         ├── Tutorial.luau                               cartel del tutorial y flecha que guía
+        ├── WelcomeBack.luau                            cartel "Welcome back!" con lo que ganaste mientras no estabas
         ├── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
         ├── SellPrompts.luau                            el botón "Sell" de cada mascota solo lo ve su dueño
         ├── UpgradePanel.luau                           ventana de mejoras

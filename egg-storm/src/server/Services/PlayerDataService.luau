@@ -164,6 +164,22 @@ local function profileFromData(data: any): Profile
 	return profile
 end
 
+-- Ganancia mientras no estuvo: segundos afuera (con tope) × plata por segundo × OfflineRate.
+-- El tiempo sale de la hora del SERVIDOR en que se guardaron sus datos (SavedAt), no del reloj del jugador.
+local function offlineEarnings(data: any, profile: Profile): (number, number)
+	if typeof(data) ~= "table" or typeof(data.SavedAt) ~= "number" then
+		return 0, 0
+	end
+	local economy = Config.Economy
+	local seconds = os.time() - data.SavedAt
+	if seconds < economy.OfflineMinSeconds then
+		return 0, 0 -- muy poco tiempo (o reloj raro entre servidores)
+	end
+	seconds = math.min(seconds, economy.OfflineMaxHours * 3600)
+	local earned = math.floor(Creatures.TotalIncome(profile.Creatures) * seconds * economy.OfflineRate)
+	return earned, seconds
+end
+
 -- Copia del perfil lista para guardar (tablas simples: números, textos y listas)
 local function dataFromProfile(profile: Profile, incubating: { IncubatingData }): { [string]: any }
 	local creatures = {}
@@ -276,9 +292,12 @@ function PlayerDataService.Load(player: Player): Profile?
 	end
 
 	local profile: Profile
+	local offlineCoins, offlineSeconds = 0, 0
 	if ok then
 		profile = profileFromData(data)
 		canSave[player] = true
+		offlineCoins, offlineSeconds = offlineEarnings(data, profile)
+		profile.Coins += offlineCoins
 	elseif RunService:IsStudio() then
 		warn("[PlayerData] Couldn't load data. Playing WITHOUT saving. In Studio, turn on Game Settings > Security > 'Enable Studio Access to API Services'.")
 		profile = newProfile()
@@ -293,6 +312,11 @@ function PlayerDataService.Load(player: Player): Profile?
 	createLeaderstats(player, profile.Coins)
 	syncCoins(player, profile)
 	syncLevels(player, profile)
+	if offlineCoins > 0 then
+		-- El cliente muestra el cartel "Welcome back!" con esto (ver WelcomeBack.luau)
+		player:SetAttribute("OfflineSeconds", offlineSeconds)
+		player:SetAttribute("OfflineCoins", offlineCoins)
+	end
 	return profile
 end
 

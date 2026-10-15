@@ -14,6 +14,7 @@ local StormClient = require(script.Parent.StormClient)
 local Hud = require(script.Parent.Hud)
 local HatchReveal = require(script.Parent.HatchReveal)
 local Tutorial = require(script.Parent.Tutorial)
+local WelcomeBack = require(script.Parent.WelcomeBack)
 
 local player = Players.LocalPlayer
 
@@ -41,3 +42,4 @@ StormClient.Start()
 Hud.Start()
 HatchReveal.Start()
 Tutorial.Start()
+WelcomeBack.Start()

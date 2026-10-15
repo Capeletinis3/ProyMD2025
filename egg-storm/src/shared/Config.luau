@@ -155,6 +155,11 @@ Config.Economy = {
 	SellHoldTimeRare = 3, -- lo mismo, para Legendary y Secret
 	SellDistance = 16, -- distancia máxima (alcanza para las mascotas del segundo piso desde abajo)
 	SellCooldown = 0.5, -- tiempo mínimo entre ventas (anti-spam)
+
+	-- Ganancia mientras no estás: al volver, tus mascotas te pagan por el tiempo que estuviste afuera
+	OfflineRate = 0.5, -- qué parte de lo normal (0.5 = la mitad)
+	OfflineMaxHours = 8, -- tope de horas que se cuentan
+	OfflineMinSeconds = 60, -- si estuviste afuera menos que esto, no cuenta (así no sale el cartel cada vez que reentrás)
 }
 
 -- ===== Guardado (fase 7) =====

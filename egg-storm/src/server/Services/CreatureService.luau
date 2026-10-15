@@ -84,15 +84,7 @@ function CreatureService.GetIncomePerSecond(player: Player): number
 	if not profile then
 		return 0
 	end
-	local total = 0
-	for _, data in profile.Creatures do
-		local creature = Creatures.Get(data.CreatureId)
-		local rarity = creature and Config.GetRarity(creature.RarityId)
-		if rarity then
-			total += rarity.CoinsPerSecond
-		end
-	end
-	return total
+	return Creatures.TotalIncome(profile.Creatures)
 end
 
 -- Cuántos pads de mascotas libres le quedan al jugador.

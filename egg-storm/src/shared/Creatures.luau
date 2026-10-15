@@ -4,6 +4,8 @@
 -- La plata por segundo NO va acá: la define la rareza en Config.Rarities.
 -- Style elige la forma del modelo placeholder: "Blob", "Bunny", "Cat", "Bird" o "Dragon".
 
+local Config = require(script.Parent.Config)
+
 export type Style = "Blob" | "Bunny" | "Cat" | "Bird" | "Dragon"
 
 export type Creature = {
@@ -54,6 +56,20 @@ function Creatures.ForRarity(rarityId: string): { Creature }
 		end
 	end
 	return result
+end
+
+-- Cuánta plata por segundo dan, en total, estas mascotas (lista como la del perfil del jugador).
+-- Lo usan el cobro normal (CreatureService) y la ganancia mientras no estás (PlayerDataService).
+function Creatures.TotalIncome(list: { { CreatureId: string, Slot: number } }): number
+	local total = 0
+	for _, entry in list do
+		local creature = byId[entry.CreatureId]
+		local rarity = creature and Config.GetRarity(creature.RarityId)
+		if rarity then
+			total += rarity.CoinsPerSecond
+		end
+	end
+	return total
 end
 
 return Creatures
