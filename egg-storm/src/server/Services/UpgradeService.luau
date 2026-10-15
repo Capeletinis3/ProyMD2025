@@ -15,6 +15,7 @@ local BaseService = require(script.Parent.BaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local IncubatorService = require(script.Parent.IncubatorService)
 local BaseFloors = require(script.Parent.BaseFloors)
+local TutorialService = require(script.Parent.TutorialService)
 
 type Base = BaseService.Base
 type UpgradeId = Upgrades.UpgradeId
@@ -108,6 +109,7 @@ function UpgradeService.TryBuy(player: Player, id: UpgradeId)
 	end
 	PlayerDataService.SyncLevels(player)
 	notify(player, `{Upgrades.DisplayNames[id]} upgraded!`)
+	TutorialService.OnEvent(player, "BoughtUpgrade")
 end
 
 -- Cuando el jugador recibe su base: segundo piso (si lo compró) y velocidad de caminata.

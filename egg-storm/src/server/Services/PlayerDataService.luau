@@ -37,11 +37,13 @@ export type Profile = {
 	IncubatorCount: number,
 	WalkSpeedLevel: number,
 	BaseLevel: number, -- 2 = tiene el segundo piso ("Base Floor")
+	TutorialStep: number, -- en qué paso del tutorial va (ver TutorialService; el último = terminado)
 	Creatures: { CreatureData },
 	Incubating: { IncubatingData }, -- se llena al salir (mientras jugás, los huevos viven en IncubatorService)
 }
 
 local DATA_VERSION = 1 -- si algún día cambia la forma de los datos, sirve para convertir los viejos
+local TUTORIAL_DONE = 5 -- igual que TutorialService.Steps.Done
 
 local PlayerDataService = {}
 
@@ -71,6 +73,7 @@ local function newProfile(): Profile
 		IncubatorCount = Config.Upgrades.StartingIncubators,
 		WalkSpeedLevel = 1,
 		BaseLevel = 1,
+		TutorialStep = 1,
 		Creatures = {},
 		Incubating = {},
 	}
@@ -123,6 +126,12 @@ local function profileFromData(data: any): Profile
 	profile.IncubatorCount = cleanNumber(data.IncubatorCount, up.StartingIncubators, 1, up.MaxIncubators)
 	profile.WalkSpeedLevel = cleanNumber(data.WalkSpeedLevel, 1, 1, #up.WalkSpeed)
 	profile.BaseLevel = cleanNumber(data.BaseLevel, 1, 1, 2)
+	if typeof(data.TutorialStep) == "number" then
+		profile.TutorialStep = cleanNumber(data.TutorialStep, 1, 1, TUTORIAL_DONE)
+	else
+		-- Jugadores que ya jugaban antes de que existiera el tutorial: no se lo mostramos
+		profile.TutorialStep = TUTORIAL_DONE
+	end
 
 	-- Mascotas: que existan y que no haya dos en el mismo pad
 	local usedSlots: { [number]: boolean } = {}
@@ -172,6 +181,7 @@ local function dataFromProfile(profile: Profile, incubating: { IncubatingData })
 		IncubatorCount = profile.IncubatorCount,
 		WalkSpeedLevel = profile.WalkSpeedLevel,
 		BaseLevel = profile.BaseLevel,
+		TutorialStep = profile.TutorialStep,
 		Creatures = creatures,
 		Incubating = eggs,
 		SavedAt = os.time(),
@@ -243,6 +253,7 @@ local function syncLevels(player: Player, profile: Profile)
 	player:SetAttribute("IncubatorCount", profile.IncubatorCount)
 	player:SetAttribute("WalkSpeedLevel", profile.WalkSpeedLevel)
 	player:SetAttribute("BaseLevel", profile.BaseLevel)
+	player:SetAttribute("TutorialStep", profile.TutorialStep)
 end
 
 -- ===== API pública =====

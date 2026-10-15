@@ -15,6 +15,7 @@ local BaseService = require(script.Parent.BaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local EggService = require(script.Parent.EggService)
 local CreatureService = require(script.Parent.CreatureService)
+local TutorialService = require(script.Parent.TutorialService)
 local Creatures = require(ReplicatedStorage.Shared.Creatures)
 
 type Base = BaseService.Base
@@ -295,6 +296,7 @@ local function finishHatch(incubator: Incubator, egg: IncubatingEgg, creature: C
 	egg.Part:Destroy()
 	incubator.Egg = nil
 	showEmpty(incubator)
+	TutorialService.OnEvent(incubator.Owner, "Hatched")
 end
 
 -- Empieza la apertura: le avisa al dueño (su pantalla hace temblar y brillar el huevo)
@@ -365,6 +367,7 @@ function IncubatorService.TryIncubate(player: Player, incubator: Incubator)
 		return
 	end
 	startIncubation(incubator, rarity)
+	TutorialService.OnEvent(player, "Incubated")
 end
 
 -- Cuando el jugador recibe su base: arma sus incubadoras y restaura los huevos que tenía.

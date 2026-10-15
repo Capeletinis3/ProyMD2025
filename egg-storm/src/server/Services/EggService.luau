@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local BaseService = require(script.Parent.BaseService)
+local TutorialService = require(script.Parent.TutorialService)
 
 type Rarity = Config.Rarity
 
@@ -344,6 +345,7 @@ function EggService.TryGrab(player: Player, egg: Egg)
 	carriedByPlayer[player] = egg
 	player:SetAttribute("CarriedEggRarity", egg.Rarity.Id) -- para que el cliente pueda mostrarlo
 	notify(player, `You grabbed a {egg.Rarity.DisplayName} Egg! Bring it to your base.`)
+	TutorialService.OnEvent(player, "Grabbed")
 end
 
 function EggService.GetCarriedEgg(player: Player): Egg?

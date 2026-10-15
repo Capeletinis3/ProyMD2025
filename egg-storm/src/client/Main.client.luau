@@ -13,6 +13,7 @@ local UpgradePanel = require(script.Parent.UpgradePanel)
 local StormClient = require(script.Parent.StormClient)
 local Hud = require(script.Parent.Hud)
 local HatchReveal = require(script.Parent.HatchReveal)
+local Tutorial = require(script.Parent.Tutorial)
 
 local player = Players.LocalPlayer
 
@@ -39,3 +40,4 @@ UpgradePanel.Start()
 StormClient.Start()
 Hud.Start()
 HatchReveal.Start()
+Tutorial.Start()

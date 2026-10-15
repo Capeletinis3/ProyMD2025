@@ -30,6 +30,7 @@ egg-storm/
     │       ├── CreatureModels.luau                     modelos placeholder de las mascotas
     │       ├── UpgradeService.luau                     compra y aplica las mejoras
     │       ├── BaseFloors.luau                         segundo piso de la base ("Base Floor")
+    │       ├── TutorialService.luau                    pasos del tutorial para jugadores nuevos
     │       └── StormService.luau                       ciclo de tormenta y ola
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
         ├── Main.client.luau
@@ -37,6 +38,7 @@ egg-storm/
         ├── Hud.luau                                    plata, plata por segundo y huevo que llevás
         ├── Notifier.luau                               avisos en pantalla
         ├── HatchReveal.luau                            animación de apertura y cartel "You got..."
+        ├── Tutorial.luau                               cartel del tutorial y flecha que guía
         ├── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
         ├── SellPrompts.luau                            el botón "Sell" de cada mascota solo lo ve su dueño
         ├── UpgradePanel.luau                           ventana de mejoras

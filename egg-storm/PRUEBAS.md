@@ -15,6 +15,14 @@ Hacela en Studio antes de publicar. Tarda unos 15 minutos.
 
 ## Checklist
 
+### Tutorial (con un jugador nuevo)
+> Para ver el tutorial de nuevo con tu cuenta, cambiá `Config.Data.StoreName` a otro nombre (empezás de cero) y después volvelo como estaba.
+- [ ] Arriba aparece "Grab an egg in the sand!" y una flecha de luz desde tu personaje al huevo más cercano.
+- [ ] Al agarrarlo: "Bring the egg to your incubator!" y la flecha apunta a tu incubadora.
+- [ ] Al incubar: "Your egg is incubating!...". Si viene la ola y estás en la arena: "WAVE INCOMING! Run back..." con la flecha a tu base.
+- [ ] Cuando sale la mascota: "Open the Upgrades panel" con la flecha al panel. Al abrirlo: "Tutorial complete!".
+- [ ] "Skip" lo termina en cualquier momento.
+
 ### Bases
 - [ ] Jugador 1 aparece en la base 1 (roja) y Jugador 2 en la base 2 (naranja), cada uno con su nombre en el cartel.
 - [ ] Cada uno ve el botón "Open" solo en el panel de su propia base.
