@@ -8,6 +8,9 @@ Juego de Roblox (MVP). El código está en Luau y se sincroniza con Roblox Studi
 egg-storm/
 ├── default.project.json      ← le dice a Rojo dónde va cada carpeta dentro de Studio
 ├── rokit.toml                ← versión de Rojo del proyecto (si usás Rokit)
+├── PRUEBAS.md                ← prueba guiada con 2 jugadores
+├── PUBLICAR.md               ← lo que falta para publicar
+├── dev-tests/                ← pruebas automáticas (opcional, ver su README)
 └── src/
     ├── shared/   → ReplicatedStorage.Shared           (lo ven servidor y cliente)
     │   ├── Config.luau                                 todos los números de balance

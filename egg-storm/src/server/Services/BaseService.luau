@@ -97,12 +97,13 @@ local function onCharacterAdded(player: Player, character: Model)
 	end
 end
 
-local function assignBase(player: Player): boolean
+-- Reserva una base libre para el jugador (no espera nada). Devuelve nil si el servidor está lleno.
+local function assignBase(player: Player): Base?
 	local base = findFreeBase()
 	if not base then
 		-- No debería pasar si Max Players = 8 en Game Settings, pero por las dudas.
 		player:Kick("This server is full. Please join another one!")
-		return false
+		return nil
 	end
 
 	base.Owner = player
@@ -110,6 +111,12 @@ local function assignBase(player: Player): boolean
 	base.Model:SetAttribute("OwnerUserId", player.UserId)
 	player:SetAttribute("BaseId", base.Id) -- el cliente lee este atributo para saber cuál es su base
 	updateSign(base)
+	return base
+end
+
+-- Avisa a los demás servicios que el jugador tiene base (cargar datos, armar incubadoras...).
+-- Puede tardar: cargar los datos espera al DataStore.
+local function runAssignedCallbacks(player: Player, base: Base)
 	for _, callback in assignedCallbacks do
 		local ok, err = pcall(function()
 			callback(player, base)
@@ -118,7 +125,6 @@ local function assignBase(player: Player): boolean
 			warn(`[BaseService] Error setting up base {base.Id}: {err}`)
 		end
 	end
-	return true
 end
 
 local function releaseBase(player: Player)
@@ -142,15 +148,19 @@ local function releaseBase(player: Player)
 end
 
 local function onPlayerAdded(player: Player)
-	if not assignBase(player) then
+	local base = assignBase(player)
+	if not base then
 		return
 	end
+	-- Primero conectamos el "viajar a tu base" (así el personaje va directo aunque los datos tarden en cargar)
 	player.CharacterAdded:Connect(function(character)
 		onCharacterAdded(player, character)
 	end)
 	if player.Character then
 		task.spawn(onCharacterAdded, player, player.Character)
 	end
+	-- Después cargamos los datos y armamos la base
+	runAssignedCallbacks(player, base)
 end
 
 -- Junta los pads de una carpeta de la base, ordenados por su número (atributo SlotIndex).
