@@ -30,22 +30,24 @@ local Config = {}
 Config.MaxPlayers = 8
 
 -- ===== Mapa =====
--- El mapa es un pasillo largo. Eje Z: el lobby (zona segura con las bases) queda en Z < 0,
+-- Forma de T. Eje Z: el lobby (zona segura con las bases en fila) queda en Z < 0,
 -- la línea segura está en Z = 0 y el pasillo de arena va de Z = 0 hasta Z = CorridorLength.
+-- El ancho y el largo del lobby se calculan solos a partir de la cantidad y el tamaño de las bases.
 Config.Map = {
 	FloorY = 0, -- altura del piso
-	CorridorWidth = 200, -- ancho de todo el mapa (lobby y pasillo)
-	CorridorLength = 500, -- largo del pasillo de arena (zona de peligro)
-	LobbyDepth = 180, -- largo del lobby verde (zona segura)
+	CorridorWidth = 200, -- ancho del pasillo de arena
+	CorridorLength = 800, -- largo del pasillo de arena (zona de peligro)
 	SeaDepth = 25, -- franja de agua al fondo del pasillo, de donde sale la ola
 	WallHeight = 80,
 	WallThickness = 10,
 	EggSideMargin = 15, -- los huevos no caen pegados a las paredes
 
-	BaseCount = 8, -- mitad de cada lado del lobby
-	PlotWidth = 38, -- largo de cada parcela a lo largo del lobby
-	PlotDepth = 44, -- profundidad de cada parcela (desde el camino central hacia la pared)
-	PlotGap = 4, -- espacio entre parcelas
+	BaseCount = 8, -- todas en una fila, mirando hacia el pasillo
+	PlotWidth = 36, -- ancho de cada parcela
+	PlotDepth = 40, -- profundidad de cada parcela
+	PlotGap = 8, -- espacio entre parcelas (y entre las parcelas de las puntas y la pared)
+	LobbyFrontWalk = 24, -- espacio para caminar entre las bases y la línea segura
+	LobbyBackMargin = 16, -- espacio detrás de las bases
 
 	GrassColor = Color3.fromRGB(80, 220, 70),
 	SandColor = Color3.fromRGB(240, 215, 160),

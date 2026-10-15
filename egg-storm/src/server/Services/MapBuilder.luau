@@ -1,16 +1,15 @@
 --!strict
 -- MapBuilder: arma el mapa placeholder con Parts simples (estilo bloques/LEGO, colorido).
 --
--- Forma del mapa (visto desde arriba), eje Z de abajo hacia arriba:
+-- Forma del mapa (visto desde arriba, en forma de T), eje Z de abajo hacia arriba:
 --
---   ┌──────────── agua (de acá sale la ola) ────────────┐   Z = CorridorLength + SeaDepth
---   │  SECRET / LEGENDARY / EPIC / RARE / COMMON zones   │   pasillo de arena (peligro)
---   ├──────────────── arco "SAFE ZONE" ──────────────────┤   Z = 0  (línea segura)
---   │ [Base1]                                   [Base5]  │
---   │ [Base2]          camino central           [Base6]  │   lobby verde (seguro)
---   │ [Base3]                                   [Base7]  │
---   │ [Base4]                                   [Base8]  │
---   └────────────────────────────────────────────────────┘   Z = -LobbyDepth
+--             ┌──── agua (de acá sale la ola) ────┐         Z = CorridorLength + SeaDepth
+--             │  SECRET / LEGENDARY / EPIC / ...  │         pasillo de arena (peligro)
+--             │  ... / RARE / COMMON zones        │
+--   ┌─────────┴──────── arco "SAFE ZONE" ─────────┴────────┐ Z = 0  (línea segura)
+--   │  ↑     ↑     ↑     ↑     ↑     ↑     ↑     ↑        │ lobby verde (seguro)
+--   │ [B1]  [B2]  [B3]  [B4]  [B5]  [B6]  [B7]  [B8]       │ bases mirando al pasillo
+--   └──────────────────────────────────────────────────────┘ Z = -(LobbyFrontWalk + PlotDepth + LobbyBackMargin)
 --
 -- Si en Workspace ya existe una carpeta "Map" (por ejemplo, cuando reemplaces los modelos a mano),
 -- no construye nada y usa esa. Solo tiene que respetar la misma estructura:
@@ -25,6 +24,10 @@ local MapBuilder = {}
 
 local cfg = Config.Map
 local HALF_WIDTH = cfg.CorridorWidth / 2
+-- El lobby tiene el ancho justo para las bases en fila (con un espacio entre cada una y contra las paredes)
+local LOBBY_WIDTH = math.max(cfg.BaseCount * cfg.PlotWidth + (cfg.BaseCount + 1) * cfg.PlotGap, cfg.CorridorWidth)
+local LOBBY_HALF_WIDTH = LOBBY_WIDTH / 2
+local LOBBY_DEPTH = cfg.LobbyFrontWalk + cfg.PlotDepth + cfg.LobbyBackMargin
 
 -- ===== Ayudantes =====
 
@@ -142,35 +145,46 @@ local function buildWalls(map: Instance)
 	local t = cfg.WallThickness
 	local h = cfg.WallHeight
 	local farZ = cfg.CorridorLength + cfg.SeaDepth
-	local nearZ = -cfg.LobbyDepth
-	local length = farZ - nearZ + t * 2
-	local midZ = (farZ + nearZ) / 2
+	local nearZ = -LOBBY_DEPTH
+	local pillarColor = cfg.WallColor:Lerp(Color3.new(0, 0, 0), 0.2)
 
+	-- Pared con su borde verde arriba. size/position describen el bloque de la pared.
+	local function wall(name: string, size: Vector3, position: Vector3)
+		makePart(name, size, CFrame.new(position), cfg.WallColor, walls, true)
+		makePart("Trim", Vector3.new(size.X + 2, 2, size.Z + 2), CFrame.new(position.X, h + 1, position.Z), cfg.WallTrimColor, walls, true)
+	end
+
+	-- Paredes del pasillo (de la línea segura hasta el fondo)
+	local corridorLength = farZ + t
 	for _, side in { -1, 1 } do
-		local x = side * (HALF_WIDTH + t / 2)
-		makePart("SideWall", Vector3.new(t, h, length), CFrame.new(x, h / 2, midZ), cfg.WallColor, walls, true)
-		makePart("Trim", Vector3.new(t + 2, 2, length), CFrame.new(x, h + 1, midZ), cfg.WallTrimColor, walls, true)
+		wall("CorridorWall", Vector3.new(t, h, corridorLength), Vector3.new(side * (HALF_WIDTH + t / 2), h / 2, corridorLength / 2))
 		-- Columnas más oscuras cada tanto para que la pared no sea un bloque liso
-		local z = nearZ + 30
+		local z = 30
 		while z < farZ do
-			makePart("Pillar", Vector3.new(2, h, 6), CFrame.new(side * (HALF_WIDTH - 1), h / 2, z), cfg.WallColor:Lerp(Color3.new(0, 0, 0), 0.2), walls, true)
+			makePart("Pillar", Vector3.new(2, h, 6), CFrame.new(side * (HALF_WIDTH - 1), h / 2, z), pillarColor, walls, true)
 			z += 60
 		end
 	end
+	wall("FarWall", Vector3.new(cfg.CorridorWidth + t * 2, h, t), Vector3.new(0, h / 2, farZ + t / 2))
 
-	local fullWidth = cfg.CorridorWidth + t * 2
-	makePart("BackWall", Vector3.new(fullWidth, h, t), CFrame.new(0, h / 2, nearZ - t / 2), cfg.WallColor, walls, true)
-	makePart("Trim", Vector3.new(fullWidth, 2, t + 2), CFrame.new(0, h + 1, nearZ - t / 2), cfg.WallTrimColor, walls, true)
-	makePart("FarWall", Vector3.new(fullWidth, h, t), CFrame.new(0, h / 2, farZ + t / 2), cfg.WallColor, walls, true)
-	makePart("Trim", Vector3.new(fullWidth, 2, t + 2), CFrame.new(0, h + 1, farZ + t / 2), cfg.WallTrimColor, walls, true)
+	-- Paredes del lobby
+	local lobbyLength = LOBBY_DEPTH + t * 2
+	for _, side in { -1, 1 } do
+		wall("LobbyWall", Vector3.new(t, h, lobbyLength), Vector3.new(side * (LOBBY_HALF_WIDTH + t / 2), h / 2, nearZ + LOBBY_DEPTH / 2))
+		-- "Hombros" de la T: cierran el lobby a los costados de la entrada del pasillo
+		local shoulderWidth = LOBBY_HALF_WIDTH - HALF_WIDTH + t
+		if shoulderWidth > t then
+			wall("ShoulderWall", Vector3.new(shoulderWidth, h, t), Vector3.new(side * (HALF_WIDTH + shoulderWidth / 2), h / 2, t / 2))
+		end
+	end
+	wall("BackWall", Vector3.new(LOBBY_WIDTH + t * 2, h, t), Vector3.new(0, h / 2, nearZ - t / 2))
 end
 
 local function buildLobby(map: Instance)
-	local lobby = makePart("LobbyFloor", Vector3.new(cfg.CorridorWidth, 2, cfg.LobbyDepth), CFrame.new(0, cfg.FloorY - 1, -cfg.LobbyDepth / 2), cfg.GrassColor, map, true)
-	lobby.Material = Enum.Material.SmoothPlastic
+	makePart("LobbyFloor", Vector3.new(LOBBY_WIDTH, 2, LOBBY_DEPTH), CFrame.new(0, cfg.FloorY - 1, -LOBBY_DEPTH / 2), cfg.GrassColor, map, true)
 
 	-- Volumen invisible de toda la zona segura (la ola de la fase 5 no hace nada acá adentro)
-	makeMarker("SafeArea", Vector3.new(cfg.CorridorWidth, 60, cfg.LobbyDepth), CFrame.new(0, cfg.FloorY + 30, -cfg.LobbyDepth / 2), map)
+	makeMarker("SafeArea", Vector3.new(LOBBY_WIDTH, 60, LOBBY_DEPTH), CFrame.new(0, cfg.FloorY + 30, -LOBBY_DEPTH / 2), map)
 
 	-- Línea blanca en el piso que marca el límite
 	local line = makePart("SafeLine", Vector3.new(cfg.CorridorWidth, 0.2, 2), CFrame.new(0, cfg.FloorY + 0.1, 0), Color3.new(1, 1, 1), map)
@@ -187,9 +201,9 @@ local function buildLobby(map: Instance)
 	addText(beam, Enum.NormalId.Front, "DANGER ZONE AHEAD", Color3.fromRGB(255, 90, 90))
 	addText(beam, Enum.NormalId.Back, "SAFE ZONE", Color3.fromRGB(110, 255, 110))
 
-	-- Palmeras en el fondo del camino central (los costados están ocupados por las bases)
-	for _, x in { -35, 35 } do
-		buildPalm(Vector3.new(x, cfg.FloorY, -cfg.LobbyDepth + 12), map)
+	-- Palmeras en las esquinas de adelante del lobby, a los costados de la entrada del pasillo
+	for _, side in { -1, 1 } do
+		buildPalm(Vector3.new(side * (LOBBY_HALF_WIDTH - 12), cfg.FloorY, -10), map)
 	end
 end
 
@@ -249,18 +263,18 @@ local function buildCorridor(map: Instance)
 end
 
 local function buildSign(model: Model, plotCFrame: CFrame)
-	local signZ = cfg.PlotDepth / 2 - 2 -- cerca del borde de atrás (contra la pared)
+	local signZ = cfg.PlotDepth / 2 - 2 -- cerca del borde de atrás
 	for _, x in { -11, 11 } do
 		makePart("SignPost", Vector3.new(1, 12, 1), plotCFrame * CFrame.new(x, 6, signZ), Color3.fromRGB(90, 60, 40), model)
 	end
-	-- plotCFrame mira hacia el camino central, así que la cara Front del cartel también
+	-- plotCFrame mira hacia el pasillo, así que la cara Front del cartel también (se lee desde la arena)
 	local board = makePart("SignBoard", Vector3.new(24, 6, 1), plotCFrame * CFrame.new(0, 11, signZ), Color3.fromRGB(60, 45, 35), model)
 	addText(board, Enum.NormalId.Front, "Free Base", Color3.fromRGB(200, 200, 200), "SignLabel")
 end
 
 local function buildBase(index: number, position: Vector3, parent: Instance): Model
-	-- Mirando hacia el camino central. En coordenadas locales: -Z = hacia el camino, +Z = hacia la pared.
-	local plotCFrame = CFrame.lookAt(position, Vector3.new(0, position.Y, position.Z))
+	-- Mirando hacia el pasillo (+Z del mundo). En coordenadas locales: -Z = hacia el pasillo, +Z = hacia atrás.
+	local plotCFrame = CFrame.lookAt(position, position + Vector3.new(0, 0, 1))
 	local color = cfg.BaseColors[index] or Color3.new(1, 1, 1)
 	local w, d = cfg.PlotWidth, cfg.PlotDepth
 	local padHeight = 0.6
@@ -315,14 +329,12 @@ local function buildBases(map: Instance)
 	basesFolder.Name = "Bases"
 	basesFolder.Parent = map
 
-	local perSide = math.ceil(cfg.BaseCount / 2)
-	local x = HALF_WIDTH - cfg.PlotDepth / 2 - 4
+	-- Todas en una fila de izquierda a derecha, centrada, mirando al pasillo
+	local rowWidth = cfg.BaseCount * cfg.PlotWidth + (cfg.BaseCount - 1) * cfg.PlotGap
+	local z = -cfg.LobbyFrontWalk - cfg.PlotDepth / 2
 	for i = 1, cfg.BaseCount do
-		-- Bases 1..4 a la izquierda y 5..8 a la derecha, empezando por las más cercanas a la arena
-		local side = if i <= perSide then -1 else 1
-		local row = (i - 1) % perSide
-		local z = -cfg.PlotWidth / 2 - 12 - row * (cfg.PlotWidth + cfg.PlotGap)
-		buildBase(i, Vector3.new(side * x, cfg.FloorY, z), basesFolder)
+		local x = -rowWidth / 2 + cfg.PlotWidth / 2 + (i - 1) * (cfg.PlotWidth + cfg.PlotGap)
+		buildBase(i, Vector3.new(x, cfg.FloorY, z), basesFolder)
 	end
 end
 
