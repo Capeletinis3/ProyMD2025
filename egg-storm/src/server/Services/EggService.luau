@@ -43,7 +43,7 @@ local VISUALS: { [string]: Visual } = {
 }
 
 local EGG_SIZE = Vector3.new(3, 4, 3)
-local DANGER_ZONE_TOP = 0.4 -- altura del disco de arena (ver MapBuilder)
+local FLOOR_Y = Config.Map.FloorY
 
 local RAINBOW = ColorSequence.new({
 	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 60, 60)),
@@ -87,14 +87,13 @@ local function rollRarity(): Rarity
 	return Config.Rarities[1]
 end
 
+-- Un punto al azar dentro del tramo del pasillo que le toca a esta rareza.
 local function randomLandingPosition(rarity: Rarity): Vector3
-	local radius = Config.Map.DangerZoneRadius
-	local minR = rarity.SpawnRadiusMin * radius
-	local maxR = rarity.SpawnRadiusMax * radius
-	-- La raíz cuadrada reparte los huevos parejo por el área (si no, se amontonan en el centro).
-	local r = math.sqrt(random:NextNumber(minR * minR, maxR * maxR))
-	local angle = random:NextNumber(0, math.pi * 2)
-	return Vector3.new(math.cos(angle) * r, DANGER_ZONE_TOP + EGG_SIZE.Y / 2, math.sin(angle) * r)
+	local map = Config.Map
+	local halfWidth = map.CorridorWidth / 2 - map.EggSideMargin
+	local x = random:NextNumber(-halfWidth, halfWidth)
+	local z = random:NextNumber(rarity.ZoneStart, rarity.ZoneEnd) * map.CorridorLength
+	return Vector3.new(x, FLOOR_Y + EGG_SIZE.Y / 2, z)
 end
 
 local function countEggsInWorld(): number
@@ -178,7 +177,7 @@ local function createLandingMarker(position: Vector3, color: Color3): Part
 	marker.Name = "LandingMarker"
 	marker.Shape = Enum.PartType.Cylinder
 	marker.Size = Vector3.new(0.1, 6, 6)
-	marker.CFrame = CFrame.new(position.X, DANGER_ZONE_TOP + 0.05, position.Z) * CFrame.Angles(0, 0, math.rad(90))
+	marker.CFrame = CFrame.new(position.X, FLOOR_Y + 0.15, position.Z) * CFrame.Angles(0, 0, math.rad(90))
 	marker.Color = color
 	marker.Material = Enum.Material.Neon
 	marker.Transparency = 0.5

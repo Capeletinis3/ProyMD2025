@@ -11,10 +11,11 @@ export type Rarity = {
 	Weight: number, -- probabilidad relativa (los pesos suman 100)
 	BaseIncubationTime: number, -- segundos, antes de aplicar mejoras
 	CoinsPerSecond: number, -- plata que genera la criatura que sale de este huevo
-	-- Dónde cae, como fracción del radio de la zona de peligro (0 = centro, 1 = borde).
-	-- Las bases están afuera del borde, así que cuanto más chico, más lejos de las bases cae.
-	SpawnRadiusMin: number,
-	SpawnRadiusMax: number,
+	-- Tramo del pasillo donde caen estos huevos, como fracción del largo
+	-- (0 = línea de la zona segura, 1 = fondo del pasillo, donde nace la ola).
+	-- Cada rareza tiene su tramo: cuanto más rara, más lejos de las bases. El piso se pinta por tramos.
+	ZoneStart: number,
+	ZoneEnd: number,
 }
 
 export type IncubationSpeedLevel = {
@@ -29,24 +30,28 @@ local Config = {}
 Config.MaxPlayers = 8
 
 -- ===== Mapa =====
+-- El mapa es un pasillo largo. Eje Z: el lobby (zona segura con las bases) queda en Z < 0,
+-- la línea segura está en Z = 0 y el pasillo de arena va de Z = 0 hasta Z = CorridorLength.
 Config.Map = {
-	GroundSize = 800, -- lado del piso cuadrado (studs)
-	GroundColor = Color3.fromRGB(110, 190, 90),
+	FloorY = 0, -- altura del piso
+	CorridorWidth = 200, -- ancho de todo el mapa (lobby y pasillo)
+	CorridorLength = 500, -- largo del pasillo de arena (zona de peligro)
+	LobbyDepth = 180, -- largo del lobby verde (zona segura)
+	SeaDepth = 25, -- franja de agua al fondo del pasillo, de donde sale la ola
+	WallHeight = 80,
+	WallThickness = 10,
+	EggSideMargin = 15, -- los huevos no caen pegados a las paredes
 
-	DangerZoneRadius = 160, -- zona central donde caen los huevos
-	DangerZoneColor = Color3.fromRGB(235, 205, 140),
+	BaseCount = 8, -- mitad de cada lado del lobby
+	PlotWidth = 38, -- largo de cada parcela a lo largo del lobby
+	PlotDepth = 44, -- profundidad de cada parcela (desde el camino central hacia la pared)
+	PlotGap = 4, -- espacio entre parcelas
 
-	BaseCount = 8,
-	BaseRingRadius = 250, -- distancia del centro del mapa al centro de cada base
-	BaseWidth = 60,
-	BaseDepth = 60,
-	BaseHeight = 30, -- qué tan elevada está la base (la ola no llega hasta acá)
-	BaseFoundationColor = Color3.fromRGB(120, 120, 130),
-	WallHeight = 3,
-
-	RampLength = 70, -- largo horizontal de la rampa que baja al mapa
-	RampWidth = 16,
-	RampColor = Color3.fromRGB(160, 120, 80),
+	GrassColor = Color3.fromRGB(80, 220, 70),
+	SandColor = Color3.fromRGB(240, 215, 160),
+	WallColor = Color3.fromRGB(215, 120, 85),
+	WallTrimColor = Color3.fromRGB(90, 200, 90),
+	SeaColor = Color3.fromRGB(40, 150, 255),
 
 	-- Un color por base, en orden (Base1, Base2, ...)
 	BaseColors = {
@@ -70,8 +75,8 @@ Config.Rarities = {
 		Weight = 60,
 		BaseIncubationTime = 30,
 		CoinsPerSecond = 1,
-		SpawnRadiusMin = 0.4,
-		SpawnRadiusMax = 0.9,
+		ZoneStart = 0.05,
+		ZoneEnd = 0.4,
 	},
 	{
 		Id = "Rare",
@@ -80,8 +85,8 @@ Config.Rarities = {
 		Weight = 25,
 		BaseIncubationTime = 60,
 		CoinsPerSecond = 5,
-		SpawnRadiusMin = 0.3,
-		SpawnRadiusMax = 0.85,
+		ZoneStart = 0.4,
+		ZoneEnd = 0.65,
 	},
 	{
 		Id = "Epic",
@@ -90,8 +95,8 @@ Config.Rarities = {
 		Weight = 10,
 		BaseIncubationTime = 90,
 		CoinsPerSecond = 20,
-		SpawnRadiusMin = 0.15,
-		SpawnRadiusMax = 0.7,
+		ZoneStart = 0.65,
+		ZoneEnd = 0.83,
 	},
 	{
 		Id = "Legendary",
@@ -100,8 +105,8 @@ Config.Rarities = {
 		Weight = 4.5,
 		BaseIncubationTime = 120,
 		CoinsPerSecond = 100,
-		SpawnRadiusMin = 0,
-		SpawnRadiusMax = 0.5,
+		ZoneStart = 0.83,
+		ZoneEnd = 0.94,
 	},
 	{
 		Id = "Secret",
@@ -110,8 +115,8 @@ Config.Rarities = {
 		Weight = 0.5,
 		BaseIncubationTime = 180,
 		CoinsPerSecond = 500,
-		SpawnRadiusMin = 0,
-		SpawnRadiusMax = 0.3,
+		ZoneStart = 0.94,
+		ZoneEnd = 1,
 	},
 } :: { Rarity }
 
