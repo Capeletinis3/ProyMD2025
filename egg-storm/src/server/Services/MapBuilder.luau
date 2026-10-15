@@ -262,58 +262,108 @@ local function buildCorridor(map: Instance)
 	end
 end
 
+-- Colores de la base (estilo del video: borde claro, baldosas pastel y pads celestes)
+local FRAME_COLOR = Color3.fromRGB(232, 218, 245) -- borde lavanda claro
+local TILE_LIGHT = Color3.fromRGB(248, 248, 252) -- baldosa blanca
+local TILE_GREEN = Color3.fromRGB(185, 240, 200) -- baldosa verde pastel
+local CREATURE_PAD_COLOR = Color3.fromRGB(70, 200, 255) -- pads celestes de las criaturas
+local PAD_HEIGHT = 0.6 -- altura de la plataforma de la base
+
+-- Distribución de los pads dentro de la base (coordenadas locales: -Z = adelante, hacia el pasillo).
+-- Adelante: 2 filas de 3 pads grandes para las incubadoras. Atrás: 3 filas de 4 pads para criaturas.
+local INCUBATOR_COLUMNS = { -14, 0, 14 }
+local INCUBATOR_ROWS = { -21, -8 }
+local INCUBATOR_PAD_SIZE = 10
+local CREATURE_COLUMNS = { -16.5, -5.5, 5.5, 16.5 }
+local CREATURE_ROWS = { 7, 18, 29 }
+local CREATURE_PAD_SIZE = 8
+assert(#INCUBATOR_COLUMNS * #INCUBATOR_ROWS >= Config.Upgrades.MaxIncubators, "[MapBuilder] Not enough incubator pads for MaxIncubators")
+
+-- Pad redondo (cilindro acostado) apoyado sobre la base
+local function makePad(name: string, diameter: number, cframe: CFrame, color: Color3, parent: Instance): Part
+	local pad = makePart(name, Vector3.new(0.3, diameter, diameter), cframe * CFrame.Angles(0, 0, math.rad(90)), color, parent)
+	pad.Shape = Enum.PartType.Cylinder
+	return pad
+end
+
 local function buildSign(model: Model, plotCFrame: CFrame)
-	local signZ = cfg.PlotDepth / 2 - 2 -- cerca del borde de atrás
-	for _, x in { -11, 11 } do
-		makePart("SignPost", Vector3.new(1, 12, 1), plotCFrame * CFrame.new(x, 6, signZ), Color3.fromRGB(90, 60, 40), model)
+	-- Detrás de la base, mirando hacia el pasillo (la cara Front del cartel mira para el mismo lado que la base)
+	local signZ = cfg.PlotDepth / 2 + 4
+	for _, x in { -14, 14 } do
+		makePart("SignPost", Vector3.new(1.5, 18, 1.5), plotCFrame * CFrame.new(x, 9, signZ), Color3.fromRGB(90, 60, 40), model)
 	end
-	-- plotCFrame mira hacia el pasillo, así que la cara Front del cartel también (se lee desde la arena)
-	local board = makePart("SignBoard", Vector3.new(24, 6, 1), plotCFrame * CFrame.new(0, 11, signZ), Color3.fromRGB(60, 45, 35), model)
+	local board = makePart("SignBoard", Vector3.new(32, 8, 1), plotCFrame * CFrame.new(0, 15, signZ), Color3.fromRGB(60, 45, 35), model)
 	addText(board, Enum.NormalId.Front, "Free Base", Color3.fromRGB(200, 200, 200), "SignLabel")
 end
 
 local function buildBase(index: number, position: Vector3, parent: Instance): Model
-	-- Mirando hacia el pasillo (+Z del mundo). En coordenadas locales: -Z = hacia el pasillo, +Z = hacia atrás.
+	-- Mirando hacia el pasillo (+Z del mundo). En coordenadas locales: -Z = adelante, +Z = atrás.
 	local plotCFrame = CFrame.lookAt(position, position + Vector3.new(0, 0, 1))
 	local color = cfg.BaseColors[index] or Color3.new(1, 1, 1)
 	local w, d = cfg.PlotWidth, cfg.PlotDepth
-	local padHeight = 0.6
 
 	local model = Instance.new("Model")
 	model.Name = `Base{index}`
 	model:SetAttribute("BaseId", index)
 	model:SetAttribute("OwnerUserId", 0)
 
-	local floor = makePart("Floor", Vector3.new(w, padHeight, d), plotCFrame * CFrame.new(0, padHeight / 2, 0), color, model, true)
+	-- Capas de la plataforma, cada una un poquito más arriba que la anterior:
+	-- piso del color de la base (queda como contorno) → borde lavanda → interior blanco → baldosas verdes
+	local floor = makePart("Floor", Vector3.new(w, PAD_HEIGHT, d), plotCFrame * CFrame.new(0, PAD_HEIGHT / 2, 0), color, model, true)
 	model.PrimaryPart = floor
+	makePart("Frame", Vector3.new(w - 2, 0.1, d - 2), plotCFrame * CFrame.new(0, PAD_HEIGHT + 0.05, 0), FRAME_COLOR, model, true)
+	local innerW, innerD = w - 6, d - 6
+	makePart("Inner", Vector3.new(innerW, 0.05, innerD), plotCFrame * CFrame.new(0, PAD_HEIGHT + 0.125, 0), TILE_LIGHT, model)
 
-	-- Baldosas más claras en damero, encima del piso de la base
-	local light = color:Lerp(Color3.new(1, 1, 1), 0.45)
-	local tilesX, tilesZ = 4, 4
-	local tileW, tileD = w / tilesX, d / tilesZ
+	local tilesX, tilesZ = 4, 6
+	local tileW, tileD = innerW / tilesX, innerD / tilesZ
 	for tx = 0, tilesX - 1 do
 		for tz = 0, tilesZ - 1 do
 			if (tx + tz) % 2 == 0 then
-				local x = -w / 2 + tileW * (tx + 0.5)
-				local z = -d / 2 + tileD * (tz + 0.5)
-				local tile = makePart("Tile", Vector3.new(tileW, 0.1, tileD), plotCFrame * CFrame.new(x, padHeight + 0.05, z), light, model, true)
-				tile.CanCollide = false
+				local x = -innerW / 2 + tileW * (tx + 0.5)
+				local z = -innerD / 2 + tileD * (tz + 0.5)
+				makePart("Tile", Vector3.new(tileW, 0.05, tileD), plotCFrame * CFrame.new(x, PAD_HEIGHT + 0.175, z), TILE_GREEN, model)
 			end
 		end
 	end
+	local surfaceY = PAD_HEIGHT + 0.2 -- donde se apoya todo lo de arriba
 
-	-- Borde bajo atrás y a los costados (el frente queda abierto)
-	local rimY = padHeight + 0.75
-	makePart("Rim", Vector3.new(w, 1.5, 1), plotCFrame * CFrame.new(0, rimY, d / 2 - 0.5), color, model, true)
-	makePart("Rim", Vector3.new(1, 1.5, d), plotCFrame * CFrame.new(-w / 2 + 0.5, rimY, 0), color, model, true)
-	makePart("Rim", Vector3.new(1, 1.5, d), plotCFrame * CFrame.new(w / 2 - 0.5, rimY, 0), color, model, true)
+	-- Pads de incubadoras (la fase 3 pone la incubadora encima). Se numeran de izquierda a derecha, de adelante hacia atrás.
+	local incubatorSlots = Instance.new("Folder")
+	incubatorSlots.Name = "IncubatorSlots"
+	incubatorSlots.Parent = model
+	local incubatorPadColor = color:Lerp(Color3.new(1, 1, 1), 0.35)
+	local slot = 0
+	for _, z in INCUBATOR_ROWS do
+		for _, x in INCUBATOR_COLUMNS do
+			slot += 1
+			local pad = makePad(`IncubatorSlot{slot}`, INCUBATOR_PAD_SIZE, plotCFrame * CFrame.new(x, surfaceY + 0.15, z), incubatorPadColor, incubatorSlots)
+			pad:SetAttribute("SlotIndex", slot)
+		end
+	end
 
-	-- Lugar donde aparece el jugador
-	local spawnPoint = makePart("SpawnPoint", Vector3.new(8, 0.2, 8), plotCFrame * CFrame.new(0, padHeight + 0.15, -d / 2 + 8), Color3.new(1, 1, 1), model)
+	-- Pads de criaturas
+	local creatureSlots = Instance.new("Folder")
+	creatureSlots.Name = "CreatureSlots"
+	creatureSlots.Parent = model
+	slot = 0
+	for _, z in CREATURE_ROWS do
+		for _, x in CREATURE_COLUMNS do
+			slot += 1
+			local pad = makePad(`CreatureSlot{slot}`, CREATURE_PAD_SIZE, plotCFrame * CFrame.new(x, surfaceY + 0.15, z), CREATURE_PAD_COLOR, creatureSlots)
+			pad:SetAttribute("SlotIndex", slot)
+		end
+	end
+
+	-- Lugar donde aparece el jugador (adelante, en el centro)
+	local spawnPoint = makePart("SpawnPoint", Vector3.new(8, 0.2, 8), plotCFrame * CFrame.new(0, surfaceY + 0.1, -d / 2 + 7), Color3.new(1, 1, 1), model)
 	spawnPoint.Transparency = 0.5
 	spawnPoint.CanCollide = false
 	spawnPoint.CanQuery = false
 	spawnPoint.Material = Enum.Material.Neon
+
+	-- Lugar reservado para el panel de mejoras (fase 4): esquina de adelante a la derecha
+	makeMarker("UpgradeSpot", Vector3.new(1, 1, 1), plotCFrame * CFrame.new(w / 2 - 6, surfaceY, -d / 2 + 6), model)
 
 	-- Volumen invisible de la base (para saber si alguien está adentro)
 	makeMarker("SafeZone", Vector3.new(w, 30, d), plotCFrame * CFrame.new(0, 15, 0), model)

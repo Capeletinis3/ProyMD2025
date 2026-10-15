@@ -35,7 +35,7 @@ Config.MaxPlayers = 8
 -- El ancho y el largo del lobby se calculan solos a partir de la cantidad y el tamaño de las bases.
 Config.Map = {
 	FloorY = 0, -- altura del piso
-	CorridorWidth = 200, -- ancho del pasillo de arena
+	CorridorWidth = 240, -- ancho del pasillo de arena
 	CorridorLength = 800, -- largo del pasillo de arena (zona de peligro)
 	SeaDepth = 25, -- franja de agua al fondo del pasillo, de donde sale la ola
 	WallHeight = 80,
@@ -43,11 +43,11 @@ Config.Map = {
 	EggSideMargin = 15, -- los huevos no caen pegados a las paredes
 
 	BaseCount = 8, -- todas en una fila, mirando hacia el pasillo
-	PlotWidth = 36, -- ancho de cada parcela
-	PlotDepth = 40, -- profundidad de cada parcela
-	PlotGap = 8, -- espacio entre parcelas (y entre las parcelas de las puntas y la pared)
-	LobbyFrontWalk = 24, -- espacio para caminar entre las bases y la línea segura
-	LobbyBackMargin = 16, -- espacio detrás de las bases
+	PlotWidth = 48, -- ancho de cada parcela
+	PlotDepth = 76, -- profundidad de cada parcela (adelante incubadoras, atrás criaturas)
+	PlotGap = 16, -- espacio entre parcelas (y entre las parcelas de las puntas y la pared)
+	LobbyFrontWalk = 50, -- espacio para caminar entre las bases y la línea segura
+	LobbyBackMargin = 24, -- espacio detrás de las bases (ahí va el cartel con el nombre)
 
 	GrassColor = Color3.fromRGB(80, 220, 70),
 	SandColor = Color3.fromRGB(240, 215, 160),
