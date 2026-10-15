@@ -15,7 +15,7 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 ## 3. Cosas de juego que todavía no están
 - ✅ ~~¿Qué pasa cuando se llenan los 14 lugares de mascotas?~~ **Hecho:** ahora se pueden vender mascotas (mantener E sobre una mascota tuya). El precio está en `Config.Economy.SellValueSeconds`.
 - ✅ ~~Tutorial corto~~ **Hecho:** cartel con el paso a seguir + flecha de luz, se guarda el progreso y se puede saltear.
-- **Escalera al segundo piso** (hoy es solo de exhibición).
+- ✅ ~~Escalera al segundo piso~~ **Hecho:** escalera por el costado de afuera de la base, con descanso y pasamanos.
 - **Ganancia mientras no estás** (opcional, muchos juegos así lo tienen).
 - **Tabla de récords** (OrderedDataStore) con la plata o las mascotas raras.
 

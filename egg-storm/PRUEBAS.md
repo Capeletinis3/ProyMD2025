@@ -50,6 +50,7 @@ Hacela en Studio antes de publicar. Tarda unos 15 minutos.
 - [ ] La ventana de mejoras se lee bien, sin textos encimados.
 - [ ] Comprar cada mejora: Incubation Speed (el tiempo de un huevo incubando baja), Extra Incubator (aparece la incubadora 2), Walk Speed (corrés más rápido), Base Floor (aparece el segundo piso).
 - [ ] Botón rojo si no te alcanza, "MAX" cuando está al máximo.
+- [ ] Con el segundo piso: subir por la escalera del costado, entrar al piso por el hueco de la baranda y vender una mascota de arriba.
 
 ### Tormenta y ola
 - [ ] Cielo oscuro y lluvia durante "EGG RAIN".
