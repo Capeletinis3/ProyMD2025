@@ -135,6 +135,76 @@ local function buildUmbrella(position: Vector3, color: Color3, parent: Instance)
 	umbrella.Parent = parent
 end
 
+-- Toalla de playa con una franja blanca
+local function buildTowel(cframe: CFrame, color: Color3, parent: Instance)
+	local towel = makePart("Towel", Vector3.new(5, 0.15, 9), cframe * CFrame.new(0, 0.075, 0), color, parent)
+	towel.CanCollide = false
+	local stripe = makePart("TowelStripe", Vector3.new(5, 0.05, 1.2), cframe * CFrame.new(0, 0.175, 2.5), Color3.new(1, 1, 1), parent)
+	stripe.CanCollide = false
+end
+
+local function buildBeachBall(position: Vector3, color: Color3, parent: Instance)
+	local ball = makePart("BeachBall", Vector3.new(2.5, 2.5, 2.5), CFrame.new(position + Vector3.new(0, 1.25, 0)), color, parent)
+	ball.Shape = Enum.PartType.Ball
+end
+
+-- Puesto de playa con toldo a rayas. cframe está a nivel del piso y su frente (-Z) mira al camino.
+local function buildKiosk(cframe: CFrame, stripeColor: Color3, parent: Instance)
+	local kiosk = Instance.new("Model")
+	kiosk.Name = "Kiosk"
+	local wood = Color3.fromRGB(150, 100, 60)
+	makePart("Counter", Vector3.new(12, 4, 3), cframe * CFrame.new(0, 2, -3), wood, kiosk, true)
+	makePart("CounterTop", Vector3.new(12.6, 0.5, 3.6), cframe * CFrame.new(0, 4.25, -3), Color3.new(1, 1, 1), kiosk)
+	makePart("BackWall", Vector3.new(12, 8, 0.6), cframe * CFrame.new(0, 4, 3.7), stripeColor, kiosk, true)
+	for _, x in { -5.7, 5.7 } do
+		for _, z in { -4.5, 3.7 } do
+			makePart("Post", Vector3.new(0.6, 10, 0.6), cframe * CFrame.new(x, 5, z), Color3.new(1, 1, 1), kiosk)
+		end
+	end
+	-- Toldo: rayas alternadas, un poco inclinado hacia adelante
+	for i = 0, 6 do
+		local color = if i % 2 == 0 then stripeColor else Color3.new(1, 1, 1)
+		makePart("Awning", Vector3.new(1.8, 0.4, 10), cframe * CFrame.new(-5.4 + i * 1.8, 10.4, -0.6) * CFrame.Angles(math.rad(-12), 0, 0), color, kiosk)
+	end
+	kiosk.Parent = parent
+end
+
+-- Torre de guardavidas (cerca del agua)
+local function buildLifeguardTower(cframe: CFrame, parent: Instance)
+	local tower = Instance.new("Model")
+	tower.Name = "LifeguardTower"
+	local white = Color3.new(1, 1, 1)
+	local red = Color3.fromRGB(230, 60, 60)
+	for _, x in { -3.5, 3.5 } do
+		for _, z in { -3.5, 3.5 } do
+			makePart("Leg", Vector3.new(0.8, 12, 0.8), cframe * CFrame.new(x, 6, z), white, tower)
+			makePart("RoofPost", Vector3.new(0.5, 7, 0.5), cframe * CFrame.new(x, 16, z), white, tower)
+		end
+	end
+	makePart("Platform", Vector3.new(9, 1, 9), cframe * CFrame.new(0, 12.5, 0), red, tower, true)
+	makePart("Rail", Vector3.new(9, 2, 0.4), cframe * CFrame.new(0, 14, -4.4), white, tower)
+	makePart("Roof", Vector3.new(10, 0.6, 10), cframe * CFrame.new(0, 19.8, 0), red, tower, true)
+	tower.Parent = parent
+end
+
+local function buildRocks(position: Vector3, rng: Random, parent: Instance)
+	for _ = 1, rng:NextInteger(2, 3) do
+		local size = rng:NextNumber(3, 6)
+		local offset = Vector3.new(rng:NextNumber(-3, 3), size * 0.3, rng:NextNumber(-3, 3))
+		local rotation = CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, math.pi), rng:NextNumber(-0.3, 0.3))
+		local gray = rng:NextNumber(0.45, 0.6)
+		makePart("Rock", Vector3.new(size, size * 0.8, size * 1.1), CFrame.new(position + offset) * rotation, Color3.new(gray, gray, gray * 1.05), parent, true)
+	end
+end
+
+local function buildCrates(position: Vector3, rng: Random, parent: Instance)
+	local wood = Color3.fromRGB(170, 120, 70)
+	local yaw = CFrame.Angles(0, rng:NextNumber(0, math.pi), 0)
+	makePart("Crate", Vector3.new(4, 4, 4), CFrame.new(position + Vector3.new(0, 2, 0)) * yaw, wood, parent, true)
+	makePart("Crate", Vector3.new(4, 4, 4), CFrame.new(position + Vector3.new(0, 2, 0)) * yaw * CFrame.new(4.2, 0, 0), wood, parent, true)
+	makePart("Crate", Vector3.new(4, 4, 4), CFrame.new(position + Vector3.new(0, 6, 0)) * yaw * CFrame.new(2, 0, 0) * CFrame.Angles(0, 0.3, 0), wood:Lerp(Color3.new(0, 0, 0), 0.1), parent, true)
+end
+
 -- ===== Partes del mapa =====
 
 local function buildWalls(map: Instance)
@@ -214,28 +284,15 @@ local function buildCorridor(map: Instance)
 
 	local length = cfg.CorridorLength
 
-	-- Primer tramo (antes de la zona Common): arena lisa
-	local firstZone = Config.Rarities[1].ZoneStart * length
-	if firstZone > 0 then
-		makePart("Sand", Vector3.new(cfg.CorridorWidth, 2, firstZone), CFrame.new(0, cfg.FloorY - 1, firstZone / 2), cfg.SandColor, corridor, true)
-	end
+	-- Piso de arena de un solo color
+	makePart("Sand", Vector3.new(cfg.CorridorWidth, 2, length), CFrame.new(0, cfg.FloorY - 1, length / 2), cfg.SandColor, corridor, true)
 
-	-- Un tramo de piso por rareza, con el color de la arena mezclado con el de la rareza
+	-- Carteles de cada zona en las dos paredes, mirando hacia el centro del pasillo
 	for _, rarity in Config.Rarities do
 		local z0 = rarity.ZoneStart * length
-		local z1 = rarity.ZoneEnd * length
-		local tint = if rarity.Id == "Secret" then Color3.fromRGB(120, 60, 160) else rarity.Color
-		makePart(`{rarity.Id}Zone`, Vector3.new(cfg.CorridorWidth, 2, z1 - z0), CFrame.new(0, cfg.FloorY - 1, (z0 + z1) / 2), cfg.SandColor:Lerp(tint, 0.45), corridor, true)
-
-		-- Franja de color donde empieza la zona
-		local stripe = makePart("ZoneStripe", Vector3.new(cfg.CorridorWidth, 0.2, 1.5), CFrame.new(0, cfg.FloorY + 0.1, z0), tint, corridor)
-		stripe.Material = Enum.Material.Neon
-		stripe.CanCollide = false
-
-		-- Cartel en cada pared, mirando hacia el centro del pasillo
 		for _, side in { -1, 1 } do
 			-- Separado de la pared lo suficiente para quedar delante de las columnas
-			local signPos = Vector3.new(side * (HALF_WIDTH - 2.6), cfg.FloorY + 22, z0 + 18)
+			local signPos = Vector3.new(side * (HALF_WIDTH - 2.6), cfg.FloorY + 26, z0 + 18)
 			local sign = makePart("ZoneSign", Vector3.new(30, 8, 1), CFrame.lookAt(signPos, signPos - Vector3.new(side, 0, 0)), Color3.fromRGB(40, 40, 50), corridor)
 			local label = addText(sign, Enum.NormalId.Front, `{string.upper(rarity.DisplayName)} ZONE`, if rarity.Id == "Secret" then Color3.new(1, 1, 1) else rarity.Color)
 			if rarity.Id == "Secret" then
@@ -249,33 +306,74 @@ local function buildCorridor(map: Instance)
 	sea.Material = Enum.Material.Glass
 	sea.Transparency = 0.2
 
-	-- Decoración a los costados
-	local umbrellaColors = { Color3.fromRGB(255, 80, 120), Color3.fromRGB(80, 170, 255), Color3.fromRGB(255, 200, 60), Color3.fromRGB(180, 90, 255) }
-	local z = 40
-	local i = 0
-	while z < length - 20 do
-		i += 1
-		local side = if i % 2 == 0 then 1 else -1
-		buildPalm(Vector3.new(side * (HALF_WIDTH - 8), cfg.FloorY, z), corridor)
-		buildUmbrella(Vector3.new(-side * (HALF_WIDTH - 9), cfg.FloorY, z + 30), umbrellaColors[(i % #umbrellaColors) + 1], corridor)
-		z += 80
+	-- Decoración a los costados, en la franja entre donde caen los huevos y la pared.
+	-- Usamos un Random con semilla fija para que el mapa salga siempre igual.
+	local decor = Instance.new("Folder")
+	decor.Name = "Decor"
+	decor.Parent = corridor
+	local rng = Random.new(2025)
+	local colors = {
+		Color3.fromRGB(255, 80, 120),
+		Color3.fromRGB(80, 170, 255),
+		Color3.fromRGB(255, 200, 60),
+		Color3.fromRGB(180, 90, 255),
+		Color3.fromRGB(80, 220, 120),
+		Color3.fromRGB(255, 140, 60),
+	}
+	local function randomColor(): Color3
+		return colors[rng:NextInteger(1, #colors)]
+	end
+
+	local decorX = HALF_WIDTH - 13 -- centro de la franja de decoración
+	for _, side in { -1, 1 } do
+		-- Mirando hacia el centro del pasillo (frente = -Z local)
+		local facing = CFrame.Angles(0, if side < 0 then -math.pi / 2 else math.pi / 2, 0)
+		local z = 20 + (if side > 0 then 15 else 0)
+		-- "Bolsa" de decoraciones: se mezcla y se van sacando de a una, así cada tramo tiene un poco de todo
+		local bag: { string } = {}
+		while z < length - 45 do
+			if #bag == 0 then
+				bag = { "Palm", "Palm", "Umbrella", "Umbrella", "Kiosk", "Rocks", "Crates" }
+				rng:Shuffle(bag)
+			end
+			local item = table.remove(bag) :: string
+			local position = Vector3.new(side * decorX, cfg.FloorY, z)
+			if item == "Palm" then
+				buildPalm(position + Vector3.new(side * 2, 0, 0), decor)
+				z += 26
+			elseif item == "Umbrella" then
+				buildUmbrella(position + Vector3.new(side * 3, 0, 0), randomColor(), decor)
+				buildTowel(CFrame.new(position + Vector3.new(-side * 3, 0, 1)) * facing, randomColor(), decor)
+				if rng:NextNumber() < 0.5 then
+					buildBeachBall(position + Vector3.new(-side * 7, 0, -4), randomColor(), decor)
+				end
+				z += 24
+			elseif item == "Kiosk" then
+				buildKiosk(CFrame.new(position + Vector3.new(side * 2, 0, 0)) * facing, randomColor(), decor)
+				z += 26
+			elseif item == "Rocks" then
+				buildRocks(position, rng, decor)
+				z += 18
+			else
+				buildCrates(position, rng, decor)
+				z += 18
+			end
+		end
+		-- Torre de guardavidas cerca del agua
+		buildLifeguardTower(CFrame.new(Vector3.new(side * decorX, cfg.FloorY, length - 22)) * facing, decor)
 	end
 end
 
--- Colores de la base (estilo del video: borde claro, baldosas pastel y pads celestes)
-local FRAME_COLOR = Color3.fromRGB(232, 218, 245) -- borde lavanda claro
-local TILE_LIGHT = Color3.fromRGB(248, 248, 252) -- baldosa blanca
-local TILE_GREEN = Color3.fromRGB(185, 240, 200) -- baldosa verde pastel
-local CREATURE_PAD_COLOR = Color3.fromRGB(70, 200, 255) -- pads celestes de las criaturas
 local PAD_HEIGHT = 0.6 -- altura de la plataforma de la base
+local INCUBATOR_PAD_COLOR = Color3.fromRGB(255, 255, 255)
 
 -- Distribución de los pads dentro de la base (coordenadas locales: -Z = adelante, hacia el pasillo).
--- Adelante: 2 filas de 3 pads grandes para las incubadoras. Atrás: 3 filas de 4 pads para criaturas.
+-- Adelante: 2 filas de 3 pads grandes para las incubadoras. Atrás: 2 filas de 4 pads para criaturas.
 local INCUBATOR_COLUMNS = { -14, 0, 14 }
-local INCUBATOR_ROWS = { -21, -8 }
+local INCUBATOR_ROWS = { -14, -1 }
 local INCUBATOR_PAD_SIZE = 10
 local CREATURE_COLUMNS = { -16.5, -5.5, 5.5, 16.5 }
-local CREATURE_ROWS = { 7, 18, 29 }
+local CREATURE_ROWS = { 13, 24 }
 local CREATURE_PAD_SIZE = 8
 assert(#INCUBATOR_COLUMNS * #INCUBATOR_ROWS >= Config.Upgrades.MaxIncubators, "[MapBuilder] Not enough incubator pads for MaxIncubators")
 
@@ -307,37 +405,21 @@ local function buildBase(index: number, position: Vector3, parent: Instance): Mo
 	model:SetAttribute("BaseId", index)
 	model:SetAttribute("OwnerUserId", 0)
 
-	-- Capas de la plataforma, cada una un poquito más arriba que la anterior:
-	-- piso del color de la base (queda como contorno) → borde lavanda → interior blanco → baldosas verdes
-	local floor = makePart("Floor", Vector3.new(w, PAD_HEIGHT, d), plotCFrame * CFrame.new(0, PAD_HEIGHT / 2, 0), color, model, true)
-	model.PrimaryPart = floor
-	makePart("Frame", Vector3.new(w - 2, 0.1, d - 2), plotCFrame * CFrame.new(0, PAD_HEIGHT + 0.05, 0), FRAME_COLOR, model, true)
-	local innerW, innerD = w - 6, d - 6
-	makePart("Inner", Vector3.new(innerW, 0.05, innerD), plotCFrame * CFrame.new(0, PAD_HEIGHT + 0.125, 0), TILE_LIGHT, model)
-
-	local tilesX, tilesZ = 4, 6
-	local tileW, tileD = innerW / tilesX, innerD / tilesZ
-	for tx = 0, tilesX - 1 do
-		for tz = 0, tilesZ - 1 do
-			if (tx + tz) % 2 == 0 then
-				local x = -innerW / 2 + tileW * (tx + 0.5)
-				local z = -innerD / 2 + tileD * (tz + 0.5)
-				makePart("Tile", Vector3.new(tileW, 0.05, tileD), plotCFrame * CFrame.new(x, PAD_HEIGHT + 0.175, z), TILE_GREEN, model)
-			end
-		end
-	end
-	local surfaceY = PAD_HEIGHT + 0.2 -- donde se apoya todo lo de arriba
+	-- Piso del color de la base, con un borde más oscuro
+	local edge = makePart("Edge", Vector3.new(w, PAD_HEIGHT, d), plotCFrame * CFrame.new(0, PAD_HEIGHT / 2, 0), color:Lerp(Color3.new(0, 0, 0), 0.25), model, true)
+	model.PrimaryPart = edge
+	makePart("Floor", Vector3.new(w - 3, 0.1, d - 3), plotCFrame * CFrame.new(0, PAD_HEIGHT + 0.05, 0), color, model, true)
+	local surfaceY = PAD_HEIGHT + 0.1 -- donde se apoya todo lo de arriba
 
 	-- Pads de incubadoras (la fase 3 pone la incubadora encima). Se numeran de izquierda a derecha, de adelante hacia atrás.
 	local incubatorSlots = Instance.new("Folder")
 	incubatorSlots.Name = "IncubatorSlots"
 	incubatorSlots.Parent = model
-	local incubatorPadColor = color:Lerp(Color3.new(1, 1, 1), 0.35)
 	local slot = 0
 	for _, z in INCUBATOR_ROWS do
 		for _, x in INCUBATOR_COLUMNS do
 			slot += 1
-			local pad = makePad(`IncubatorSlot{slot}`, INCUBATOR_PAD_SIZE, plotCFrame * CFrame.new(x, surfaceY + 0.15, z), incubatorPadColor, incubatorSlots)
+			local pad = makePad(`IncubatorSlot{slot}`, INCUBATOR_PAD_SIZE, plotCFrame * CFrame.new(x, surfaceY + 0.15, z), INCUBATOR_PAD_COLOR, incubatorSlots)
 			pad:SetAttribute("SlotIndex", slot)
 		end
 	end
@@ -346,24 +428,25 @@ local function buildBase(index: number, position: Vector3, parent: Instance): Mo
 	local creatureSlots = Instance.new("Folder")
 	creatureSlots.Name = "CreatureSlots"
 	creatureSlots.Parent = model
+	local creaturePadColor = color:Lerp(Color3.new(0, 0, 0), 0.4)
 	slot = 0
 	for _, z in CREATURE_ROWS do
 		for _, x in CREATURE_COLUMNS do
 			slot += 1
-			local pad = makePad(`CreatureSlot{slot}`, CREATURE_PAD_SIZE, plotCFrame * CFrame.new(x, surfaceY + 0.15, z), CREATURE_PAD_COLOR, creatureSlots)
+			local pad = makePad(`CreatureSlot{slot}`, CREATURE_PAD_SIZE, plotCFrame * CFrame.new(x, surfaceY + 0.15, z), creaturePadColor, creatureSlots)
 			pad:SetAttribute("SlotIndex", slot)
 		end
 	end
 
 	-- Lugar donde aparece el jugador (adelante, en el centro)
-	local spawnPoint = makePart("SpawnPoint", Vector3.new(8, 0.2, 8), plotCFrame * CFrame.new(0, surfaceY + 0.1, -d / 2 + 7), Color3.new(1, 1, 1), model)
+	local spawnPoint = makePart("SpawnPoint", Vector3.new(8, 0.2, 8), plotCFrame * CFrame.new(0, surfaceY + 0.1, -d / 2 + 6), Color3.new(1, 1, 1), model)
 	spawnPoint.Transparency = 0.5
 	spawnPoint.CanCollide = false
 	spawnPoint.CanQuery = false
 	spawnPoint.Material = Enum.Material.Neon
 
 	-- Lugar reservado para el panel de mejoras (fase 4): esquina de adelante a la derecha
-	makeMarker("UpgradeSpot", Vector3.new(1, 1, 1), plotCFrame * CFrame.new(w / 2 - 6, surfaceY, -d / 2 + 6), model)
+	makeMarker("UpgradeSpot", Vector3.new(1, 1, 1), plotCFrame * CFrame.new(w / 2 - 6, surfaceY, -d / 2 + 5), model)
 
 	-- Volumen invisible de la base (para saber si alguien está adentro)
 	makeMarker("SafeZone", Vector3.new(w, 30, d), plotCFrame * CFrame.new(0, 15, 0), model)

@@ -40,11 +40,11 @@ Config.Map = {
 	SeaDepth = 25, -- franja de agua al fondo del pasillo, de donde sale la ola
 	WallHeight = 80,
 	WallThickness = 10,
-	EggSideMargin = 15, -- los huevos no caen pegados a las paredes
+	EggSideMargin = 25, -- los huevos no caen en la franja de decoración junto a las paredes
 
 	BaseCount = 8, -- todas en una fila, mirando hacia el pasillo
 	PlotWidth = 48, -- ancho de cada parcela
-	PlotDepth = 76, -- profundidad de cada parcela (adelante incubadoras, atrás criaturas)
+	PlotDepth = 60, -- profundidad de cada parcela (adelante incubadoras, atrás criaturas)
 	PlotGap = 16, -- espacio entre parcelas (y entre las parcelas de las puntas y la pared)
 	LobbyFrontWalk = 50, -- espacio para caminar entre las bases y la línea segura
 	LobbyBackMargin = 24, -- espacio detrás de las bases (ahí va el cartel con el nombre)
