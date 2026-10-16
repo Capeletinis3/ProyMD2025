@@ -4,13 +4,13 @@
 --
 -- Visto desde arriba (+X hacia la derecha, -Z arriba):
 --
---         Bases 1-4 (terraza de pasto, mirando al altar)
---   ┌───────────────────────┐
---   │ Tienda        Rankings│ ┌──────────────────── CAÑÓN (1200) ────────────────────┐
---   │      ALTAR (0,0,0) ───┼─┤ Playa│Selva│Rocas│Basalto│Lava fría│Obsidiana│ ← OLA ← VOLCÁN
---   │ Comerciante Intercamb.│ └──────────── cuevas-refugio en las paredes ───────────┘
---   └───────────────────────┘
---         Bases 5-8
+--         Hábitats 1-4 (en la selva, con una pasarela de madera por delante)
+--   ┌──────────────────────────────┐
+--   │ Laguna   Tienda   Rankings  Fogón│ ┌─────────────────── CAÑÓN (1200) ───────────────────┐
+--   │      ~foso~ ALTAR (0,0,0) ~foso~ ──┼─┤ Playa│Selva│Rocas│Basalto│Lava fría│Obsidiana│ ← OLA ← VOLCÁN
+--   │ Árbol  Comerciante Intercambio Jardín│ └─────────── cuevas-refugio en las paredes ──────────┘
+--   └──────────────────────────────┘
+--         Hábitats 5-8
 --
 -- Todo sale de Config (medidas, paleta, zonas, cuevas). Las Parts del piso tienen 2 de alto con la cara de arriba en Y = 0.
 -- Si en Workspace ya existe una carpeta "Map" (por ejemplo, cuando reemplaces los modelos a mano),
@@ -24,6 +24,7 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config)
 local IslandBuilder = require(script.Parent.IslandBuilder)
 local HabitatBuilder = require(script.Parent.HabitatBuilder)
+local VillageBuilder = require(script.Parent.VillageBuilder)
 
 local MapBuilder = {}
 
@@ -360,9 +361,10 @@ end
 
 local function buildLobbyGround(lobby: Instance)
 	local ground = folder("Ground", lobby)
-	part("LobbySand", Vector3.new(cfg.LobbySize.X, 2, cfg.LobbySize.Y), CFrame.new(0, Y0 - 1, 0), P.LobbySand, M.Sand, ground)
+	-- Aldea de la selva: todo pasto (la plaza del altar es de piedra, ver VillageBuilder)
+	part("LobbyGrass", Vector3.new(cfg.LobbySize.X, 2, cfg.LobbySize.Y), CFrame.new(0, Y0 - 1, 0), P.TerraceGrass, M.Grass, ground)
 	for _, side in { -1, 1 } do
-		part("Terrace", Vector3.new(cfg.LobbySize.X, 2.2, cfg.TerraceDepth), CFrame.new(0, Y0 - 0.9, side * cfg.TerraceZ), P.TerraceGrass, M.Grass, ground)
+		part("Terrace", Vector3.new(cfg.LobbySize.X, 2.2, cfg.TerraceDepth), CFrame.new(0, Y0 - 0.9, side * cfg.TerraceZ), P.PlotGrass, M.Grass, ground)
 	end
 	-- Alrededor ya no hay mar: el pasto de la isla (Terrain) llega justo hasta el borde del lobby
 end
@@ -413,11 +415,13 @@ local function buildAltar(lobby: Instance)
 	spawn.Parent = lobby
 end
 
+-- Los 4 puestos, en diagonal del otro lado del foso (Config.Village.StallRadius)
+local STALL_OFFSET = Config.Village.StallRadius * math.cos(math.rad(45))
 local STALLS = {
-	{ Name = "UpgradeShop", Position = Vector3.new(-95, 0, -55), Color = Color3.fromRGB(30, 136, 229), Title = "UPGRADES" },
-	{ Name = "Merchant", Position = Vector3.new(-95, 0, 55), Color = Color3.fromRGB(142, 63, 214), Title = "MYSTERY MERCHANT" },
-	{ Name = "Rankings", Position = Vector3.new(95, 0, -55), Color = Color3.fromRGB(232, 89, 12), Title = "RANKINGS" },
-	{ Name = "Trading", Position = Vector3.new(95, 0, 55), Color = Color3.fromRGB(15, 157, 138), Title = "TRADING" },
+	{ Name = "UpgradeShop", Position = Vector3.new(-STALL_OFFSET, 0, -STALL_OFFSET), Color = Color3.fromRGB(30, 136, 229), Title = "UPGRADES" },
+	{ Name = "Merchant", Position = Vector3.new(-STALL_OFFSET, 0, STALL_OFFSET), Color = Color3.fromRGB(142, 63, 214), Title = "MYSTERY MERCHANT" },
+	{ Name = "Rankings", Position = Vector3.new(STALL_OFFSET, 0, -STALL_OFFSET), Color = Color3.fromRGB(232, 89, 12), Title = "RANKINGS" },
+	{ Name = "Trading", Position = Vector3.new(STALL_OFFSET, 0, STALL_OFFSET), Color = Color3.fromRGB(15, 157, 138), Title = "TRADING" },
 }
 
 -- Tablero de eventos: título y 3 renglones (próxima ola, súper tsunami, evento). Los escribe cada cliente (EventBoard.luau).
@@ -477,7 +481,9 @@ end
 local function buildPath(lobby: Instance)
 	local path = folder("Path", lobby)
 	local i = 0
-	for x = 30, 145, 8 do
+	-- Del puente del este (pasando el foso) hasta el portal del cañón
+	local start = Config.Village.PlazaRadius + Config.Village.MoatWidth + 6
+	for x = start, 145, 8 do
 		i += 1
 		local z = if i % 2 == 0 then 2 else -2
 		column("Stone", 0.4, 5, Vector3.new(x, Y0, z), Color3.fromRGB(184, 176, 163), M.Slate, path)
@@ -504,21 +510,9 @@ local function buildPortal(lobby: Instance)
 	portal.Parent = lobby
 end
 
+-- La aldea de la selva: foso, laguna, árbol gigante, fogón, jardín de huevos, pasarela y selva (ver VillageBuilder)
 local function buildLobbyDecor(lobby: Instance)
-	local decor = folder("Decor", lobby)
-	local rng = Random.new(1405)
-	local palms = {
-		Vector3.new(-60, 0, -95), Vector3.new(60, 0, -95), Vector3.new(-60, 0, 95), Vector3.new(60, 0, 95),
-		Vector3.new(-135, 0, -10), Vector3.new(-135, 0, 25), Vector3.new(135, 0, -95), Vector3.new(135, 0, 95),
-	}
-	for _, position in palms do
-		buildPalm(position + Vector3.new(0, Y0, 0), rng:NextNumber(18, 26), rng, decor)
-	end
-	-- Flores de hibisco en el borde de las terrazas
-	for i = 1, 20 do
-		local side = if i % 2 == 0 then 1 else -1
-		buildFlower(Vector3.new(rng:NextNumber(-140, 140), Y0, side * rng:NextNumber(118, 122)), rng, decor)
-	end
+	VillageBuilder.Build(lobby)
 end
 
 -- ===== Bases (§6) =====

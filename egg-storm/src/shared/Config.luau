@@ -118,6 +118,19 @@ Config.Map = {
 
 }
 
+-- ===== Aldea de la selva (el lobby, ver VillageBuilder) =====
+-- +X = hacia el cañón (este), -Z = norte (bases 1-4). El altar está en (0, 0, 0).
+Config.Village = {
+	PlazaRadius = 30, -- la plaza de piedra del altar (adentro del foso)
+	MoatWidth = 10, -- el foso de agua alrededor (se puede cruzar por los 4 puentes o mojándose los pies)
+	StallRadius = 62, -- los 4 puestos, en diagonal del otro lado del foso
+	BoardwalkZ = 116, -- la pasarela de madera que pasa por delante de los hábitats (norte y sur)
+	Lagoon = Vector3.new(-105, 0, -72), -- laguna con cascada (arriba a la izquierda)
+	GiantTree = Vector3.new(-105, 0, 72), -- árbol gigante con la casita (abajo a la izquierda)
+	FirePit = Vector3.new(100, 0, -76), -- fogón tiki con escenario (arriba a la derecha)
+	EggGarden = Vector3.new(100, 0, 74), -- jardín con los 6 huevos gigantes (abajo a la derecha)
+}
+
 -- ===== Tutorial =====
 Config.Tutorial = {
 	StepReward = 100, -- monedas por cada paso completado ("STEP COMPLETE! +100 coins")
