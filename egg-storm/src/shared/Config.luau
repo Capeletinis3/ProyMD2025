@@ -362,6 +362,16 @@ Config.Merchant = {
 	Cooldown = 0.5,
 }
 
+-- ===== Intercambio entre jugadores =====
+Config.Trade = {
+	MaxItems = 4, -- cuántas mascotas puede ofrecer cada uno en un intercambio
+	RequestTimeout = 30, -- segundos que dura una invitación sin responder
+	RequestCooldown = 5, -- segundos entre invitaciones a la misma persona (anti-spam)
+	CountdownTime = 3, -- cuenta regresiva cuando los dos aprietan "Ready" (si alguien cambia algo, se cancela)
+	Distance = 14, -- distancia máxima al puesto de Intercambio para mandar una invitación
+	Cooldown = 0.2, -- anti-spam de los botones
+}
+
 -- ===== Ayudantes =====
 local raritiesById: { [string]: Rarity } = {}
 for _, rarity in Config.Rarities do

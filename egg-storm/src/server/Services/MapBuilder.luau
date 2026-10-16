@@ -458,7 +458,7 @@ local function buildStalls(lobby: Instance)
 		elseif info.Name == "Merchant" then
 			CollectionService:AddTag(addPrompt(counter, "Open", "Mystery Merchant"), "MerchantPrompt")
 		elseif info.Name == "Trading" then
-			addPrompt(counter, "Open", "Trading")
+			CollectionService:AddTag(addPrompt(counter, "Open", "Trading"), "TradePrompt")
 		elseif info.Name == "Rankings" then
 			-- Récords de plata arriba del puesto; a los costados, huevos abiertos y el tablero de eventos
 			local boards = folder("Leaderboards", stall)

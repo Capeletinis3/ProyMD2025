@@ -369,6 +369,11 @@ function PlayerDataService.SetIncubatingProvider(provider: (Player) -> { Incubat
 end
 
 -- Hay que llamarlo después de cambiar un nivel de mejora en el perfil.
+-- Guarda ya (en segundo plano). Por ejemplo, después de un intercambio.
+function PlayerDataService.SaveNow(player: Player)
+	saveOnline(player)
+end
+
 function PlayerDataService.SyncLevels(player: Player)
 	local profile = profiles[player]
 	if profile then

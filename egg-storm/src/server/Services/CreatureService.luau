@@ -25,6 +25,8 @@ local CreatureService = {}
 
 -- Modelos que están en el mundo, por jugador y por número de pad
 local modelsByPlayer: { [Player]: { [number]: Model } } = {}
+-- Si devuelve true, esa mascota no se puede vender ahora (por ejemplo, está en un intercambio; ver TradeService)
+local lockCheck: ((Player, number) -> boolean)? = nil
 local lastSell: { [Player]: number } = {}
 local random = Random.new()
 local notifyRemote = Remotes.Event("Notify")
@@ -167,6 +169,10 @@ function CreatureService.TrySell(who: Player, owner: Player, slot: number, model
 		return
 	end
 	lastSell[owner] = now
+	if lockCheck and lockCheck(owner, slot) then
+		notifyRemote:FireClient(owner, "That creature is in a trade!")
+		return
+	end
 
 	-- La mascota tiene que seguir existiendo en ese pad (por si ya se vendió)
 	local models = modelsByPlayer[owner]
@@ -210,6 +216,33 @@ function CreatureService.TrySell(who: Player, owner: Player, slot: number, model
 	PlayerDataService.AddCoins(owner, price)
 	updateIncomeAttribute(owner)
 	notifyRemote:FireClient(owner, `Sold {Config.WithVariant(variant, creature.DisplayName)} for {Format.Number(price)} coins!`)
+end
+
+-- Para bloquear la venta de mascotas que están en un intercambio
+function CreatureService.SetLockCheck(check: (Player, number) -> boolean)
+	lockCheck = check
+end
+
+-- Saca una mascota del estante (sin pagar nada). Devuelve sus datos, o nil si no hay ninguna ahí.
+function CreatureService.RemoveCreature(player: Player, slot: number): PlayerDataService.CreatureData?
+	local profile = PlayerDataService.Get(player)
+	if not profile then
+		return nil
+	end
+	for i, data in profile.Creatures do
+		if data.Slot == slot then
+			table.remove(profile.Creatures, i)
+			local models = modelsByPlayer[player]
+			local model = models and models[slot]
+			if models and model then
+				model:Destroy()
+				models[slot] = nil
+			end
+			updateIncomeAttribute(player)
+			return data
+		end
+	end
+	return nil
 end
 
 -- Cuando el jugador recibe su base: pone las mascotas que ya tenía.

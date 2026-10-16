@@ -1,7 +1,7 @@
 --!strict
--- StallService: los puestos del lobby que todavía no tienen su sistema.
--- El Intercambio (fase 4) por ahora solo avisa "Coming soon!".
--- La Tienda de mejoras la maneja UpgradeService, el Comerciante MerchantService y los Rankings, LeaderboardService.
+-- StallService: avisos de los puestos del lobby que todavía no tienen su sistema (hoy ninguno).
+-- La Tienda de mejoras la maneja UpgradeService, el Comerciante MerchantService, el Intercambio TradeService
+-- y los Rankings, LeaderboardService. Si agregás un puesto nuevo sin sistema, poné su aviso acá.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -10,7 +10,6 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local StallService = {}
 
 local COMING_SOON: { [string]: string } = {
-	Trading = "Trading is coming soon!",
 }
 
 local notifyRemote = Remotes.Event("Notify")

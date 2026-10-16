@@ -68,8 +68,9 @@ local shopPrompt = stalls.UpgradeShop.Counter.ProximityPrompt
 check(shopPrompt.ActionText == "Open" and shopPrompt:GetAttribute("Shared") == true, "the Upgrades shop has an Open button for everyone with a base")
 local alice = ADD_PLAYER("Alice", 601); SPAWN_CHARACTER(alice); ADVANCE(1)
 check(stalls.Merchant.Counter.ProximityPrompt.ObjectText == "Mystery Merchant", "the Mystery Merchant has its Open button (window on the client)")
+local before = lastNotify(alice)
 stalls.Trading.Counter.ProximityPrompt.Triggered:Fire(alice); ADVANCE(0.1)
-check(lastNotify(alice) == "Trading is coming soon!", "Trading: coming soon")
+check(lastNotify(alice) == before, "Trading opens its own window (no 'coming soon' message)")
 local boards = stalls.Rankings.Leaderboards
 local ids = {}
 for _, m in boards:GetChildren() do ids[m.Board:GetAttribute("Board")] = true end
