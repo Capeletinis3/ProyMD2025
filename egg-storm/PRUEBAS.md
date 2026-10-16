@@ -10,6 +10,9 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
    - `Config.Upgrades.MinIncubationTime = 1` y los `BaseIncubationTime` de cada rareza a `10`
    - Olas más seguido: `Config.Waves.MinInterval = 20` y `MaxInterval = 25`; para ver el súper tsunami: `SuperInterval = 90`
    - Eventos más seguido: `Config.Events.Interval = 30` y `Chance = 1`
+   - Renacimiento barato: `Config.Rebirth.Costs = { 1000, 2000, 3000, 4000, 5000 }`
+   - Comerciante más seguido: `Config.Merchant.RestockInterval = 60`
+   - Para probar el VIP sin comprarlo: poné tu UserId en `Config.Vip.TestUserIds = { tuUserId }` (en Studio los jugadores de prueba tienen UserIds negativos: -1 y -2)
 4. Pestaña **Test → Clients and Servers → 2 jugadores → Start**. Se abren 3 ventanas: el servidor y 2 jugadores.
 
 > ⚠️ Cuando termines, **volvé todos esos números a como estaban** (ver PUBLICAR.md).
@@ -22,7 +25,7 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
 - [ ] Camino de piedras del altar al **Portal tiki** (dos tótems con cara y el cartel "TO THE CANYON ⚠").
 - [ ] Al fondo, detrás del cañón, se ve el **volcán** con humo y ríos de lava.
 - [ ] 4 puestos con toldo a rayas mirando al altar: **UPGRADES** (azul), **MYSTERY MERCHANT** (violeta), **RANKINGS** (naranja), **TRADING** (verde).
-- [ ] UPGRADES: "Open" abre la ventana de mejoras y se puede comprar. MYSTERY MERCHANT y TRADING dicen "coming soon".
+- [ ] UPGRADES: "Open" abre la ventana de mejoras y se puede comprar. MYSTERY MERCHANT y TRADING abren sus ventanas (ver más abajo).
 - [ ] RANKINGS: tablero de plata arriba, de huevos abiertos a un costado y el tablero **EVENTS** al otro (próxima ola, súper tsunami y evento; cambia solo).
 
 ### Bases
@@ -51,7 +54,7 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
 - [ ] Jugador 1 metido en una cueva (marco de madera con antorcha): no le pasa nada.
 - [ ] Jugador 2 afuera con un huevo: pierde el huevo y aparece en la isla ("The wave got you!").
 - [ ] A veces la ola es rápida (menos aviso). Con `SuperInterval` corto: "SUPER TSUNAMI", más alta, con aviso más largo y anuncio para todos.
-- [ ] La cueva VIP (marco dorado) está cerrada por ahora.
+- [ ] La cueva VIP (marco dorado) tiene un botón "Get VIP" y una pared invisible: sin VIP no se puede entrar (ver "VIP").
 
 ### Eventos
 - [ ] Cartel grande al empezar y, abajo del cartelito de la ola, el nombre del evento con su tiempo:
@@ -59,6 +62,31 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
   - **LUCKY STORM**: cada zona da más seguido la rareza siguiente.
   - **DOUBLE COINS**: la plata por segundo dice "(x2!)" y sube el doble.
   - **METEOR SHOWER**: cada 10 segundos cae un meteorito en llamas (círculo rojo) con un huevo Epic o mejor.
+
+### Renacimiento
+- [ ] A la izquierda está el botón **Rebirth**: abre una ventana con el precio, lo que perdés y lo que ganás.
+- [ ] Sin plata suficiente el botón está en rojo y no hace nada. Con plata: la plata vuelve a 0, Incubation Speed y Walk Speed vuelven a nivel 1, se abre el piso 2 de la torre (desaparece la barrera) y la plata por segundo sube un 25%.
+- [ ] Las mascotas, los huevos de los nidos y la mejora de incubadora extra se conservan.
+- [ ] Al segundo renacimiento se abre el piso 3. Se puede renacer hasta 5 veces (los últimos solo suben el bonus). Después de Stop + Play sigue todo igual.
+
+### Comerciante misterioso
+- [ ] "Open" en el puesto violeta muestra 3 huevos (Rare o mejores, a veces con variante), su precio y cuánto falta para la próxima tanda.
+- [ ] Comprar uno lo pone directo en un nido libre tuyo (con la cuenta regresiva). Cada oferta se compra una vez por tanda ("SOLD").
+- [ ] Sin nido libre o sin plata, avisa y no cobra. Los dos jugadores ven las mismas ofertas.
+
+### Intercambio (con los 2 jugadores)
+- [ ] Jugador 1 en el puesto verde: "Open" muestra la lista de jugadores. Toca a Jugador 2: "Trade request sent".
+- [ ] A Jugador 2 le aparece arriba "Player1 wants to trade with you!" (esté donde esté). "Decline" avisa a Jugador 1; "Accept" abre la ventana a los dos.
+- [ ] Cada uno toca hasta 4 mascotas suyas (se ponen verdes) y ve la oferta del otro con la plata por segundo de cada una.
+- [ ] Mientras una mascota está ofrecida no se puede vender ("That creature is in a trade!").
+- [ ] Los dos aprietan **Ready**: "Trading in 3...". Si alguien cambia algo en esos 3 segundos, se corta y hay que apretar Ready de nuevo.
+- [ ] Al terminar: "Trade complete!", las mascotas cambian de estante (con su variante) y la plata por segundo se actualiza. Después de Stop + Play sigue igual.
+- [ ] Si a alguien no le alcanzan los estantes, avisa y no cambia nada. Si alguien aprieta Cancel o sale del juego, se cancela para los dos.
+
+### VIP
+- [ ] Sin VIP: el botón **👑 VIP** de la izquierda y el "Get VIP" de la cueva dicen "VIP isn't available yet" (si `GamePassId = 0`) o abren la compra del pase.
+- [ ] Con VIP (por ejemplo con `TestUserIds`): el botón dice "👑 VIP ✓", no aparece "Get VIP" y podés entrar a la cueva VIP caminando. Un jugador sin VIP choca con la entrada.
+- [ ] La cueva VIP protege de la ola como las otras.
 
 ### Tutorial (con un jugador nuevo)
 > Para ver el tutorial de nuevo con tu cuenta, cambiá `Config.Data.StoreName` a otro nombre (empezás de cero) y después volvelo como estaba.
@@ -76,3 +104,4 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
 
 ### Celular
 - [ ] **Test → Device** → elegí un teléfono: la ventana de mejoras, los carteles de ola y de evento, la plata y los avisos entran en la pantalla.
+- [ ] También entran las ventanas de Rebirth, Comerciante e Intercambio, el cartel de invitación y los botones Rebirth/VIP de la izquierda.

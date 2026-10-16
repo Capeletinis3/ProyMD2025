@@ -372,6 +372,15 @@ Config.Trade = {
 	Cooldown = 0.2, -- anti-spam de los botones
 }
 
+-- ===== Pase VIP =====
+-- Para activarlo: creá el Game Pass en el Creator Dashboard y pegá su número acá (ver PUBLICAR.md).
+-- Con 0, el juego funciona igual pero nadie puede comprar el pase todavía.
+Config.Vip = {
+	GamePassId = 0,
+	TestUserIds = {} :: { number }, -- UserIds que son VIP sin comprar (para probar en Studio o regalarlo)
+	PromptCooldown = 2, -- anti-spam del botón "Get VIP"
+}
+
 -- ===== Ayudantes =====
 local raritiesById: { [string]: Rarity } = {}
 for _, rarity in Config.Rarities do

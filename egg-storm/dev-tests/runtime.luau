@@ -73,6 +73,7 @@ local baseIndex = InstMeta.__index
 local SIGNAL_NAMES = {
 	PlayerAdded = true, PlayerRemoving = true, CharacterAdded = true, CharacterRemoving = true,
 	Triggered = true, Died = true, Completed = true, OnClientEvent = true, OnServerEvent = true, Changed = true,
+	DescendantAdded = true, PromptGamePassPurchaseFinished = true,
 }
 REMOTE_LOG = {}
 InstMeta.__index = function(self, k)
@@ -111,6 +112,14 @@ InstMeta.__index = function(self, k)
 		end
 	end
 	if k == "Kick" then return function(s, msg) print("KICK", s.Name, msg) end end
+	if k == "GetDescendants" then
+		return function(s)
+			local list = {}
+			local function walk(o) for _, c in rawget(o, "_children") do table.insert(list, c); walk(c) end end
+			walk(s)
+			return list
+		end
+	end
 	if k == "FindFirstChildOfClass" then
 		return function(s, cls) for _, c in rawget(s, "_children") do if c.ClassName == cls then return c end end return nil end
 	end
@@ -294,4 +303,22 @@ rawget(playersSvc, "_props").GetNameFromUserIdAsync = function(_, id) return "Us
 rawget(playersSvc, "_props").GetPlayerByUserId = function(_, id)
 	for _, p in playersSvc:GetPlayers() do if p.UserId == id then return p end end
 	return nil
+end
+
+-- VIP: grupos de colisión y Game Pass falsos
+COLLIDABLE = {}
+PASS_OWNERS = {}
+PASS_FAIL = false
+PURCHASE_PROMPTS = {}
+do
+	local physics = game:GetService("PhysicsService")
+	rawget(physics, "_props").RegisterCollisionGroup = function() end
+	rawget(physics, "_props").CollisionGroupSetCollidable = function(_, a, b, v) COLLIDABLE[a .. "|" .. b] = v end
+	local market = game:GetService("MarketplaceService")
+	rawget(market, "_props").UserOwnsGamePassAsync = function(_, userId, passId)
+		task.wait(0.05)
+		if PASS_FAIL then error("Marketplace unavailable (simulated)") end
+		return PASS_OWNERS[userId .. ":" .. passId] == true
+	end
+	rawget(market, "_props").PromptGamePassPurchase = function(_, player, passId) table.insert(PURCHASE_PROMPTS, { player, passId }) end
 end

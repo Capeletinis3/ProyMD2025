@@ -18,6 +18,7 @@ local StallService = require(Services.StallService)
 local RebirthService = require(Services.RebirthService)
 local MerchantService = require(Services.MerchantService)
 local TradeService = require(Services.TradeService)
+local VipService = require(Services.VipService)
 
 local map = MapBuilder.Build()
 
@@ -63,6 +64,7 @@ EventService.Init()
 StallService.Init(map)
 MerchantService.Init(map)
 TradeService.Init(map)
+VipService.Init(map)
 LeaderboardService.Init(map)
 
 print("[EggStorm] Server ready")

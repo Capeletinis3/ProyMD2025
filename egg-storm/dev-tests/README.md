@@ -22,6 +22,10 @@ python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_game.luau        # pa
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tutorial.luau    # tutorial
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_offline.luau     # ganancia mientras no estás
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_leaderboard.luau # tablas de récords
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_rebirth.luau     # renacimiento
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_merchant.luau    # Comerciante misterioso
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_trade.luau       # intercambio entre jugadores
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_vip.luau         # pase VIP y cueva VIP
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tower.luau > salida.txt   # (también imprime las piezas de 2 bases)
 python3 dev-tests/render_parts.py salida.txt bases.png                               # dibujo de las bases
 python3 dev-tests/bundle.py src <ruta-a-luau> mapa.png                               # dibujo del mapa desde arriba

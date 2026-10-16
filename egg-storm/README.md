@@ -33,7 +33,11 @@ egg-storm/
     │       ├── UpgradeService.luau                     compra y aplica las mejoras (Tienda del lobby)
     │       ├── WaveService.luau                        olas del volcán y cuevas-refugio
     │       ├── EventService.luau                       eventos especiales (Golden Rain, Lucky Storm...)
-    │       ├── StallService.luau                       puestos del lobby que todavía no tienen sistema
+    │       ├── StallService.luau                       avisos de puestos del lobby sin sistema (hoy ninguno)
+│       ├── RebirthService.luau                     renacimiento (abre pisos de la torre, +25% de plata)
+│       ├── MerchantService.luau                    Comerciante misterioso (ofertas de huevos cada 10 min)
+│       ├── TradeService.luau                       intercambio de mascotas entre jugadores
+│       ├── VipService.luau                         pase VIP (cueva VIP con grupos de colisión)
     │       ├── TutorialService.luau                    pasos del tutorial para jugadores nuevos
     │       └── LeaderboardService.luau                 tableros de récords (top 10 de todos los servidores)
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
@@ -47,6 +51,11 @@ egg-storm/
         ├── IncubatorPrompts.luau                       muestra "Place Egg" / "Open" solo cuando corresponde
         ├── SellPrompts.luau                            el botón "Sell" de cada mascota solo lo ve su dueño
         ├── UpgradePanel.luau                           ventana de mejoras
+        ├── SideMenu.luau                               botones del costado izquierdo (Rebirth, VIP)
+        ├── RebirthPanel.luau                           ventana de renacimiento
+        ├── MerchantPanel.luau                          ventana del Comerciante
+        ├── TradePanel.luau                             lista de jugadores, invitación y ventana de intercambio
+        ├── VipClient.luau                              botón VIP y esconde "Get VIP" si ya lo tenés
         ├── WaveClient.luau                             próxima ola, "THE WAVE IS COMING!", la ola y los eventos
         ├── EventBoard.luau                             escribe el tablero de eventos del puesto de Rankings
         └── EggAnimator.luau                            hace girar y flotar los huevos del piso

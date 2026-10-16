@@ -29,7 +29,7 @@ local function getHolder(): Frame
 	frame.Size = UDim2.fromOffset(BUTTON.X, (BUTTON.Y + GAP) * 4)
 	frame.BackgroundTransparency = 1
 	frame.Parent = gui
-	UIKit.FitToScreen(frame, Vector2.new(BUTTON.X, (BUTTON.Y + GAP) * 4), Vector2.new(400, 300))
+	UIKit.FitToScreen(frame, Vector2.new(BUTTON.X, (BUTTON.Y + GAP) * 4), Vector2.new(400, 160))
 	holder = frame
 	return frame
 end

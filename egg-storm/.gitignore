@@ -7,3 +7,4 @@ sourcemap.json
 
 # Archivo que arman las pruebas automáticas al correr
 dev-tests/flow_bundle.luau
+dev-tests/ui_bundle.luau
