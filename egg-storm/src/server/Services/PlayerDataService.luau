@@ -39,6 +39,7 @@ export type Profile = {
 	IncubatorCount: number,
 	WalkSpeedLevel: number,
 	BaseLevel: number, -- cuántos pisos de la torre tiene abiertos (1 a 3)
+	Rebirths: number, -- cuántas veces renació (ver RebirthService)
 	TutorialStep: number, -- en qué paso del tutorial va (ver TutorialService; el último = terminado)
 	TotalEarned: number, -- plata ganada en toda la historia (no baja al gastar; para la tabla de récords)
 	EggsHatched: number, -- huevos abiertos en toda la historia (para la tabla de récords)
@@ -77,6 +78,7 @@ local function newProfile(): Profile
 		IncubatorCount = Config.Upgrades.StartingIncubators,
 		WalkSpeedLevel = 1,
 		BaseLevel = 1,
+		Rebirths = 0,
 		TutorialStep = 1,
 		TotalEarned = 0,
 		EggsHatched = 0,
@@ -136,7 +138,9 @@ local function profileFromData(data: any): Profile
 	profile.IncubationSpeedLevel = cleanNumber(data.IncubationSpeedLevel, 1, 1, #up.IncubationSpeed)
 	profile.IncubatorCount = cleanNumber(data.IncubatorCount, up.StartingIncubators, 1, up.MaxIncubators)
 	profile.WalkSpeedLevel = cleanNumber(data.WalkSpeedLevel, 1, 1, #up.WalkSpeed)
-	profile.BaseLevel = cleanNumber(data.BaseLevel, 1, 1, Config.Map.BaseFloors)
+	profile.Rebirths = cleanNumber(data.Rebirths, 0, 0, #Config.Rebirth.Costs)
+	-- Los pisos abiertos: los que da el renacimiento (o más, si los tenía de antes)
+	profile.BaseLevel = math.max(cleanNumber(data.BaseLevel, 1, 1, Config.Map.BaseFloors), Config.FloorsForRebirths(profile.Rebirths))
 	if typeof(data.TutorialStep) == "number" then
 		profile.TutorialStep = cleanNumber(data.TutorialStep, 1, 1, TUTORIAL_DONE)
 	else
@@ -190,7 +194,8 @@ local function offlineEarnings(data: any, profile: Profile): (number, number)
 		return 0, 0 -- muy poco tiempo (o reloj raro entre servidores)
 	end
 	seconds = math.min(seconds, economy.OfflineMaxHours * 3600)
-	local earned = math.floor(Creatures.TotalIncome(profile.Creatures) * seconds * economy.OfflineRate)
+	local income = Creatures.TotalIncome(profile.Creatures) * Config.RebirthMultiplier(profile.Rebirths)
+	local earned = math.floor(income * seconds * economy.OfflineRate)
 	return earned, seconds
 end
 
@@ -211,6 +216,7 @@ local function dataFromProfile(profile: Profile, incubating: { IncubatingData })
 		IncubatorCount = profile.IncubatorCount,
 		WalkSpeedLevel = profile.WalkSpeedLevel,
 		BaseLevel = profile.BaseLevel,
+		Rebirths = profile.Rebirths,
 		TutorialStep = profile.TutorialStep,
 		TotalEarned = profile.TotalEarned,
 		EggsHatched = profile.EggsHatched,
@@ -285,6 +291,7 @@ local function syncLevels(player: Player, profile: Profile)
 	player:SetAttribute("IncubatorCount", profile.IncubatorCount)
 	player:SetAttribute("WalkSpeedLevel", profile.WalkSpeedLevel)
 	player:SetAttribute("BaseLevel", profile.BaseLevel)
+	player:SetAttribute("Rebirths", profile.Rebirths)
 	player:SetAttribute("TutorialStep", profile.TutorialStep)
 end
 

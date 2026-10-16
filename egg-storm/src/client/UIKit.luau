@@ -98,4 +98,33 @@ function UIKit.FitToScreen(frame: GuiObject, designSize: Vector2, margin: Vector
 	end
 end
 
+-- Ventana centrada con título, borde dorado y botón X (se achica sola en pantallas chicas).
+-- Devuelve el ScreenGui (empieza cerrado), el marco y el botón de cerrar.
+function UIKit.Window(name: string, title: string, size: Vector2, displayOrder: number?): (ScreenGui, Frame, TextButton)
+	local Players = game:GetService("Players")
+	local gui = Instance.new("ScreenGui")
+	gui.Name = name
+	gui.ResetOnSpawn = false
+	gui.Enabled = false
+	gui.DisplayOrder = displayOrder or 5
+	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+	local frame = Instance.new("Frame")
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
+	frame.Size = UDim2.fromOffset(size.X, size.Y)
+	frame.BackgroundColor3 = UIKit.Colors.Panel
+	frame.Parent = gui
+	UIKit.Corner(frame, 20)
+	UIKit.Stroke(frame, 4, UIKit.Colors.Accent)
+	UIKit.FitToScreen(frame, size)
+
+	UIKit.Label(frame, title, UDim2.fromOffset(size.X - 120, 50), UDim2.fromOffset(28, 18), 36, UIKit.Colors.Accent)
+	local closeButton = UIKit.Button(frame, "X", UDim2.fromOffset(52, 52), UDim2.fromOffset(size.X - 70, 17), 28, UIKit.Colors.Red)
+	closeButton.Activated:Connect(function()
+		gui.Enabled = false
+	end)
+	return gui, frame, closeButton
+end
+
 return UIKit

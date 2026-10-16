@@ -94,7 +94,7 @@ function DUMP_GUI(root)
 			cls, x, y, w, h,
 			bg and string.format("%.3f,%.3f,%.3f", bg.R, bg.G, bg.B) or "-",
 			tostring(bt), tostring(hasCorner),
-			text and text:gsub("\t", " ") or "",
+			text and text:gsub("\t", " "):gsub("\n", "\\n") or "",
 			tc and string.format("%.3f,%.3f,%.3f", tc.R, tc.G, tc.B) or "-",
 			tostring(if obj.TextScaled and text then math.min(h * 0.8, w / math.max(1, utf8.len(text) or #text) / 0.6) else (obj.TextSize or 14) * s),
 			tostring(obj.TextXAlignment or ""), tostring(s),

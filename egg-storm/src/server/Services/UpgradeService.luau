@@ -32,7 +32,7 @@ local function notify(player: Player, text: string)
 end
 
 -- Pone la velocidad de caminata según el nivel comprado
-local function applyWalkSpeed(player: Player)
+function UpgradeService.ApplyWalkSpeed(player: Player)
 	local profile = PlayerDataService.Get(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -80,7 +80,7 @@ local function apply(player: Player, id: UpgradeId): boolean
 		return IncubatorService.AddIncubator(player)
 	elseif id == "WalkSpeed" then
 		profile.WalkSpeedLevel += 1
-		applyWalkSpeed(player)
+		UpgradeService.ApplyWalkSpeed(player)
 		return true
 	end
 	return false
@@ -126,7 +126,7 @@ end
 function UpgradeService.SetupBase(player: Player, base: Base)
 	local profile = PlayerDataService.Get(player)
 	BaseFloors.Apply(base, if profile then profile.BaseLevel else 1)
-	applyWalkSpeed(player)
+	UpgradeService.ApplyWalkSpeed(player)
 end
 
 function UpgradeService.ClearBase(player: Player, base: Base)
@@ -137,7 +137,7 @@ end
 local function watchPlayer(player: Player)
 	player.CharacterAdded:Connect(function(character)
 		character:WaitForChild("Humanoid", 10)
-		applyWalkSpeed(player)
+		UpgradeService.ApplyWalkSpeed(player)
 	end)
 end
 

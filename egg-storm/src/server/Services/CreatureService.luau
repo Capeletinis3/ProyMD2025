@@ -88,7 +88,13 @@ function CreatureService.GetIncomePerSecond(player: Player): number
 	if not profile then
 		return 0
 	end
-	return Creatures.TotalIncome(profile.Creatures)
+	-- Los renacimientos suman un porcentaje a todas las mascotas
+	return Creatures.TotalIncome(profile.Creatures) * Config.RebirthMultiplier(profile.Rebirths)
+end
+
+-- Vuelve a calcular la plata por segundo que ve el cliente (por ejemplo, después de renacer)
+function CreatureService.RefreshIncome(player: Player)
+	updateIncomeAttribute(player)
 end
 
 -- Cuántos estantes puede usar el jugador (los de los pisos que tiene abiertos)

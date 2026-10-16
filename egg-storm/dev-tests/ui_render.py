@@ -38,6 +38,7 @@ for line in res.stdout.splitlines():
         continue
     _, cls, x, y, w, h, bg, bt, corner, text, tc, ts, align, scale, name = line.split("\t")
     x, y, w, h, bt, ts = float(x), float(y), float(w), float(h), float(bt), float(ts)
+    text = text.replace("\\n", "\n")
     name, rot = name.rsplit("|", 1); rot = float(rot)
     if rot and bg != "-" and bt < 1:
         import matplotlib.transforms as mt

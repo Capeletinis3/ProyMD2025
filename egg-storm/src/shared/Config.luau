@@ -338,6 +338,17 @@ Config.Upgrades = {
 	} :: { WalkSpeedLevel },
 }
 
+-- ===== Renacimiento =====
+-- Renacer reinicia la plata y las mejoras de velocidad (Incubation Speed y Walk Speed).
+-- Se conservan las mascotas, los huevos y las incubadoras. A cambio:
+--   - el 1.º renacimiento abre el piso 2 de la torre y el 2.º el piso 3
+--   - cada renacimiento suma IncomeBonus a la plata de TODAS tus mascotas (para siempre)
+Config.Rebirth = {
+	Costs = { 100000, 1000000, 5000000, 25000000, 100000000 }, -- precio de cada renacimiento (la cantidad = el máximo)
+	IncomeBonus = 0.25, -- +25% de plata por renacimiento
+	Cooldown = 1, -- anti-spam
+}
+
 -- ===== Ayudantes =====
 local raritiesById: { [string]: Rarity } = {}
 for _, rarity in Config.Rarities do
@@ -397,6 +408,16 @@ end
 -- Ancho de una cueva (la VIP es más ancha)
 function Config.CaveWidth(cave: Cave): number
 	return if cave.Vip then Config.VipCaveWidth else Config.CaveSize.X
+end
+
+-- Multiplicador de plata por los renacimientos (1 renacimiento = x1.25)
+function Config.RebirthMultiplier(rebirths: number): number
+	return 1 + Config.Rebirth.IncomeBonus * rebirths
+end
+
+-- Cuántos pisos de la torre abre esa cantidad de renacimientos (1 piso sin renacer)
+function Config.FloorsForRebirths(rebirths: number): number
+	return math.min(Config.Map.BaseFloors, 1 + rebirths)
 end
 
 -- Plata por segundo de una mascota de esta rareza y variante.

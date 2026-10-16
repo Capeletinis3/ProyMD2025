@@ -15,6 +15,7 @@ local EventService = require(Services.EventService)
 local TutorialService = require(Services.TutorialService)
 local LeaderboardService = require(Services.LeaderboardService)
 local StallService = require(Services.StallService)
+local RebirthService = require(Services.RebirthService)
 
 local map = MapBuilder.Build()
 
@@ -24,6 +25,7 @@ CreatureService.Init()
 IncubatorService.Init()
 UpgradeService.Init()
 TutorialService.Init()
+RebirthService.Init()
 
 -- Para el autoguardado: así PlayerDataService puede guardar los huevos que se están incubando ahora mismo
 PlayerDataService.SetIncubatingProvider(IncubatorService.GetSnapshot)
