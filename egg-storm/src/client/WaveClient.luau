@@ -3,7 +3,7 @@
 --   - Arriba de la pantalla: "NEXT WAVE / Run to a cave! / 00:42" (y abajo, el evento activo si hay).
 --   - Durante el aviso: cartel grande "THE WAVE IS COMING!" con cuenta regresiva, cuerno y la cámara tiembla
 --     (si estás en el cañón).
---   - La ola: este cliente la dibuja con la misma fórmula que usa el servidor para decidir a quién agarra,
+--   - La ola (ver WaveVisual): este cliente la dibuja con la misma fórmula que usa el servidor para decidir a quién agarra,
 --     así se mueve suave (sin los saltitos que tendría si la moviera el servidor).
 --   - Cuando empieza un evento: un cartel grande con su nombre y qué hace.
 
@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local UIKit = require(script.Parent.UIKit)
+local WaveVisual = require(script.Parent.WaveVisual)
 
 local player = Players.LocalPlayer
 
@@ -25,7 +26,6 @@ local BANNER_TOP = 180 -- px desde arriba donde empiezan los carteles grandes (d
 local TUTORIAL_SPACE = 96 -- si el tutorial está activo, su cartel ocupa ese lugar: bajamos los nuestros
 local TUTORIAL_DONE = 5 -- igual que en TutorialService
 local EVENT_BANNER_TIME = 5 -- segundos que se ve el cartel grande del evento
-local WAVE_COLOR = Color3.fromRGB(168, 238, 246)
 local RED = Color3.fromRGB(255, 80, 80)
 
 local phaseLabel: TextLabel
@@ -41,7 +41,7 @@ local eventDescription: TextLabel
 local eventShownAt = -math.huge
 local warningSound: Sound
 local waveSound: Sound
-local waveModel: Model? = nil
+local waveModel: WaveVisual.Wave? = nil
 local fading = false
 local lastBeepSecond = -1
 
@@ -163,41 +163,6 @@ local function buildSounds()
 	waveSound.Parent = Workspace
 end
 
--- La ola: pared de agua del ancho del cañón, con espuma blanca saliendo del frente
-local function buildWave(height: number): Model
-	local waves = Config.Waves
-	local model = Instance.new("Model")
-	model.Name = "Wave"
-
-	local water = Instance.new("Part")
-	water.Name = "Water"
-	water.Size = Vector3.new(waves.Thickness, height, waves.Width)
-	water.Color = WAVE_COLOR
-	water.Material = Enum.Material.Glass
-	water.Transparency = 0.3
-	water.Anchored = true
-	water.CanCollide = false
-	water.CanQuery = false
-	water.CanTouch = false
-	water.Parent = model
-	model.PrimaryPart = water
-
-	local foam = Instance.new("ParticleEmitter")
-	foam.Name = "Foam"
-	foam.Color = ColorSequence.new(Color3.new(1, 1, 1))
-	foam.EmissionDirection = Enum.NormalId.Left -- el frente de la ola mira a -X (hacia el lobby)
-	foam.Rate = 120
-	foam.Lifetime = NumberRange.new(0.6, 1.2)
-	foam.Speed = NumberRange.new(10, 18)
-	foam.SpreadAngle = Vector2.new(30, 60)
-	foam.Size = NumberSequence.new(2.5, 0.5)
-	foam.Transparency = NumberSequence.new(0.1, 1)
-	foam.Parent = water
-
-	model.Parent = Workspace
-	return model
-end
-
 -- Dónde está el frente de la ola ahora (misma fórmula que el servidor)
 local function waveFrontX(): number?
 	local startedAt = attribute("WaveStartedAt")
@@ -217,17 +182,10 @@ local function fadeWave()
 		return
 	end
 	fading = true
-	local water = model:FindFirstChild("Water")
-	if water and water:IsA("BasePart") then
-		local foam = water:FindFirstChild("Foam")
-		if foam and foam:IsA("ParticleEmitter") then
-			foam.Enabled = false
-		end
-		TweenService:Create(water, TweenInfo.new(Config.Waves.FadeTime), { Transparency = 1 }):Play()
-	end
+	model:Fade()
 	waveSound:Stop()
 	task.delay(Config.Waves.FadeTime, function()
-		model:Destroy()
+		model.Model:Destroy()
 		if waveModel == model then
 			waveModel = nil
 		end
@@ -339,15 +297,12 @@ local function update()
 			local heightValue = attribute("WaveHeight")
 			local height = if typeof(heightValue) == "number" then heightValue else Config.Waves.Normal.Height
 			if not waveModel and not fading then
-				waveModel = buildWave(height)
+				waveModel = WaveVisual.Build(height)
 				waveSound:Play()
 			end
 			local model = waveModel
 			if model and not fading then
-				local water = model:FindFirstChild("Water")
-				if water and water:IsA("BasePart") then
-					water.CFrame = CFrame.new(front + Config.Waves.Thickness / 2, Config.Map.FloorY + height / 2, 0)
-				end
+				model:Update(front)
 				if front <= Config.Waves.EndX then
 					fadeWave()
 				end
