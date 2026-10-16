@@ -151,7 +151,7 @@ check(facing, "stalls face the altar (counter on the altar side)")
 local totems = 0
 for _, p in map.Lobby.Portal:GetChildren() do if p.Name == "Totem" and math.abs(p.Position.X - 150) < 0.01 then totems += 1 end end
 check(totems == 2, "tiki portal at the canyon entrance (X = 150)")
-check(map.Volcano and (map.Volcano.Crater.Position - Vector3.new(1550, 220.7, 0)).Magnitude < 1, "volcano in the sea behind the canyon")
+check(map.Volcano and (map.Volcano.Crater.Position - Vector3.new(1600, 206, 0)).Magnitude < 1, "volcano at the end of the canyon (lava lake in the crater)")
 check(Lighting.ClockTime == 14.5 and Lighting.Brightness == 2.5 and Lighting:FindFirstChildOfClass("Atmosphere") ~= nil, "lighting from the spec")
 
 -- Todo anclado

@@ -21,9 +21,18 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
 
 ### Isla (lobby)
 - [ ] Aparecés al lado del Altar del volcán (pileta de lava con un huevo dorado gigante que gira) con 8 antorchas alrededor.
-- [ ] Piso de arena, terrazas de pasto arriba y abajo con las 8 bases, palmeras, flores y conchas en la orilla. El mar alrededor.
+- [ ] Piso de arena, terrazas de pasto arriba y abajo con las 8 bases, palmeras y flores. Alrededor, el pasto de la isla (sin escalón ni agujeros en el borde).
 - [ ] Camino de piedras del altar al **Portal tiki** (dos tótems con cara y el cartel "TO THE CANYON ⚠").
-- [ ] Al fondo, detrás del cañón, se ve el **volcán** con humo y ríos de lava.
+- [ ] Al fondo, al final del cañón, se ve el **volcán** grande (curvo, con barrancos), humo enorme con brasas y 3 ríos de lava.
+
+### Isla v2 (salí del lobby caminando)
+- [ ] El terreno aparece en unos segundos al apretar Play, empezando cerca del lobby (en modo edición no se ve, es normal).
+- [ ] Colinas con selva a los dos lados del cañón y acantilados de roca pegados a sus paredes. No se puede entrar al cañón desde arriba ni por el lado del volcán (pared invisible).
+- [ ] Punta noroeste: **faro** a rayas con luz que gira y un **barco hundido** en el agua.
+- [ ] Caleta norte: **laguna** con **cascada**. Península sur: **muelle** con 2 botes.
+- [ ] Playas con palmeras y conchas, arrecifes claros y rocas en el agua.
+- [ ] Volcán: se puede subir; arriba el cráter tiene un lago de lava que brilla.
+- [ ] Estando en las colinas, la ola no te agarra (solo dentro del cañón).
 - [ ] 4 puestos con toldo a rayas mirando al altar: **UPGRADES** (azul), **MYSTERY MERCHANT** (violeta), **RANKINGS** (naranja), **TRADING** (verde).
 - [ ] UPGRADES: "Open" abre la ventana de mejoras y se puede comprar. MYSTERY MERCHANT y TRADING abren sus ventanas (ver más abajo).
 - [ ] RANKINGS: tablero de plata arriba, de huevos abiertos a un costado y el tablero **EVENTS** al otro (próxima ola, súper tsunami y evento; cambia solo).

@@ -84,7 +84,7 @@ MOVE_TO(carol, Vector3.new(100, 3, 0)) -- Carol en la isla
 MOVE_TO(dave, Vector3.new(500, 3, 10))
 
 while phase() ~= "Warning" do ADVANCE(0.05) end
-check(Workspace:GetAttribute("WaveKind") == "Normal" and smoke.Rate == 25, "warning: normal wave, the volcano smokes more")
+check(Workspace:GetAttribute("WaveKind") == "Normal" and smoke.Rate == 14, "warning: normal wave, the volcano smokes more")
 local warnStart = os.clock()
 while phase() ~= "Wave" do ADVANCE(0.05) end
 check(math.abs(os.clock() - warnStart - Config.Waves.Normal.Warning) < 0.2, "5 seconds of warning")
@@ -104,7 +104,7 @@ MOVE_TO(dave, Vector3.new(400, 3, 10))
 while phase() == "Wave" do ADVANCE(0.05) end
 check(at(dave).X < 150, "the wave reaches the portal and gets Dave on the way")
 check((at(carol) - Vector3.new(100, 3, 0)).Magnitude < 0.1, "the wave never enters the island")
-check(phase() == "Calm" and smoke.Rate == 4, "calm again after the wave")
+check(phase() == "Calm" and smoke.Rate == 5, "calm again after the wave")
 
 -- Segunda ola: súper tsunami (y después, que no vuelva a tocar súper en esta prueba)
 Config.Waves.SuperInterval = 1e6

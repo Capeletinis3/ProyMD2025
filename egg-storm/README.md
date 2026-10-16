@@ -22,7 +22,8 @@ egg-storm/
     ├── server/   → ServerScriptService.Server          (solo servidor)
     │   ├── Main.server.luau                            arranca los servicios
     │   └── Services/
-    │       ├── MapBuilder.luau                         arma la isla, el cañón, las cuevas, las bases, el mar y el volcán
+    │       ├── MapBuilder.luau                         arma el lobby, el cañón, las cuevas, las bases, el faro, el muelle...
+│       ├── IslandBuilder.luau                      la isla grande con Terrain (colinas, playas, arrecifes, volcán)
     │       ├── BaseService.luau                        asigna/libera bases
     │       ├── BaseFloors.luau                         abre y cierra los pisos de la torre (candados)
     │       ├── PlayerDataService.luau                  datos de cada jugador y guardado (DataStore)

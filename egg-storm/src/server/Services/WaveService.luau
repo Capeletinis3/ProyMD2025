@@ -26,8 +26,8 @@ export type Phase = "Calm" | "Warning" | "Wave"
 local WaveService = {}
 
 local CATCH_BEHIND = 12 -- studs detrás del frente de la ola que también cuentan como "mojado" (la ola avanza a saltos)
-local SMOKE_CALM = 4
-local SMOKE_ERUPTING = 25
+local SMOKE_CALM = 5
+local SMOKE_ERUPTING = 14 -- (las nubes de humo son enormes: con esto alcanza)
 
 local notifyRemote = Remotes.Event("Notify")
 local random = Random.new()
@@ -68,6 +68,9 @@ local function isCaught(root: BasePart, frontX: number, height: number): boolean
 	local canyonEnd = Config.Map.CanyonStartX + Config.Map.CanyonLength
 	if position.X < waves.EndX or position.X > canyonEnd + 10 then
 		return false -- en el lobby (o fuera del cañón)
+	end
+	if math.abs(position.Z) > Config.Map.CanyonWidth / 2 + Config.Map.CanyonWallThickness then
+		return false -- afuera de las paredes (en las colinas de la isla)
 	end
 	if position.X < frontX - 2 or position.X > frontX + waves.Thickness + CATCH_BEHIND then
 		return false -- la ola todavía no llegó, o ya pasó

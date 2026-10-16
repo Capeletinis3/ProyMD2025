@@ -215,6 +215,17 @@ do
 	terrain.Name = "Terrain"
 	terrain.Parent = ws
 	rawget(terrain, "_props").FillBlock = function() end
+	VOXEL_WRITES = 0
+	VOXEL_COUNT = 0
+	rawget(terrain, "_props").FillBall = function() end
+	rawget(terrain, "_props").SetMaterialColor = function() end
+	rawget(terrain, "_props").WriteVoxels = function(_, region, res, materials, occupancy)
+		assert(res == 4, "resolution must be 4")
+		local size = (region.Max - region.Min) / 4
+		assert(#materials == size.X and #materials[1] == size.Y and #materials[1][1] == size.Z, "voxel arrays must match the region")
+		VOXEL_WRITES += 1
+		VOXEL_COUNT += size.X * size.Y * size.Z
+	end
 end
 
 -- Phase 7: fake DataStore with failure injection, BindToClose, IsStudio, IsDescendantOf

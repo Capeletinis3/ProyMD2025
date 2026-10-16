@@ -26,9 +26,11 @@ python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_rebirth.luau     # re
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_merchant.luau    # Comerciante misterioso
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_trade.luau       # intercambio entre jugadores
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_vip.luau         # pase VIP y cueva VIP
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_island.luau      # isla v2 de Terrain y volcán
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tower.luau > salida.txt   # (también imprime las piezas de 2 bases)
 python3 dev-tests/render_parts.py salida.txt bases.png                               # dibujo de las bases
 python3 dev-tests/bundle.py src <ruta-a-luau> mapa.png                               # dibujo del mapa desde arriba
+python3 dev-tests/island_preview.py src <ruta-a-luau> isla.png volcan.png           # isla v2 (terreno) y corte del volcán
 python3 dev-tests/ui_render.py src <ruta-a-luau> dev-tests/ui_upgrades.luau mejoras.png 1280 720   # interfaz
 ```
 

@@ -79,11 +79,10 @@ Config.MaxPlayers = 8
 Config.Map = {
 	FloorY = 0,
 
-	-- Lobby (isla de arena)
+	-- Lobby (plaza de arena en el oeste de la isla)
 	LobbySize = Vector2.new(300, 340), -- X × Z
 	TerraceZ = 145, -- centro de las terrazas de pasto (norte y sur)
 	TerraceDepth = 50,
-	ShoreWidth = 8,
 	SpawnPosition = Vector3.new(0, 2.5, 22), -- al lado del altar: ahí aparecen los jugadores
 
 	-- Cañón (de X = CanyonStartX a CanyonStartX + CanyonLength)
@@ -109,10 +108,94 @@ Config.Map = {
 	BaseFloors = 3, -- pisos de la torre
 	ShelvesPerFloor = 5, -- estantes (lugares para mascotas) por piso
 
-	-- Volcán (en el mar, detrás del final del cañón)
-	VolcanoPosition = Vector3.new(1550, 0, 0),
-	VolcanoBaseDiameter = 260,
-	VolcanoHeight = 220,
+}
+
+-- ===== Isla v2 (Terrain) =====
+-- Una forma de la costa (ver Config.Island.Lobes)
+export type IslandLobe = {
+	Name: string,
+	Kind: string, -- "Ellipse" o "Capsule"
+	X: number?,
+	Z: number,
+	RX: number?,
+	RZ: number?,
+	X1: number?,
+	X2: number?,
+	R: number?,
+}
+
+-- La isla grande alrededor del lobby y del cañón: la arma IslandBuilder con Terrain cuando arranca el servidor.
+-- El lobby, las bases y el cañón (de Parts) quedan igual: el terreno los rodea pero nunca los tapa.
+-- Visto desde arriba: -Z es el norte (arriba), +X va hacia el volcán.
+Config.Island = {
+	Enabled = true, -- false = sin isla (solo el mar), por si querés probar algo rápido
+	SeaLevel = -1.5, -- altura del agua
+	-- Rectángulo que cubre el terreno (afuera es mar)
+	MinX = -640,
+	MaxX = 2160,
+	MinZ = -560,
+	MaxZ = 560,
+	-- Forma de la costa: la unión de estas formas, con ruido para que no se vea geométrica.
+	-- Ellipse: centro X/Z y radios RX/RZ. Capsule: una "pastilla" de X1 a X2 (en Z) con radio R.
+	Lobes = {
+		{ Name = "West", Kind = "Ellipse", X = -60, Z = 10, RX = 390, RZ = 420 }, -- pasto, lobby, punta con el faro
+		{ Name = "Middle", Kind = "Capsule", X1 = 300, X2 = 1350, Z = 0, R = 210 }, -- colinas con selva a los lados del cañón
+		{ Name = "NorthCove", Kind = "Ellipse", X = 1010, Z = -320, RX = 125, RZ = 115 }, -- caleta norte (cascada y laguna)
+		{ Name = "SouthPeninsula", Kind = "Ellipse", X = 590, Z = 320, RX = 115, RZ = 140 }, -- península sur (muelle y botes)
+		{ Name = "East", Kind = "Ellipse", X = 1610, Z = 0, RX = 420, RZ = 420 }, -- el volcán
+	} :: { IslandLobe },
+	CoastNoise = 38, -- cuánto se mete o sale la costa (studs)
+	CoastNoiseScale = 170,
+	BeachWidth = 16, -- ancho de la playa
+	SeaSlope = 0.32, -- qué tan rápido se hace hondo el mar (arrecife cerca de la costa, mar profundo lejos)
+	SeaFloor = -32,
+	ReefChance = 0.5, -- más alto = menos arrecife
+	ReefRocks = 34, -- rocas que asoman del agua
+	-- Colinas
+	WestHills = 12, -- alto de las lomas de pasto del oeste
+	Hills = 44, -- alto de las colinas con selva
+	HillScale = 150,
+	LobbyFlatMargin = 14, -- alrededor del lobby el piso queda plano...
+	LobbyBlend = 90, -- ...y después sube de a poco
+	CliffHeight = 46, -- acantilados al lado de las paredes del cañón
+	CliffWidth = 70,
+	-- Volcán realista: alto = Peak × (1 − r/Radius)^Power, cortado en RimHeight (el borde del cráter)
+	Volcano = {
+		X = 1600,
+		Z = 0,
+		Peak = 330,
+		Radius = 380,
+		Power = 1.55,
+		RimHeight = 240,
+		CraterDepth = 38,
+		LavaLevel = 206, -- altura del lago de lava
+		Ravines = 9, -- barrancos que bajan desde la cumbre
+		RavineDepth = 0.12,
+	},
+	LavaRivers = { 150, 212, 35 }, -- ángulo de cada río de lava (grados; 180 = hacia el cañón)
+	LavaHotRadius = 230, -- hasta acá la lava brilla; más abajo ya se enfrió
+	-- Caleta norte
+	Lagoon = { X = 1000, Z = -288, Radius = 44 },
+	Ridge = { X = 1010, Z = -362, Height = 42, Radius = 60 }, -- loma de donde cae la cascada
+	-- Decoración (cantidades)
+	Palms = 70,
+	Trees = 110,
+	Bushes = 140,
+	Flowers = 90,
+	Shells = 40, -- conchas y estrellas de mar en las playas
+	Seed = 2025,
+	-- Colores de los materiales del terreno
+	Colors = {
+		Sand = Color3.fromRGB(240, 220, 170),
+		Grass = Color3.fromRGB(108, 192, 74),
+		LeafyGrass = Color3.fromRGB(46, 139, 62),
+		Ground = Color3.fromRGB(120, 92, 62),
+		Rock = Color3.fromRGB(143, 138, 133),
+		Basalt = Color3.fromRGB(74, 68, 64),
+		Slate = Color3.fromRGB(58, 54, 52),
+		CrackedLava = Color3.fromRGB(255, 106, 26),
+		Limestone = Color3.fromRGB(214, 226, 214),
+	},
 }
 
 -- Paleta y materiales: usar SIEMPRE estos para que todo combine
@@ -140,8 +223,8 @@ Config.Lighting = {
 	Brightness = 2.5,
 	Ambient = Color3.fromRGB(90, 80, 70),
 	OutdoorAmbient = Color3.fromRGB(150, 140, 130),
-	AtmosphereDensity = 0.3,
-	AtmosphereHaze = 1,
+	AtmosphereDensity = 0.34, -- niebla que tapa el horizonte
+	AtmosphereHaze = 1.6,
 	AtmosphereGlare = 0.2,
 	AtmosphereColor = Color3.fromRGB(199, 232, 240),
 	AtmosphereDecay = Color3.fromRGB(106, 112, 125),

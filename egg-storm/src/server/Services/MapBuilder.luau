@@ -1,12 +1,13 @@
 --!strict
 -- MapBuilder: arma el mapa "Isla tropical + volcán" con Parts simples (ver MAPA_SPEC.md).
+-- La isla grande de alrededor (colinas, playas, volcán) es de Terrain: la arma IslandBuilder.
 --
 -- Visto desde arriba (+X hacia la derecha, -Z arriba):
 --
 --         Bases 1-4 (terraza de pasto, mirando al altar)
 --   ┌───────────────────────┐
 --   │ Tienda        Rankings│ ┌──────────────────── CAÑÓN (1200) ────────────────────┐
---   │      ALTAR (0,0,0) ───┼─┤ Playa│Selva│Rocas│Basalto│Lava fría│Obsidiana│ ← OLA ← VOLCÁN (en el mar)
+--   │      ALTAR (0,0,0) ───┼─┤ Playa│Selva│Rocas│Basalto│Lava fría│Obsidiana│ ← OLA ← VOLCÁN
 --   │ Comerciante Intercamb.│ └──────────── cuevas-refugio en las paredes ───────────┘
 --   └───────────────────────┘
 --         Bases 5-8
@@ -21,6 +22,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local IslandBuilder = require(script.Parent.IslandBuilder)
 
 local MapBuilder = {}
 
@@ -339,9 +341,18 @@ local function buildOcean()
 	terrain.WaterTransparency = L.WaterTransparency
 	terrain.WaterWaveSize = L.WaterWaveSize
 	terrain.WaterWaveSpeed = L.WaterWaveSpeed
-	-- Agua de Y = -30 a Y = -1.5 alrededor de todo el mapa (queda debajo del piso de la isla y del cañón)
-	terrain:FillBlock(CFrame.new(700, -15.75, 0), Vector3.new(2200, 28.5, 800), M.Water)
-	terrain:FillBlock(CFrame.new(700, -32, 0), Vector3.new(2200, 4, 800), M.Sand)
+	-- Mar alrededor de todo el mapa: agua hasta SeaLevel y arena en el fondo (la isla la escribe IslandBuilder después)
+	-- (en cuadrados de 512 studs, así ninguna llamada es gigante)
+	local I = Config.Island
+	local margin = 640
+	local tile = 512
+	for x = I.MinX - margin, I.MaxX + margin - 1, tile do
+		for z = I.MinZ - margin, I.MaxZ + margin - 1, tile do
+			local center = Vector3.new(x + tile / 2, 0, z + tile / 2)
+			terrain:FillBlock(CFrame.new(center + Vector3.new(0, (I.SeaFloor + I.SeaLevel) / 2, 0)), Vector3.new(tile, I.SeaLevel - I.SeaFloor, tile), M.Water)
+			terrain:FillBlock(CFrame.new(center + Vector3.new(0, I.SeaFloor - 2, 0)), Vector3.new(tile, 4, tile), M.Sand)
+		end
+	end
 end
 
 -- ===== Lobby (§5) =====
@@ -352,17 +363,7 @@ local function buildLobbyGround(lobby: Instance)
 	for _, side in { -1, 1 } do
 		part("Terrace", Vector3.new(cfg.LobbySize.X, 2.2, cfg.TerraceDepth), CFrame.new(0, Y0 - 0.9, side * cfg.TerraceZ), P.TerraceGrass, M.Grass, ground)
 	end
-	-- Orilla mojada alrededor de la isla, un poco más baja
-	local shore = cfg.ShoreWidth
-	for _, side in { -1, 1 } do
-		part("Shore", Vector3.new(cfg.LobbySize.X + shore * 2, 2, shore), CFrame.new(0, Y0 - 1.5, side * (HALF_LOBBY_Z + shore / 2)), P.WetSand, M.Sand, ground)
-		part("Shore", Vector3.new(shore, 2, cfg.LobbySize.Y), CFrame.new(side * (HALF_LOBBY_X + shore / 2), Y0 - 1.5, 0), P.WetSand, M.Sand, ground)
-		for _, sideZ in { -1, 1 } do
-			-- Esquinas: cilindros de arena para que no se vean tan cuadradas
-			local corner = part("ShoreCorner", Vector3.new(2, 60, 60), CFrame.new(side * HALF_LOBBY_X, Y0 - 1.5, sideZ * HALF_LOBBY_Z) * CFrame.Angles(0, 0, math.rad(90)), P.WetSand, M.Sand, ground)
-			corner.Shape = Enum.PartType.Cylinder
-		end
-	end
+	-- Alrededor ya no hay mar: el pasto de la isla (Terrain) llega justo hasta el borde del lobby
 end
 
 local function buildAltar(lobby: Instance)
@@ -516,15 +517,6 @@ local function buildLobbyDecor(lobby: Instance)
 	for i = 1, 20 do
 		local side = if i % 2 == 0 then 1 else -1
 		buildFlower(Vector3.new(rng:NextNumber(-140, 140), Y0, side * rng:NextNumber(118, 122)), rng, decor)
-	end
-	-- Conchas y estrellas de mar en la orilla
-	for i = 1, 15 do
-		local side = if i % 2 == 0 then 1 else -1
-		if i % 3 == 0 then
-			buildShell(Vector3.new(-HALF_LOBBY_X - cfg.ShoreWidth / 2, Y0 - 0.5, rng:NextNumber(-150, 150)), rng, decor)
-		else
-			buildShell(Vector3.new(rng:NextNumber(-140, 140), Y0 - 0.5, side * (HALF_LOBBY_Z + cfg.ShoreWidth / 2)), rng, decor)
-		end
 	end
 end
 
@@ -966,48 +958,294 @@ local function buildCanyonDecor(canyon: Instance, spawns: { Vector3 })
 	end
 end
 
--- ===== Volcán (§8.2) =====
+-- ===== Isla v2: volcán, faro, barco, muelle, cascada y selva =====
+-- El terreno lo arma IslandBuilder (Terrain). Acá van las cosas de Parts que van arriba del terreno.
+-- Para saber a qué altura poner cada cosa se usa IslandBuilder.Sample (no hace falta leer el terreno).
 
+local I = Config.Island
+
+local function groundAt(x: number, z: number): number
+	local h = IslandBuilder.Sample(x, z)
+	return h
+end
+
+-- Volcán realista: lago de lava en el cráter, humo enorme con brasas y 3 ríos de lava que se enfrían al bajar
 local function buildVolcano(map: Instance)
+	local V = I.Volcano
 	local volcano = Instance.new("Model")
 	volcano.Name = "Volcano"
-	local center = cfg.VolcanoPosition + Vector3.new(0, Y0, 0)
-	local height = cfg.VolcanoHeight
-	local baseDiameter = cfg.VolcanoBaseDiameter
-	local topDiameter = 50
-	local layers = 11
-	local layerHeight = (height + 10) / layers
-	for i = 0, layers - 1 do
-		local t = i / (layers - 1)
-		local diameter = baseDiameter + (topDiameter - baseDiameter) * t
-		column("Slope", layerHeight + 0.5, diameter, center + Vector3.new(0, -10 + i * layerHeight, 0), Color3.fromRGB(90, 64, 56), M.Basalt, volcano)
-	end
-	local crater = column("Crater", 1, 40, center + Vector3.new(0, height + 0.2, 0), P.Lava, M.Neon, volcano)
-	addLight(crater, P.Lava, 60, 3)
+	local center = Vector3.new(V.X, 0, V.Z)
+	-- Lago de lava: el tazón del cráter llega a LavaLevel en este radio
+	local lakeRadius = IslandBuilder.RimRadius * math.sqrt(math.max(0, 1 - (V.RimHeight - V.LavaLevel) / V.CraterDepth))
+	local crater = column("Crater", 1, (lakeRadius + 3) * 2, center + Vector3.new(0, V.LavaLevel - 0.5, 0), P.Lava, M.Neon, volcano)
+	crater.CanCollide = false
+	addLight(crater, P.Lava, 60, 4)
 	local smoke = Instance.new("ParticleEmitter")
 	smoke.Name = "VolcanoSmoke"
-	smoke.Color = ColorSequence.new(Color3.fromRGB(142, 142, 150))
-	smoke.Size = NumberSequence.new(20, 45)
-	smoke.Transparency = NumberSequence.new(0.3, 1)
-	smoke.Lifetime = NumberRange.new(8, 12)
-	smoke.Speed = NumberRange.new(10, 20)
-	smoke.Rate = 4
+	smoke.Color = ColorSequence.new(Color3.fromRGB(150, 150, 158), Color3.fromRGB(95, 95, 102))
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 30), NumberSequenceKeypoint.new(1, 95) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(0.7, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Lifetime = NumberRange.new(14, 20)
+	smoke.Speed = NumberRange.new(14, 24)
+	smoke.Rate = 5
+	smoke.RotSpeed = NumberRange.new(-8, 8)
+	smoke.Acceleration = Vector3.new(6, 2, 0) -- el viento lo lleva un poco
 	smoke.EmissionDirection = Enum.NormalId.Right -- el cilindro está acostado: su +X apunta para arriba
-	smoke.SpreadAngle = Vector2.new(15, 15)
+	smoke.SpreadAngle = Vector2.new(12, 12)
 	smoke.Parent = crater
-	-- 3 ríos de lava por la ladera que mira al cañón (-X)
-	local topRadius = topDiameter / 2
-	local baseRadius = baseDiameter / 2
-	for _, angleDeg in { -20, 0, 20 } do
-		local angle = math.rad(180 + angleDeg)
-		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
-		local top = center + direction * (topRadius - 2) + Vector3.new(0, height, 0)
-		local bottom = center + direction * (baseRadius - 4) + Vector3.new(0, 2, 0)
-		local midpoint = (top + bottom) / 2 + direction * 3 -- un poco hacia afuera para que se vea sobre la ladera
-		local length = (top - bottom).Magnitude
-		part("LavaRiver", Vector3.new(4, 1, length), CFrame.lookAt(midpoint, midpoint + (bottom - top)), P.Lava, M.Neon, volcano).CanCollide = false
+	local embers = Instance.new("ParticleEmitter")
+	embers.Name = "VolcanoEmbers"
+	embers.Color = ColorSequence.new(Color3.fromRGB(255, 200, 60), Color3.fromRGB(255, 80, 20))
+	embers.LightEmission = 1
+	embers.Size = NumberSequence.new(1.2, 0.2)
+	embers.Lifetime = NumberRange.new(3, 5)
+	embers.Speed = NumberRange.new(30, 55)
+	embers.Rate = 30
+	embers.Acceleration = Vector3.new(0, -14, 0)
+	embers.EmissionDirection = Enum.NormalId.Right
+	embers.SpreadAngle = Vector2.new(25, 25)
+	embers.Parent = crater
+
+	-- Ríos de lava: brillan arriba y se van oscureciendo hasta LavaHotRadius (más abajo, el terreno ya es lava fría)
+	local hot = Color3.fromRGB(255, 140, 30)
+	local cool = Color3.fromRGB(130, 32, 12)
+	for index in I.LavaRivers do
+		local previous: Vector3? = nil
+		for r = IslandBuilder.RimRadius + 2, I.LavaHotRadius, 12 do
+			local angle = IslandBuilder.RiverAngle(index, r)
+			local x, z = V.X + math.cos(angle) * r, V.Z + math.sin(angle) * r
+			local point = Vector3.new(x, groundAt(x, z) + 0.4, z)
+			if previous then
+				local t = (r - IslandBuilder.RimRadius) / (I.LavaHotRadius - IslandBuilder.RimRadius)
+				local length = (point - previous).Magnitude
+				local width = 4 + r * 0.018
+				local mid = (point + previous) / 2
+				local lava = deco("LavaRiver", Vector3.new(width * 1.4, 1, length + 1), CFrame.lookAt(mid, point), hot:Lerp(cool, t), M.Neon, volcano)
+				if t < 0.4 and r % 36 < 12 then
+					addLight(lava, P.Lava, 30, 2)
+				end
+			end
+			previous = point
+		end
 	end
 	volcano.Parent = map
+end
+
+-- Faro: torre a rayas blancas y rojas con un haz de luz que gira
+local function buildLighthouse(position: Vector3, parent: Instance)
+	local lighthouse = Instance.new("Model")
+	lighthouse.Name = "Lighthouse"
+	column("Base", 4, 22, position - Vector3.new(0, 2, 0), P.Stone, M.Slate, lighthouse)
+	local white, red = Color3.fromRGB(245, 245, 240), Color3.fromRGB(205, 50, 45)
+	local y = position.Y + 2
+	for i = 1, 6 do
+		local diameter = 14 - i * 0.8
+		column("Tower", 8, diameter, Vector3.new(position.X, y, position.Z), if i % 2 == 1 then white else red, M.SmoothPlastic, lighthouse)
+		y += 8
+	end
+	column("Balcony", 1, 14, Vector3.new(position.X, y, position.Z), P.DarkWood, M.Wood, lighthouse)
+	local lamp = column("Lamp", 6, 7, Vector3.new(position.X, y + 1, position.Z), Color3.fromRGB(255, 235, 150), M.Neon, lighthouse)
+	addLight(lamp, Color3.fromRGB(255, 230, 150), 60, 3)
+	column("Roof", 3, 9, Vector3.new(position.X, y + 7, position.Z), red, M.SmoothPlastic, lighthouse)
+	-- Haz de luz que gira (lo anima cada cliente con EggAnimator)
+	local beam = deco("Beam", Vector3.new(140, 3, 3), CFrame.new(position.X, y + 4, position.Z), Color3.fromRGB(255, 245, 190), M.Neon, lighthouse)
+	beam.Transparency = 0.75
+	beam:SetAttribute("Spin", 40)
+	CollectionService:AddTag(beam, "Spinning")
+	lighthouse.Parent = parent
+end
+
+-- Barco hundido: casco de madera inclinado, medio adentro del agua, con el mástil roto
+local function buildShipwreck(position: Vector3, yaw: number, parent: Instance)
+	local ship = Instance.new("Model")
+	ship.Name = "Shipwreck"
+	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0) * CFrame.Angles(0, 0, math.rad(18)) * CFrame.Angles(math.rad(-8), 0, 0)
+	local wood, dark = Color3.fromRGB(110, 72, 40), P.DarkWood
+	part("Hull", Vector3.new(12, 6, 34), base, wood, M.WoodPlanks, ship)
+	for _, side in { -1, 1 } do
+		part("Side", Vector3.new(1.2, 5, 34), base * CFrame.new(side * 6.4, 3, 0), dark, M.WoodPlanks, ship)
+	end
+	wedge("Bow", Vector3.new(12, 6, 10), base * CFrame.new(0, 0, -22), wood, M.WoodPlanks, ship)
+	part("Deck", Vector3.new(11, 0.6, 20), base * CFrame.new(0, 3.2, 4), Color3.fromRGB(150, 105, 60), M.WoodPlanks, ship)
+	part("Mast", Vector3.new(1.4, 16, 1.4), base * CFrame.new(0, 10, -2) * CFrame.Angles(0, 0, math.rad(25)), dark, M.Wood, ship)
+	deco("Sail", Vector3.new(0.3, 7, 9), base * CFrame.new(3, 12, -2) * CFrame.Angles(0, 0, math.rad(25)), Color3.fromRGB(225, 215, 190), M.Fabric, ship)
+	ship.Parent = parent
+end
+
+-- Bote de remos que se mece en el agua
+local function buildBoat(position: Vector3, yaw: number, color: Color3, parent: Instance)
+	local boat = Instance.new("Model")
+	boat.Name = "Boat"
+	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+	part("Hull", Vector3.new(6, 2, 14), base, color, M.WoodPlanks, boat)
+	wedge("Bow", Vector3.new(6, 2, 4), base * CFrame.new(0, 0, -9), color, M.WoodPlanks, boat)
+	part("Seat", Vector3.new(5.6, 0.4, 1.6), base * CFrame.new(0, 1, 1), P.Wood, M.Wood, boat)
+	deco("Oar", Vector3.new(0.4, 0.3, 9), base * CFrame.new(2.8, 1.2, 1) * CFrame.Angles(0, math.rad(20), 0), P.Wood, M.Wood, boat)
+	boat.Parent = parent
+end
+
+-- Muelle de madera que sale de la playa hacia el mar, con 2 botes atados
+local function buildDock(start: Vector3, direction: Vector3, parent: Instance)
+	local dock = Instance.new("Model")
+	dock.Name = "Dock"
+	local length = 70
+	local deckY = I.SeaLevel + 3
+	local origin = CFrame.lookAt(Vector3.new(start.X, deckY, start.Z), Vector3.new(start.X, deckY, start.Z) + direction)
+	part("Deck", Vector3.new(10, 1, length), origin * CFrame.new(0, 0, -length / 2), Color3.fromRGB(160, 112, 64), M.WoodPlanks, dock)
+	for d = 6, length - 2, 12 do
+		for _, side in { -1, 1 } do
+			part("Post", Vector3.new(1.2, 10, 1.2), origin * CFrame.new(side * 4.6, -4, -d), P.DarkWood, M.Wood, dock)
+		end
+	end
+	for _, side in { -1, 1 } do
+		local boatCFrame = origin * CFrame.new(side * 10, 0, -length + 16)
+		buildBoat(Vector3.new(boatCFrame.Position.X, I.SeaLevel + 0.4, boatCFrame.Position.Z), math.atan2(-direction.X, -direction.Z), if side < 0 then Color3.fromRGB(70, 140, 220) else Color3.fromRGB(220, 90, 70), dock)
+	end
+	dock.Parent = parent
+end
+
+-- Cascada: cae desde la loma de la caleta hasta la laguna, con espuma y niebla abajo
+local function buildWaterfall(parent: Instance)
+	local lagoon = I.Lagoon
+	local toRidge = Vector3.new(I.Ridge.X - lagoon.X, 0, I.Ridge.Z - lagoon.Z).Unit
+	local edge = Vector3.new(lagoon.X, 0, lagoon.Z) + toRidge * (lagoon.Radius - 1)
+	local above = edge + toRidge * 7
+	local top = groundAt(above.X, above.Z)
+	local bottom = I.SeaLevel
+	if top - bottom < 4 then
+		return
+	end
+	local waterfall = Instance.new("Model")
+	waterfall.Name = "Waterfall"
+	local mid = Vector3.new(edge.X, (top + bottom) / 2, edge.Z)
+	local facing = CFrame.lookAt(mid, mid - toRidge)
+	local sheet = deco("Water", Vector3.new(16, top - bottom + 2, 2), facing, Color3.fromRGB(170, 225, 255), M.Glass, waterfall)
+	sheet.Transparency = 0.3
+	local foamAt = Vector3.new(edge.X, bottom + 0.2, edge.Z) - toRidge * 4
+	local foam = deco("Foam", Vector3.new(24, 1, 12), CFrame.lookAt(foamAt, foamAt - toRidge), Color3.fromRGB(240, 250, 255), M.SmoothPlastic, waterfall)
+	foam.Transparency = 0.25
+	local mist = Instance.new("ParticleEmitter")
+	mist.Name = "Mist"
+	mist.Color = ColorSequence.new(Color3.fromRGB(235, 245, 255))
+	mist.Size = NumberSequence.new(4, 10)
+	mist.Transparency = NumberSequence.new(0.5, 1)
+	mist.Lifetime = NumberRange.new(2, 3)
+	mist.Speed = NumberRange.new(3, 6)
+	mist.Rate = 15
+	mist.EmissionDirection = Enum.NormalId.Top
+	mist.SpreadAngle = Vector2.new(40, 40)
+	mist.Parent = foam
+	waterfall.Parent = parent
+end
+
+-- Árbol de selva: tronco y 2-3 copas redondas
+local function buildJungleTree(position: Vector3, rng: Random, parent: Instance)
+	local tree = Instance.new("Model")
+	tree.Name = "JungleTree"
+	local height = rng:NextNumber(14, 24)
+	part("Trunk", Vector3.new(2, height, 2), CFrame.new(position + Vector3.new(0, height / 2 - 1, 0)), Color3.fromRGB(110, 76, 44), M.Wood, tree)
+	local greens = { Color3.fromRGB(46, 139, 62), Color3.fromRGB(38, 120, 52), Color3.fromRGB(70, 160, 70) }
+	for i = 1, rng:NextInteger(2, 3) do
+		local offset = Vector3.new(rng:NextNumber(-3, 3), height + rng:NextNumber(-2, 2) + i, rng:NextNumber(-3, 3))
+		ball("Canopy", rng:NextNumber(10, 15), position + offset, greens[rng:NextInteger(1, #greens)], M.LeafyGrass, tree).CanCollide = false
+	end
+	tree.Parent = parent
+end
+
+local function buildBush(position: Vector3, rng: Random, parent: Instance)
+	local size = rng:NextNumber(4, 7)
+	local bush = deco("Bush", Vector3.new(size * 1.3, size * 0.8, size), CFrame.new(position + Vector3.new(0, size * 0.25, 0)) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0), Color3.fromRGB(60, 150, 60), M.LeafyGrass, parent)
+	bush.Shape = Enum.PartType.Ball
+end
+
+-- ¿Se puede poner decoración acá? (no en el lobby, ni el cañón, ni cerca del faro/muelle, ni en el volcán alto)
+local function decorSpot(x: number, z: number): (number?, IslandBuilder.Kind?)
+	local h, kind = IslandBuilder.Sample(x, z)
+	if kind == "Hidden" or kind == "Sea" or kind == "Reef" or kind == "Lagoon" or kind == "Crater" or kind == "River" then
+		return nil, nil
+	end
+	if kind == "Volcano" and h > 30 then
+		return nil, nil
+	end
+	-- Lejos de las paredes del cañón (las copas no tienen que meterse adentro) y del lobby
+	if x > cfg.CanyonStartX - 10 and x < CANYON_END + 10 and math.abs(z) < HALF_CANYON + WALL_T + 12 then
+		return nil, nil
+	end
+	if math.abs(x) < HALF_LOBBY_X + 24 and math.abs(z) < HALF_LOBBY_Z + 24 then
+		return nil, nil
+	end
+	return h, kind
+end
+
+local function buildIslandDecor(island: Instance)
+	local decor = folder("Decor", island)
+	local rng = Random.new(I.Seed)
+	local function scatter(count: number, accept: (number, IslandBuilder.Kind) -> boolean, build: (Vector3) -> ())
+		local placed, tries = 0, 0
+		while placed < count and tries < count * 40 do
+			tries += 1
+			local x, z = rng:NextNumber(I.MinX, I.MaxX), rng:NextNumber(I.MinZ, I.MaxZ)
+			local h, kind = decorSpot(x, z)
+			if h and kind and accept(h, kind) then
+				build(Vector3.new(x, h - 0.3, z))
+				placed += 1
+			end
+		end
+	end
+	scatter(I.Palms, function(h, kind)
+		return kind == "Beach" or (kind == "Grass" and h < 8)
+	end, function(position)
+		buildPalm(position, rng:NextNumber(18, 28), rng, decor)
+	end)
+	scatter(I.Trees, function(_, kind)
+		return kind == "Jungle"
+	end, function(position)
+		buildJungleTree(position, rng, decor)
+	end)
+	scatter(I.Bushes, function(_, kind)
+		return kind == "Jungle" or kind == "Grass" or kind == "Cliff"
+	end, function(position)
+		buildBush(position, rng, decor)
+	end)
+	scatter(I.Shells, function(_, kind)
+		return kind == "Beach"
+	end, function(position)
+		buildShell(position + Vector3.new(0, 0.2, 0), rng, decor)
+	end)
+	scatter(I.Flowers, function(_, kind)
+		return kind == "Grass" or kind == "Jungle"
+	end, function(position)
+		buildFlower(position, rng, decor)
+	end)
+end
+
+-- Paredes invisibles: nadie entra al cañón por arriba de las paredes ni por el lado del volcán
+-- (si no, se podría caminar por las colinas, donde la ola no llega, y saltar adentro).
+local function buildCanyonBarriers(canyon: Instance)
+	local barriers = folder("Barriers", canyon)
+	local height = 600
+	for _, side in { -1, 1 } do
+		invisibleWall("TopBarrier", Vector3.new(cfg.CanyonLength, height, WALL_T), CFrame.new((CANYON_START + CANYON_END) / 2, Y0 + WALL_H + height / 2, side * (HALF_CANYON + WALL_T / 2)), barriers)
+	end
+	invisibleWall("EndBarrier", Vector3.new(4, height, cfg.CanyonWidth + WALL_T * 2), CFrame.new(CANYON_END + 2, Y0 + height / 2, 0), barriers)
+end
+
+local function buildIsland(map: Instance)
+	local island = folder("Island", map)
+	buildVolcano(map)
+	-- Faro en la punta noroeste y el barco hundido un poco más afuera
+	local west = Vector2.new(-60, 10)
+	local northwest = Vector2.new(-1, -0.8)
+	local lighthousePoint = IslandBuilder.FindCoastPoint(west, northwest, 26)
+	buildLighthouse(Vector3.new(lighthousePoint.X, groundAt(lighthousePoint.X, lighthousePoint.Y), lighthousePoint.Y), island)
+	local wreckPoint = IslandBuilder.FindCoastPoint(lighthousePoint, Vector2.new(-1, 0.15), -50)
+	buildShipwreck(Vector3.new(wreckPoint.X, I.SeaLevel - 1, wreckPoint.Y), math.rad(35), island)
+	-- Muelle en la punta de la península sur
+	local peninsula = I.Lobes[4]
+	local dockPoint = IslandBuilder.FindCoastPoint(Vector2.new(peninsula.X :: number, peninsula.Z), Vector2.new(0, 1), 6)
+	buildDock(Vector3.new(dockPoint.X, 0, dockPoint.Y), Vector3.new(0, 0, 1), island)
+	buildWaterfall(island)
+	buildIslandDecor(island)
 end
 
 -- ===== Construcción =====
@@ -1053,9 +1291,16 @@ function MapBuilder.Build(): Folder
 	buildCanyonWalls(canyon, caves)
 	buildCanyonDecor(canyon, spawns)
 
-	buildVolcano(map)
+	buildCanyonBarriers(canyon)
+	buildIsland(map)
 
 	map.Parent = Workspace
+
+	-- El terreno de la isla se escribe de a poco en segundo plano (el lobby ya se puede usar mientras tanto)
+	local terrain = Workspace:FindFirstChildOfClass("Terrain")
+	if terrain and Config.Island.Enabled then
+		task.spawn(IslandBuilder.BuildTerrain, terrain)
+	end
 	return map
 end
 

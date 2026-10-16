@@ -26,7 +26,22 @@ V.__div = function(a, b)
 	return vec(a.x / b.x, a.y / b.y, a.z / b.z)
 end
 Vector3 = { new = vec, zero = vec(0, 0, 0) }
-Vector2 = { new = function(x, y) return { X = x, Y = y } end }
+local V2 = {}
+local function vec2(x, y) return setmetatable({ X = x or 0, Y = y or 0 }, V2) end
+V2.__index = function(self, k)
+	if k == "Magnitude" then return math.sqrt(self.X * self.X + self.Y * self.Y) end
+	if k == "Unit" then local m = math.sqrt(self.X * self.X + self.Y * self.Y); return vec2(self.X / m, self.Y / m) end
+	return nil
+end
+V2.__add = function(a, b) return vec2(a.X + b.X, a.Y + b.Y) end
+V2.__sub = function(a, b) return vec2(a.X - b.X, a.Y - b.Y) end
+V2.__mul = function(a, b)
+	if type(a) == "number" then return vec2(a * b.X, a * b.Y) end
+	if type(b) == "number" then return vec2(a.X * b, a.Y * b) end
+	return vec2(a.X * b.X, a.Y * b.Y)
+end
+Vector2 = { new = vec2 }
+Region3 = { new = function(a, b) return { Min = a, Max = b } end }
 
 -- CFrame: position p + rotation matrix columns r (right), u (up), b (back)
 local C = {}
@@ -77,6 +92,7 @@ ColorSequence = { new = dummy }
 ColorSequenceKeypoint = { new = dummy }
 NumberSequence = { new = dummy }
 NumberRange = { new = dummy }
+NumberSequenceKeypoint = { new = dummy }
 Enum = setmetatable({}, { __index = function(_, cat)
 	return setmetatable({}, { __index = function(_, item) return cat .. "." .. item end })
 end })

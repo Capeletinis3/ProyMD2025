@@ -325,15 +325,20 @@ Cada cueva (Model):
 
 ## 8. Mar, volcán y ola
 
-### 8.1 Mar
-Terrain de agua rodeando todo el mapa: `Terrain:FillBlock` desde Y = -30 hasta Y = -1.5, cubriendo X de -400 a 1800 y Z de -400 a 400 (sin tapar la isla ni el cañón). Fondo de arena con Terrain Sand en Y = -30.
+### 8.1 Mar e Isla v2 (Terrain)
+- Agua de Terrain hasta Y = -1.5 alrededor de todo, fondo de arena en Y = -32.
+- **Isla v2** (la arma `IslandBuilder` con Terrain, números en `Config.Island`): el lobby y las bases quedan en el oeste de una isla grande (pasto), el cañón cruza colinas con selva (acantilados de roca al lado de las paredes) y termina contra el volcán, al este.
+- Formas de la costa: lóbulo oeste (faro y barco hundido en la punta noroeste), franja central, **caleta norte** (laguna con cascada), **península sur** (muelle con 2 botes) y el lóbulo del volcán. Playa alrededor, arrecifes y rocas en el agua baja.
+- El lobby y el cañón **no se tocan**: el terreno queda abajo de sus Parts; alrededor del lobby el piso es plano y sube de a poco.
+- Paredes invisibles arriba de las paredes del cañón y en su final: al cañón solo se entra por el portal.
+- Colores de Terrain: arena #F0DCAA, pasto #6CC04A, selva #2E8B3E, roca #8F8A85, basalto #4A4440, lava #FF6A1A.
 
-### 8.2 Volcán
-- Centro en **(1550, 0, 0)**, en el mar, detrás del final del cañón.
-- Cono hecho con Terrain (Basalt + Rock) o con Parts: base de diámetro 260, alto 220, cráter de diámetro 40 en la punta.
-- Color #5A4038. Lava: 3 "ríos" de Parts Neon #FF6A1A bajando por la ladera que mira al cañón.
-- Cráter: Part Neon #FF6A1A + ParticleEmitter de humo gris (#8E8E96) siempre activo, más fuerte durante la erupción.
-- Tiene que verse desde el lobby.
+### 8.2 Volcán (Terrain)
+- Centro en **(1600, 0, 0)**: el cañón (que termina en X = 1350) choca contra su ladera.
+- Forma: alto = **330 × (1 − r/380)^1.55**, cortado a **240** (borde del cráter, r ≈ 71). Cráter hundido **38 studs** con un lago de lava (Part Neon) a Y = 206.
+- Laderas curvas (empinadas arriba, suaves abajo) con 9 barrancos. Colores por altura: selva (abajo) → roca y pasto → basalto → piedra oscura (Slate) en la cumbre.
+- 3 ríos de lava tallados en el terreno (CrackedLava); brillan arriba (Parts Neon) y se oscurecen al bajar.
+- Humo enorme (`VolcanoSmoke`, más fuerte durante la ola) + brasas (`VolcanoEmbers`). Niebla de Atmosphere que tapa el horizonte.
 
 ### 8.3 Ola (Part `Wave`)
 - Tamaño **6 (X) × 50 (Y) × 84 (Z)**. Material Glass o SmoothPlastic, color #A8EEF6, Transparency 0.3.
