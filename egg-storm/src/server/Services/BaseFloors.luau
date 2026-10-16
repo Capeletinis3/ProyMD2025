@@ -8,13 +8,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local BaseService = require(script.Parent.BaseService)
+local BaseBuilder = require(script.Parent.BaseBuilder)
 
 type Base = BaseService.Base
 
 local BaseFloors = {}
 
-local SHELF_UNLOCKED = Color3.fromRGB(255, 226, 122)
-local SHELF_LOCKED = Color3.fromRGB(91, 74, 184)
+local SHELF_UNLOCKED = BaseBuilder.ShelfOn
+local SHELF_LOCKED = BaseBuilder.ShelfOff
+local OPEN_COLOR = Color3.fromRGB(76, 209, 55)
+local CLOSED_COLOR = Color3.fromRGB(107, 107, 115)
 
 -- Las barreras de cada base, por piso (las guardamos para poder volver a ponerlas)
 type LockInfo = { Folder: Instance, Barriers: { [number]: Instance } }
@@ -59,6 +62,26 @@ function BaseFloors.Apply(base: Base, floors: number)
 		local unlocked = BaseFloors.IsSlotUnlocked(index, open)
 		shelf:SetAttribute("Unlocked", unlocked)
 		shelf.Color = if unlocked then SHELF_UNLOCKED else SHELF_LOCKED
+		-- La lamparita del estante se prende cuando su piso está abierto
+		local lamp = shelf:FindFirstChild("Lamp")
+		local spot = lamp and lamp:FindFirstChildOfClass("SpotLight")
+		if spot then
+			spot.Brightness = if unlocked then 1.6 else 0
+		end
+	end
+	-- Cartel "BIGGER TOWER": qué pisos ya están abiertos
+	local shop = base.Model:FindFirstChild("FloorShop")
+	local paper = shop and shop:FindFirstChild("Paper")
+	local gui = paper and paper:FindFirstChild("ShopGui")
+	if gui then
+		for floor = 2, Config.Map.BaseFloors do
+			local row = gui:FindFirstChild(`Floor{floor}`)
+			if row and row:IsA("TextLabel") then
+				local isOpen = floor <= open
+				row.Text = if isOpen then `FLOOR {floor} ✓ OPEN` else `FLOOR {floor} · REBIRTH {floor - 1}`
+				row.BackgroundColor3 = if isOpen then OPEN_COLOR else CLOSED_COLOR
+			end
+		end
 	end
 end
 

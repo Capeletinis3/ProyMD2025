@@ -61,7 +61,10 @@ local function spawnModel(player: Player, base: Base, creature: Creature, varian
 		return
 	end
 	-- Encima del estante, mirando hacia el frente de la base (al lobby)
-	local padTop = pad.Position + Vector3.new(0, pad.Size.Y / 2, 0)
+	-- (el estante puede estar girado, por ejemplo un cilindro acostado: medimos su alto de verdad)
+	local cf, size = pad.CFrame, pad.Size
+	local halfHeight = (math.abs(cf.RightVector.Y) * size.X + math.abs(cf.UpVector.Y) * size.Y + math.abs(cf.LookVector.Y) * size.Z) / 2
+	local padTop = pad.Position + Vector3.new(0, halfHeight, 0)
 	local model = CreatureModels.Build(creature, CFrame.new(padTop) * base.Facing, variant)
 	model:SetAttribute("OwnerUserId", player.UserId)
 	addSellPrompt(player, model, creature, variant, slot)

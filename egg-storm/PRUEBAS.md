@@ -38,9 +38,12 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
 - [ ] RANKINGS: tablero de plata arriba, de huevos abiertos a un costado y el tablero **EVENTS** al otro (próxima ola, súper tsunami y evento; cambia solo).
 
 ### Bases
-- [ ] Cada jugador tiene su base (Jugador 1 la 1, Jugador 2 la 2) con su nombre en el cartel, arriba.
-- [ ] Torre de bambú de 3 pisos con techo de paja, máscaras tiki y 2 antorchas. Pisos 2 y 3 con barrera celeste y candado.
-- [ ] 5 estantes amarillos en el piso 1; los de arriba violetas (bloqueados). Escalera de mano al costado (no deja pasar a los pisos bloqueados).
+- [ ] Cada jugador tiene su base (Jugador 1 la 1, Jugador 2 la 2) con su nombre en el cartel del arco de la entrada.
+- [ ] Choza tiki de 3 pisos: plataforma de piedra, postes de bambú con anillos, barandas, techo de paja de 3 capas con flecos, bandera y guirnalda de luces de colores, máscaras tiki, faroles y enredaderas.
+- [ ] 2 escaleras de bambú por afuera (piso 1 → 2 → 3). Pisos 2 y 3 con pared de vidrio y "🔒 LOCKED · Floor N" (no se puede entrar hasta abrirlos).
+- [ ] 5 estantes redondos dorados con su lamparita en el piso 1; los de arriba violetas y apagados. Las mascotas quedan paradas arriba del estante.
+- [ ] Patio de arena con caminito de piedras, 3 nidos de piedra numerados, cerco de bambú, hamaca entre palmeras, reposera, barril, cajas y tablas de surf.
+- [ ] Cartel "BIGGER TOWER" al costado: dice qué renacimiento abre cada piso ("✓ OPEN" cuando ya está) y "Open" abre la ventana de Rebirth.
 - [ ] 3 nidos-incubadora ADELANTE de la torre: el 1 dice "EMPTY"; el 2 y el 3, "LOCKED" hasta comprar "Extra Incubator".
 
 ### Cañón y huevos

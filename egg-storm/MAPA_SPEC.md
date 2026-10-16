@@ -190,6 +190,8 @@ Piedras planas (Cylinder diámetro 5, alto 0.4, Slate #B8B0A3) a lo largo de Z =
 
 ## 6. Bases de jugadores (8)
 
+> **Base v2:** cada base es una choza tiki de 3 pisos muy decorada (la arma `BaseBuilder.luau`, ~1000 piezas): pisos a Y = 2 / 14 / 26, estantes redondos al fondo, 2 escaleras exteriores, techo de paja de 3 capas, arco de entrada con el nombre del dueño, cerco, hamaca y cartel "BIGGER TOWER" (los pisos se abren renaciendo). Las medidas de abajo siguen valiendo para el terreno, la torre y los nidos.
+
 ### 6.1 Ubicación
 Cada base ocupa un terreno (Plot) de **60 (X) × 44 (Z)**. El FRENTE de la base mira al centro del lobby.
 

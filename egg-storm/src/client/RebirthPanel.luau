@@ -3,6 +3,7 @@
 -- Muestra el nivel (0 → 1), qué ganás, qué perdés, qué conservás, cuánta plata te falta y el botón para renacer.
 -- El botón solo PIDE renacer: el servidor decide si se puede (ver RebirthService).
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -202,6 +203,16 @@ function RebirthPanel.Start()
 		end)
 	end
 	SideMenu.AddButton("🔄 Rebirth", Color3.fromRGB(200, 70, 90), RebirthPanel.Open)
+	-- El cartel "BIGGER TOWER" de cada base también abre esta ventana
+	local function setupPrompt(prompt: Instance)
+		if prompt:IsA("ProximityPrompt") then
+			prompt.Triggered:Connect(RebirthPanel.Open)
+		end
+	end
+	for _, prompt in CollectionService:GetTagged("RebirthPrompt") do
+		setupPrompt(prompt)
+	end
+	CollectionService:GetInstanceAddedSignal("RebirthPrompt"):Connect(setupPrompt)
 end
 
 return RebirthPanel

@@ -23,6 +23,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local IslandBuilder = require(script.Parent.IslandBuilder)
+local BaseBuilder = require(script.Parent.BaseBuilder)
 
 local MapBuilder = {}
 
@@ -522,152 +523,11 @@ end
 
 -- ===== Bases (§6) =====
 
-local FLOOR_TOPS = { 1, 13, 25 } -- altura de la cara de arriba de cada piso de la torre
-local SHELF_X = { -16, -8, 0, 8, 16 }
-local SHELF_Z = 13 -- cerca de la pared de atrás de la torre
-local TOWER_Z = 9 -- centro de la torre (local; +Z = atrás)
-local SHELF_UNLOCKED = Color3.fromRGB(255, 226, 122)
-local SHELF_LOCKED = Color3.fromRGB(91, 74, 184)
-local INCUBATOR_X = { -14, 0, 14 }
-local INCUBATOR_Z = -15 -- adelante de la torre, del lado del lobby
-
--- Nido-incubadora (la parte que no cambia). IncubatorService le agrega el huevo, la luz, el botón y el timer.
-local function buildNest(cframe: CFrame, slot: number, parent: Instance)
-	local nest = Instance.new("Model")
-	nest.Name = `Nest{slot}`
-	local pedestal = part("Pedestal", Vector3.new(8, 2, 8), cframe * CFrame.new(0, 1, 0), P.Stone, M.Slate, nest)
-	pedestal:SetAttribute("SlotIndex", slot)
-	column("NestBase", 1.5, 7, (cframe * CFrame.new(0, 2, 0)).Position, Color3.fromRGB(122, 74, 30), M.WoodPlanks, nest)
-	for i = 0, 9 do
-		local angle = math.rad(i * 36)
-		local rim = cframe * CFrame.Angles(0, angle, 0) * CFrame.new(0, 3.6, -3.2) * CFrame.Angles(math.rad(-25), 0, 0)
-		deco("NestRim", Vector3.new(2.2, 1, 0.8), rim, Color3.fromRGB(227, 182, 90), M.Fabric, nest)
-	end
-	nest.Parent = parent
-end
-
--- Barrera de un piso bloqueado: celeste brillante con un candado (adelante y del lado de la escalera)
-local function buildLockBarrier(plot: CFrame, floor: number, parent: Instance)
-	local barrier = Instance.new("Model")
-	barrier.Name = `LockBarrier{floor}`
-	barrier:SetAttribute("Floor", floor)
-	local y = FLOOR_TOPS[floor] + 5.5
-	local front = part("Front", Vector3.new(40, 11, 0.5), plot * CFrame.new(0, y, TOWER_Z - 10), Color3.fromRGB(127, 214, 232), M.ForceField, barrier)
-	part("Side", Vector3.new(0.5, 11, 20), plot * CFrame.new(20, y, TOWER_Z), Color3.fromRGB(127, 214, 232), M.ForceField, barrier)
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromScale(4, 4)
-	gui.MaxDistance = 120
-	gui.Parent = front
-	local lock = Instance.new("TextLabel")
-	lock.Size = UDim2.fromScale(1, 1)
-	lock.BackgroundTransparency = 1
-	lock.TextScaled = true
-	lock.Text = "🔒"
-	lock.Parent = gui
-	barrier.Parent = parent
-end
-
+-- Cada base es una choza tiki de 3 pisos muy decorada: la arma BaseBuilder (ahí están todas sus piezas).
 local function buildBase(index: number, position: Vector3, parent: Instance): Model
 	-- El frente mira al centro del lobby. En coordenadas locales: -Z = adelante, +Z = atrás.
 	local facing = if position.Z < 0 then Vector3.new(0, 0, 1) else Vector3.new(0, 0, -1)
-	local plot = CFrame.lookAt(position, position + facing)
-	local w, d = cfg.PlotSize.X, cfg.PlotSize.Y
-
-	local model = Instance.new("Model")
-	model.Name = `Base{index}`
-	model:SetAttribute("BaseId", index)
-	model:SetAttribute("OwnerUserId", 0)
-
-	local plotPart = part("Plot", Vector3.new(w, 0.3, d), plot * CFrame.new(0, 0.15, 0), P.PlotGrass, M.Grass, model)
-	model.PrimaryPart = plotPart
-
-	-- Torre de 3 pisos
-	local tower = Instance.new("Model")
-	tower.Name = "Tower"
-	for floor, top in FLOOR_TOPS do
-		part(`Floor{floor}`, Vector3.new(40, 1, 20), plot * CFrame.new(0, top - 0.5, TOWER_Z), P.Wood, M.WoodPlanks, tower)
-	end
-	for _, x in { -20, 0, 20 } do
-		for _, z in { TOWER_Z + 10, TOWER_Z - 10 } do
-			local bottom = (plot * CFrame.new(x, 0, z)).Position
-			column("Post", 36, 2, bottom, P.Bamboo, M.Wood, tower)
-			for ringY = 4, 32, 4 do
-				column("PostRing", 0.5, 2.3, bottom + Vector3.new(0, ringY, 0), Color3.fromRGB(140, 105, 40), M.Wood, tower)
-			end
-		end
-	end
-	part("BackWall", Vector3.new(40, 36, 1), plot * CFrame.new(0, 18, TOWER_Z + 10), Color3.fromRGB(233, 201, 138), M.Wood, tower)
-	-- Techo de paja a dos aguas (de Y = 36 a Y = 46), sobresale 3 de cada lado
-	local roofDepth = 13
-	wedge("Roof", Vector3.new(46, 10, roofDepth), plot * CFrame.new(0, 41, TOWER_Z - roofDepth / 2), P.Straw, M.Fabric, tower)
-	wedge("Roof", Vector3.new(46, 10, roofDepth), plot * CFrame.new(0, 41, TOWER_Z + roofDepth / 2) * CFrame.Angles(0, math.pi, 0), P.Straw, M.Fabric, tower)
-	local x = -22.5
-	while x <= 22.5 do
-		deco("RoofFringe", Vector3.new(1, 3, 0.5), plot * CFrame.new(x, 35, TOWER_Z - roofDepth), Color3.fromRGB(196, 138, 44), M.Fabric, tower)
-		x += 1.5
-	end
-	-- Escalera de mano (TrussPart: se trepa caminando contra ella) en el costado, hasta el piso 3
-	for _, z in { TOWER_Z - 1, TOWER_Z + 1 } do
-		local ladder = Instance.new("TrussPart")
-		ladder.Name = "Ladder"
-		ladder.Size = Vector3.new(2, 26, 2)
-		ladder.CFrame = plot * CFrame.new(21, 13, z)
-		ladder.Style = Enum.Style.NoSupports
-		ladder.Color = P.Wood
-		ladder.Material = M.Wood
-		ladder.Anchored = true
-		ladder.Parent = tower
-	end
-	-- Máscaras tiki en los postes del frente
-	for _, mx in { -20, 20 } do
-		local mask = part("TikiMask", Vector3.new(3, 4, 1), plot * CFrame.new(mx, 30, TOWER_Z - 11.2), Color3.fromRGB(160, 82, 45), M.Wood, tower)
-		for _, ex in { -0.7, 0.7 } do
-			deco("MaskEye", Vector3.new(0.6, 0.6, 0.2), mask.CFrame * CFrame.new(ex, 0.8, -0.55), Color3.fromRGB(255, 226, 122), M.Neon, tower)
-		end
-		deco("MaskMouth", Vector3.new(1.6, 0.4, 0.2), mask.CFrame * CFrame.new(0, -0.8, -0.55), P.DarkWood, M.Wood, tower)
-	end
-	tower.Parent = model
-
-	-- Estantes: 5 por piso. Se numeran piso por piso (1-5 abajo, 6-10 en el 2, 11-15 en el 3).
-	local shelves = folder("CreatureSlots", model)
-	local slot = 0
-	for floor, top in FLOOR_TOPS do
-		for n, sx in SHELF_X do
-			slot += 1
-			local shelf = part(`Shelf_{floor}_{n}`, Vector3.new(6, 0.5, 6), plot * CFrame.new(sx, top + 0.25, SHELF_Z), SHELF_UNLOCKED, M.WoodPlanks, shelves)
-			shelf:SetAttribute("SlotIndex", slot)
-			shelf:SetAttribute("Floor", floor)
-			shelf:SetAttribute("Unlocked", floor == 1)
-			if floor > 1 then
-				shelf.Color = SHELF_LOCKED
-			end
-		end
-	end
-	-- Pisos 2 y 3 bloqueados al principio (BaseFloors los abre)
-	local locks = folder("Locks", model)
-	for floor = 2, #FLOOR_TOPS do
-		buildLockBarrier(plot, floor, locks)
-	end
-
-	-- Incubadoras: 3 nidos ADELANTE de la torre
-	local nests = folder("IncubatorSlots", model)
-	for i, ix in INCUBATOR_X do
-		buildNest(plot * CFrame.new(ix, 0, INCUBATOR_Z), i, nests)
-	end
-
-	-- Cartel con el nombre del dueño
-	local sign = part("Sign", Vector3.new(18, 4, 1), plot * CFrame.new(0, 33, TOWER_Z - 11.5), P.Wood, M.WoodPlanks, model)
-	addText(sign, Enum.NormalId.Front, "Free Base", Color3.fromRGB(230, 230, 230), "SignLabel")
-
-	for _, tx in { -26, 26 } do
-		buildTorch((plot * CFrame.new(tx, 0, -6)).Position, model)
-	end
-	marker("SpawnPoint", Vector3.new(4, 1, 4), plot * CFrame.new(0, 1, -6), model)
-	-- Volumen de la base (para saber si alguien está adentro)
-	marker("SafeZone", Vector3.new(w, 50, d), plot * CFrame.new(0, 25, 0), model)
-
-	model.Parent = parent
-	return model
+	return BaseBuilder.Build(index, CFrame.lookAt(position, position + facing), parent)
 end
 
 -- ===== Cañón (§7) =====

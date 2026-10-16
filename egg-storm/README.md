@@ -25,6 +25,7 @@ egg-storm/
     │       ├── MapBuilder.luau                         arma el lobby, el cañón, las cuevas, las bases, el faro, el muelle...
 │       ├── IslandBuilder.luau                      la isla grande con Terrain (colinas, playas, arrecifes, volcán)
     │       ├── BaseService.luau                        asigna/libera bases
+│       ├── BaseBuilder.luau                        arma cada base: choza tiki de 3 pisos (~1000 piezas)
     │       ├── BaseFloors.luau                         abre y cierra los pisos de la torre (candados)
     │       ├── PlayerDataService.luau                  datos de cada jugador y guardado (DataStore)
     │       ├── EggService.luau                         huevos por zona (rareza + variante), meteoritos, agarrar y llevar

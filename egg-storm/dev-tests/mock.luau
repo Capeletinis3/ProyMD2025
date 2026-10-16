@@ -67,6 +67,8 @@ CFrame.new = function(x, y, z)
 	if type(x) == "table" then return cf(x, I[1], I[2], I[3]) end
 	return cf(vec(x or 0, y or 0, z or 0), I[1], I[2], I[3])
 end
+CFrame.fromMatrix = function(p, x, y, z) return cf(p, x, y, z or x:Cross(y)) end
+CFrame.identity = cf(vec(0, 0, 0), I[1], I[2], I[3])
 CFrame.lookAt = function(at, target)
 	local look = (target - at).Unit
 	local right = look:Cross(vec(0, 1, 0)).Unit
