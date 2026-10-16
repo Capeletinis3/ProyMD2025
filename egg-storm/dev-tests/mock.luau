@@ -10,6 +10,7 @@ V.__index = function(self, k)
 	if k == "Unit" then local m = self.Magnitude; return vec(self.x / m, self.y / m, self.z / m) end
 	if k == "Cross" then return function(a, b) return vec(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x) end end
 	if k == "Dot" then return function(a, b) return a.x * b.x + a.y * b.y + a.z * b.z end end
+	if k == "Lerp" then return function(a, b, t) return vec(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t) end end
 	return nil
 end
 function vec(x, y, z) return setmetatable({ x = x or 0, y = y or 0, z = z or 0, __vec = true }, V) end
@@ -130,8 +131,17 @@ Inst.__index = function(self, k)
 		SetAttribute = function(s, k2, v) rawget(s, "_attrs")[k2] = v end,
 		GetAttribute = function(s, k2) return rawget(s, "_attrs")[k2] end,
 		Destroy = function(s) s.Parent = nil end,
-		AddTag = function() end,
-		RemoveTag = function() end,
+		-- CollectionService:AddTag(inst, tag) o inst:AddTag(tag); si existe TAGS (runtime) se anotan
+		AddTag = function(s, a, b)
+			if TAGS then local inst, tag = if b ~= nil then a else s, if b ~= nil then b else a; TAGS[inst] = TAGS[inst] or {}; TAGS[inst][tag] = true end
+		end,
+		RemoveTag = function(s, a, b)
+			if TAGS then local inst, tag = if b ~= nil then a else s, if b ~= nil then b else a; if TAGS[inst] then TAGS[inst][tag] = nil end end
+		end,
+		HasTag = function(s, a, b)
+			local inst, tag = if b ~= nil then a else s, if b ~= nil then b else a
+			return TAGS ~= nil and TAGS[inst] ~= nil and TAGS[inst][tag] == true
+		end,
 		GetFullName = function(s) local p = rawget(s, "_props").Parent; return (p and p:GetFullName() .. "." or "") .. s.Name end,
 	}
 	if methods[k] then return methods[k] end

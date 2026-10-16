@@ -1,6 +1,6 @@
 --!strict
 -- CreatureService: las mascotas de cada jugador.
--- Las pone en los estantes de la torre de su base (5 por piso; solo los pisos abiertos, ver BaseFloors),
+-- Viven en el hábitat de su base (hasta Config.Habitat.Capacity, todas desde el principio),
 -- cada segundo le suma la plata que generan, y deja venderlas (mantener E sobre una mascota tuya) para hacer lugar.
 
 local CollectionService = game:GetService("CollectionService")
@@ -15,7 +15,6 @@ local BaseService = require(script.Parent.BaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CreatureModels = require(script.Parent.CreatureModels)
 local EventService = require(script.Parent.EventService)
-local BaseFloors = require(script.Parent.BaseFloors)
 
 type Base = BaseService.Base
 type Creature = Creatures.Creature
@@ -60,13 +59,17 @@ local function spawnModel(player: Player, base: Base, creature: Creature, varian
 	if not pad then
 		return
 	end
-	-- Encima del estante, mirando hacia el frente de la base (al lobby)
-	-- (el estante puede estar girado, por ejemplo un cilindro acostado: medimos su alto de verdad)
+	-- Encima de su lugar en el hábitat, mirando para cualquier lado (el cliente después la hace pasear alrededor)
+	-- (el lugar puede estar girado, por ejemplo un cilindro acostado: medimos su alto de verdad)
 	local cf, size = pad.CFrame, pad.Size
 	local halfHeight = (math.abs(cf.RightVector.Y) * size.X + math.abs(cf.UpVector.Y) * size.Y + math.abs(cf.LookVector.Y) * size.Z) / 2
 	local padTop = pad.Position + Vector3.new(0, halfHeight, 0)
-	local model = CreatureModels.Build(creature, CFrame.new(padTop) * base.Facing, variant)
+	local turn = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
+	local model = CreatureModels.Build(creature, CFrame.new(padTop) * base.Facing * turn, variant)
 	model:SetAttribute("OwnerUserId", player.UserId)
+	local wander = pad:GetAttribute("WanderRadius")
+	model:SetAttribute("WanderRadius", if typeof(wander) == "number" then wander else Config.Habitat.WanderRadius)
+	CollectionService:AddTag(model, "WanderingCreature")
 	addSellPrompt(player, model, creature, variant, slot)
 	model.Parent = base.Model
 
@@ -82,8 +85,22 @@ local function spawnModel(player: Player, base: Base, creature: Creature, varian
 	models[slot] = model
 end
 
+-- Cartel de la entrada del hábitat: "🐾 7/20 · +$120/s"
+local function updateInfoSign(base: Base, count: number, income: number)
+	local label = base.Model:FindFirstChild("InfoLabel", true)
+	if label and label:IsA("TextLabel") then
+		label.Text = `🐾 {count}/{Config.Habitat.Capacity} · +${Format.Number(income)}/s`
+	end
+end
+
 local function updateIncomeAttribute(player: Player)
-	player:SetAttribute("Income", CreatureService.GetIncomePerSecond(player))
+	local income = CreatureService.GetIncomePerSecond(player)
+	player:SetAttribute("Income", income)
+	local base = BaseService.GetBase(player)
+	local profile = PlayerDataService.Get(player)
+	if base and profile then
+		updateInfoSign(base, #profile.Creatures, income)
+	end
 end
 
 -- ===== API pública =====
@@ -103,12 +120,12 @@ function CreatureService.RefreshIncome(player: Player)
 	updateIncomeAttribute(player)
 end
 
--- Cuántos estantes puede usar el jugador (los de los pisos que tiene abiertos)
-local function usableSlots(base: Base, floors: number): number
-	return math.min(#base.CreatureSlots, BaseFloors.SlotCount(floors))
+-- Cuántos lugares tiene el hábitat (siempre Config.Habitat.Capacity, sin mejoras)
+local function usableSlots(base: Base): number
+	return math.min(#base.CreatureSlots, Config.Habitat.Capacity)
 end
 
--- Cuántos estantes libres (en pisos abiertos) le quedan al jugador.
+-- Cuántos lugares libres le quedan al jugador en su hábitat.
 function CreatureService.GetFreeSlotCount(player: Player): number
 	local base = BaseService.GetBase(player)
 	local profile = PlayerDataService.Get(player)
@@ -120,7 +137,7 @@ function CreatureService.GetFreeSlotCount(player: Player): number
 	for _, data in profile.Creatures do
 		used[data.Slot] = true
 	end
-	for slot = 1, usableSlots(base, profile.BaseLevel) do
+	for slot = 1, usableSlots(base) do
 		if not used[slot] then
 			free += 1
 		end
@@ -151,7 +168,7 @@ function CreatureService.AddCreature(player: Player, creature: Creature, variant
 	for _, data in profile.Creatures do
 		used[data.Slot] = true
 	end
-	for slot = 1, usableSlots(base, profile.BaseLevel) do
+	for slot = 1, usableSlots(base) do
 		if not used[slot] then
 			table.insert(profile.Creatures, { CreatureId = creature.Id, Slot = slot, Variant = chosen.Id })
 			spawnModel(player, base, creature, chosen, slot)
@@ -209,7 +226,7 @@ function CreatureService.TrySell(who: Player, owner: Player, slot: number, model
 	if not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart") or not body then
 		return
 	end
-	if (root.Position - body.Position).Magnitude > Config.Economy.SellDistance + 5 then
+	if (root.Position - body.Position).Magnitude > Config.Economy.SellDistance + Config.Habitat.WanderRadius + 5 then
 		return
 	end
 
@@ -227,7 +244,7 @@ function CreatureService.SetLockCheck(check: (Player, number) -> boolean)
 	lockCheck = check
 end
 
--- Saca una mascota del estante (sin pagar nada). Devuelve sus datos, o nil si no hay ninguna ahí.
+-- Saca una mascota del hábitat (sin pagar nada). Devuelve sus datos, o nil si no hay ninguna ahí.
 function CreatureService.RemoveCreature(player: Player, slot: number): PlayerDataService.CreatureData?
 	local profile = PlayerDataService.Get(player)
 	if not profile then
@@ -250,7 +267,7 @@ function CreatureService.RemoveCreature(player: Player, slot: number): PlayerDat
 end
 
 -- Cuando el jugador recibe su base: pone las mascotas que ya tenía.
--- Si alguna estaba en un lugar que no existe (datos de una versión vieja del mapa), la acomoda en un estante libre.
+-- Si alguna estaba en un lugar que no existe (datos de una versión vieja del mapa), la acomoda en un lugar libre.
 function CreatureService.SetupBase(player: Player, base: Base)
 	local profile = PlayerDataService.Get(player)
 	if not profile then
@@ -285,6 +302,10 @@ end
 
 -- Cuando el jugador se va: saca los modelos para dejar la base limpia.
 function CreatureService.ClearBase(player: Player)
+	local base = BaseService.GetBase(player)
+	if base then
+		updateInfoSign(base, 0, 0)
+	end
 	local models = modelsByPlayer[player]
 	if models then
 		for _, model in models do

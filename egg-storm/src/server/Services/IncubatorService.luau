@@ -3,7 +3,7 @@
 --   Empty      → "EMPTY". Si llevás un huevo, aparece "Place Egg".
 --   Incubating → el huevo está en el nido, con la luz y las chispitas de su rareza y la cuenta regresiva.
 --   Ready      → el huevo se agrieta, dice "READY!" y aparece "Open". Al abrirlo sale la mascota
---                y va al primer estante libre de la torre.
+--                y va al primer lugar libre del hábitat.
 -- Los nidos que todavía no compraste (mejora "Extra Incubator") dicen LOCKED.
 -- Solo el dueño de la base puede usar sus incubadoras.
 --
@@ -72,7 +72,7 @@ local BOARD_COLORS: { [string]: Color3 } = {
 	Ready = Color3.fromRGB(201, 138, 0),
 	Hatching = Color3.fromRGB(201, 138, 0),
 }
-local FULL_MESSAGE = "Your shelves are full! Sell a creature (hold E on it) to make room."
+local FULL_MESSAGE = "Your habitat is full! Sell a creature (hold E on it) to make room."
 
 -- ===== Ayudantes visuales =====
 
@@ -386,7 +386,7 @@ function IncubatorService.TryIncubate(player: Player, incubator: Incubator)
 		notifyRemote:FireClient(player, "Grab an egg in the canyon first!")
 		return
 	end
-	-- Cada huevo necesita un estante libre para su mascota (contando los que ya se están incubando)
+	-- Cada huevo necesita un lugar libre en el hábitat para su mascota (contando los que ya se están incubando)
 	if CreatureService.GetFreeSlotCount(player) - countIncubating(player) <= 0 then
 		notifyRemote:FireClient(player, FULL_MESSAGE)
 		return

@@ -160,7 +160,7 @@ fire(alice, "Ready", true); fire(bob, "Ready", true)
 ADVANCE(Config.Trade.CountdownTime + 0.5)
 check(has(bob, "GoldenDragon", "Golden") and has(alice, "SunPhoenix") and not has(alice, "GoldenDragon", "Golden") and not has(bob, "SunPhoenix"), "the creatures are swapped (variant kept)")
 check(Trade.GetSession(alice) == nil and lastTrade(alice)[1] == "Closed" and lastTrade(alice)[2] == "Trade complete!", "the trade closes: Trade complete!")
-check(dragon.Parent == nil and creatureAt(BaseService.GetBase(bob), has(bob, "GoldenDragon", "Golden")) ~= nil, "the models move to the new shelves")
+check(dragon.Parent == nil and creatureAt(BaseService.GetBase(bob), has(bob, "GoldenDragon", "Golden")) ~= nil, "the models move to the new habitats")
 check(alice:GetAttribute("Income") < aliceIncome and bob:GetAttribute("Income") > alice:GetAttribute("Income"), "income updates for both")
 ADVANCE(1)
 local saved = STORE_DATA[key(902)]
@@ -168,9 +168,9 @@ local savedDragon = false
 for _, c in (saved and saved.Creatures or {}) do if c.CreatureId == "GoldenDragon" and c.Variant == "Golden" then savedDragon = true end end
 check(savedDragon, "the trade is saved right away")
 
--- Sin lugar en los estantes
-for _ = 1, 4 do CreatureService.AddCreature(bob, Creatures.Get("SandBunny")) end
-check(CreatureService.GetFreeSlotCount(bob) == 0, "Bob's 5 shelves are full")
+-- Sin lugar en el hábitat
+while CreatureService.GetFreeSlotCount(bob) > 0 do CreatureService.AddCreature(bob, Creatures.Get("SandBunny")) end
+check(#PDS.Get(bob).Creatures == Config.Habitat.Capacity, "Bob's habitat is full (20)")
 MOVE_TO(alice, counter.Position + Vector3.new(0, 0, 4)); ADVANCE(0.1)
 ADVANCE(Config.Trade.RequestCooldown)
 fire(alice, "Request", bob.UserId); fire(bob, "Respond", alice.UserId, true)
@@ -179,13 +179,13 @@ fire(alice, "Offer", { has(alice, "SunPhoenix"), has(alice, "SandBunny") })
 fire(bob, "Offer", { has(bob, "GoldenDragon", "Golden") })
 fire(alice, "Ready", true); fire(bob, "Ready", true)
 ADVANCE(Config.Trade.CountdownTime + 0.5)
-check(lastNotify(alice) == "Bob doesn't have enough free shelves for this trade." and has(alice, "SunPhoenix") and has(bob, "GoldenDragon", "Golden"), "no room: nothing is swapped")
+check(lastNotify(alice) == "Bob doesn't have enough room in their habitat for this trade." and has(alice, "SunPhoenix") and has(bob, "GoldenDragon", "Golden"), "no room: nothing is swapped")
 check(Trade.GetSession(alice) == session and session.Ready[alice] == nil, "the trade stays open so they can fix it")
 -- 1 por 1 sí entra
 fire(alice, "Offer", { has(alice, "SunPhoenix") })
 fire(alice, "Ready", true); fire(bob, "Ready", true)
 ADVANCE(Config.Trade.CountdownTime + 0.5)
-check(has(alice, "GoldenDragon", "Golden") and has(bob, "SunPhoenix"), "1 for 1 fits with full shelves")
+check(has(alice, "GoldenDragon", "Golden") and has(bob, "SunPhoenix"), "1 for 1 fits with a full habitat")
 
 -- Cancelar e irse
 ADVANCE(Config.Trade.RequestCooldown)

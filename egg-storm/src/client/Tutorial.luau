@@ -177,6 +177,8 @@ local function cheapestUpgrade(): number?
 		IncubationSpeedLevel = level("IncubationSpeedLevel", 1),
 		IncubatorCount = level("IncubatorCount", Config.Upgrades.StartingIncubators),
 		WalkSpeedLevel = level("WalkSpeedLevel", 1),
+		LuckLevel = level("LuckLevel", 1),
+		CarryLevel = level("CarryLevel", 1),
 	}
 	local best: number? = nil
 	for _, id in Upgrades.Order do

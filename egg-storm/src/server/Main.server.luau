@@ -34,7 +34,7 @@ RebirthService.Init()
 PlayerDataService.SetIncubatingProvider(IncubatorService.GetSnapshot)
 
 -- Cuando un jugador recibe su base: cargamos sus datos y armamos su base.
--- El orden importa: primero se abren los pisos de la torre que tiene desbloqueados, después van las mascotas.
+-- El orden importa: primero su velocidad, después las mascotas en su hábitat y al final los nidos.
 BaseService.OnAssigned(function(player, base)
 	-- Load espera al DataStore. Si devuelve nil, el jugador se fue mientras cargaba (o lo tuvimos que sacar).
 	if not PlayerDataService.Load(player) then

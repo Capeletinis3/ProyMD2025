@@ -1,12 +1,11 @@
 --!strict
--- UpgradeService: cobra y aplica las mejoras que se compran en la Tienda de mejoras del lobby.
--- El cliente solo dice "quiero comprar X". El servidor revisa TODO antes de cobrar:
--- que el nombre de la mejora exista, que tengas base, que estés cerca del mostrador de la tienda,
--- que no esté al máximo, que te alcance la plata y que no estés haciendo spam.
+-- UpgradeService: cobra y aplica las mejoras (Speed, Carry Eggs, Hatching, Luck y Extra Nest).
+-- Se compran desde cualquier lado (botón "Shop" o el puesto del lobby), de a 1, de a 10 o el MÁXIMO que alcance.
+-- El cliente solo dice "quiero comprar X (tantos niveles)". El servidor revisa TODO antes de cobrar:
+-- que el nombre de la mejora exista, que tengas base, que no esté al máximo, que te alcance la plata y que no hagas spam.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -15,7 +14,6 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local BaseService = require(script.Parent.BaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local IncubatorService = require(script.Parent.IncubatorService)
-local BaseFloors = require(script.Parent.BaseFloors)
 local TutorialService = require(script.Parent.TutorialService)
 
 type Base = BaseService.Base
@@ -43,29 +41,6 @@ function UpgradeService.ApplyWalkSpeed(player: Player)
 	humanoid.WalkSpeed = levels[math.clamp(profile.WalkSpeedLevel, 1, #levels)].Speed
 end
 
--- ¿Está cerca del mostrador de la Tienda de mejoras? (MapBuilder le pone el atributo Stall = "UpgradeShop")
-local function isNearShop(player: Player): boolean
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root or not root:IsA("BasePart") then
-		return false
-	end
-	local map = Workspace:FindFirstChild("Map")
-	local stalls = map and map:FindFirstChild("Stalls", true)
-	if not stalls then
-		return false
-	end
-	-- Un margen extra por el lag
-	local maxDistance = Config.Upgrades.PanelDistance + 5
-	for _, stall in stalls:GetChildren() do
-		local counter = stall:FindFirstChild("Counter")
-		if counter and counter:IsA("BasePart") and counter:GetAttribute("Stall") == "UpgradeShop" and (root.Position - counter.Position).Magnitude <= maxDistance then
-			return true
-		end
-	end
-	return false
-end
-
 -- Hace el cambio de la mejora (ya cobrada). Devuelve false si no se pudo aplicar.
 local function apply(player: Player, id: UpgradeId): boolean
 	local profile = PlayerDataService.Get(player)
@@ -82,55 +57,67 @@ local function apply(player: Player, id: UpgradeId): boolean
 		profile.WalkSpeedLevel += 1
 		UpgradeService.ApplyWalkSpeed(player)
 		return true
+	elseif id == "Luck" then
+		profile.LuckLevel += 1
+		return true
+	elseif id == "Carry" then
+		profile.CarryLevel += 1
+		return true
 	end
 	return false
 end
 
 -- ===== API pública =====
 
-function UpgradeService.TryBuy(player: Player, id: UpgradeId)
+-- Compra hasta "amount" niveles seguidos (los que alcance la plata). Devuelve cuántos compró.
+function UpgradeService.TryBuy(player: Player, id: UpgradeId, amount: number?): number
 	local now = os.clock()
 	if now - (lastBuy[player] or 0) < Config.Upgrades.BuyCooldown then
-		return
+		return 0
 	end
 	lastBuy[player] = now
 
 	local base = BaseService.GetBase(player)
 	local profile = PlayerDataService.Get(player)
 	if not base or not profile then
-		return
+		return 0
 	end
-	if not isNearShop(player) then
-		return
-	end
+	local wanted = math.clamp(math.floor(amount or 1), 1, 100)
+	local name = Upgrades.DisplayNames[id]
 
-	local cost = Upgrades.GetNextCost(id, profile)
-	if cost == nil then
-		notify(player, `{Upgrades.DisplayNames[id]} is already maxed!`)
-		return
+	local first = Upgrades.GetNextCost(id, profile)
+	if first == nil then
+		notify(player, `{name} is already maxed!`)
+		return 0
 	end
-	if not PlayerDataService.SpendCoins(player, cost) then
-		notify(player, `Not enough coins! You need {Format.Number(cost)}.`)
-		return
+	local bought = 0
+	while bought < wanted do
+		local cost = Upgrades.GetNextCost(id, profile)
+		if cost == nil or not PlayerDataService.SpendCoins(player, cost) then
+			break
+		end
+		if not apply(player, id) then
+			PlayerDataService.AddCoins(player, cost, true) -- algo falló: devolvemos la plata (no cuenta como ganada)
+			break
+		end
+		bought += 1
 	end
-	if not apply(player, id) then
-		PlayerDataService.AddCoins(player, cost, true) -- algo falló: devolvemos la plata (no cuenta como ganada)
-		return
+	if bought == 0 then
+		notify(player, `Not enough coins! You need {Format.Number(first)}.`)
+		return 0
 	end
 	PlayerDataService.SyncLevels(player)
-	notify(player, `{Upgrades.DisplayNames[id]} upgraded!`)
+	notify(player, if bought == 1 then `{name} upgraded!` else `{name} upgraded x{bought}!`)
 	TutorialService.OnEvent(player, "BoughtUpgrade")
+	return bought
 end
 
--- Cuando el jugador recibe su base: abre los pisos de la torre que tiene desbloqueados y pone su velocidad.
-function UpgradeService.SetupBase(player: Player, base: Base)
-	local profile = PlayerDataService.Get(player)
-	BaseFloors.Apply(base, if profile then profile.BaseLevel else 1)
+-- Cuando el jugador recibe su base: le pone su velocidad.
+function UpgradeService.SetupBase(player: Player, _base: Base)
 	UpgradeService.ApplyWalkSpeed(player)
 end
 
-function UpgradeService.ClearBase(player: Player, base: Base)
-	BaseFloors.Reset(base)
+function UpgradeService.ClearBase(player: Player, _base: Base)
 	lastBuy[player] = nil
 end
 
@@ -142,10 +129,16 @@ local function watchPlayer(player: Player)
 end
 
 function UpgradeService.Init()
-	buyRemote.OnServerEvent:Connect(function(player: Player, id: unknown)
-		-- Lo que manda el cliente no es confiable: revisamos que sea un nombre de mejora válido
-		if Upgrades.IsValid(id) then
-			UpgradeService.TryBuy(player, id :: UpgradeId)
+	buyRemote.OnServerEvent:Connect(function(player: Player, id: unknown, amount: unknown)
+		-- Lo que manda el cliente no es confiable: revisamos que sea un nombre de mejora válido y una cantidad razonable
+		-- (sin cantidad = 1 nivel; una cantidad rara, como texto, negativa o NaN, se ignora)
+		if not Upgrades.IsValid(id) then
+			return
+		end
+		if amount == nil then
+			UpgradeService.TryBuy(player, id :: UpgradeId, 1)
+		elseif typeof(amount) == "number" and amount == amount and amount >= 1 then
+			UpgradeService.TryBuy(player, id :: UpgradeId, amount)
 		end
 	end)
 	Players.PlayerAdded:Connect(watchPlayer)

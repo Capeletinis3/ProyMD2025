@@ -64,14 +64,8 @@ local function refresh()
 	local coins = number("Coins")
 	levelLabel.Text = `{rebirths} → {rebirths + 1}`
 	bonusLabel.Text = string.format("X%.2f → X%.2f", Config.RebirthMultiplier(rebirths), Config.RebirthMultiplier(rebirths + 1))
-	local floors = Config.FloorsForRebirths(rebirths + 1)
-	if floors > number("BaseLevel") then
-		bonusNote.Text = `🏠 + Floor {floors} of your tower!`
-		bonusNote.TextColor3 = C.Gold
-	else
-		bonusNote.Text = string.format("+%.2f every rebirth", Config.Rebirth.IncomeBonus)
-		bonusNote.TextColor3 = C.SubText
-	end
+	bonusNote.Text = string.format("+%.2f every rebirth", Config.Rebirth.IncomeBonus)
+	bonusNote.TextColor3 = C.SubText
 	local ready = coins >= cost
 	local nextOne = Format.Number(Config.RebirthCost(rebirths + 1))
 	coinsLabel.Text = `{Format.Number(math.min(coins, cost))} / {Format.Number(cost)}` .. (if ready then " Ready!" else "") .. ` · Next one: {nextOne}`
@@ -195,7 +189,7 @@ function RebirthPanel.Start()
 		rebirthRemote:FireServer("Rebirth")
 	end)
 
-	for _, name in { "Coins", "Rebirths", "BaseLevel" } do
+	for _, name in { "Coins", "Rebirths" } do
 		player:GetAttributeChangedSignal(name):Connect(function()
 			if gui.Enabled then
 				refresh()
@@ -203,7 +197,7 @@ function RebirthPanel.Start()
 		end)
 	end
 	SideMenu.AddButton("🔄 Rebirth", Color3.fromRGB(200, 70, 90), RebirthPanel.Open)
-	-- El cartel "BIGGER TOWER" de cada base también abre esta ventana
+	-- Cualquier botón con la etiqueta "RebirthPrompt" en el mapa también abre esta ventana
 	local function setupPrompt(prompt: Instance)
 		if prompt:IsA("ProximityPrompt") then
 			prompt.Triggered:Connect(RebirthPanel.Open)

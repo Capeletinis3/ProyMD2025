@@ -64,16 +64,15 @@ local function done() print(if fails == 0 then "ALL PASSED" else ("FAILURES: " .
 
 local Creatures = __mod("Creatures")
 local CreatureService = __mod("CreatureService")
-local BaseFloors = __mod("BaseFloors")
 local buy = Remotes.Event("BuyUpgrade")
 local alice = ADD_PLAYER("Alice", 111); SPAWN_CHARACTER(alice); ADVANCE(1)
 local base = BaseService.GetBase(alice)
 local profile = PDS.Get(alice)
-check(profile ~= nil and profile.Coins == 0 and profile.IncubatorCount == 1 and profile.BaseLevel == 1, "new player starts with a fresh profile (1 floor)")
+check(profile ~= nil and profile.Coins == 0 and profile.IncubatorCount == 1 and profile.LuckLevel == 1 and profile.CarryLevel == 1, "new player starts with a fresh profile")
 PDS.AddCoins(alice, 6000)
 goToShop(alice)
 buy.OnServerEvent:Fire(alice, "IncubationSpeed"); ADVANCE(0.5)
-profile.BaseLevel = 2; BaseFloors.Apply(base, 2) -- como si hubiera renacido
+buy.OnServerEvent:Fire(alice, "Luck"); ADVANCE(0.5)
 CreatureService.AddCreature(alice, Creatures.Get("GoldenDragon"))
 CreatureService.AddCreature(alice, Creatures.Get("SandBunny"))
 grab(alice, 1)
@@ -82,7 +81,7 @@ useNest(alice, 1)
 check(nestState(alice, 1) == "Incubating", "Alice is incubating a " .. tostring(carried) .. " egg")
 ADVANCE(Config.Data.AutosaveInterval + 1)
 local saved = STORE_DATA[key(111)]
-check(saved and saved.BaseLevel == 2 and saved.IncubationSpeedLevel == 2 and #saved.Creatures == 2, "autosave has upgrades, floors and creatures")
+check(saved and saved.LuckLevel == 2 and saved.IncubationSpeedLevel == 2 and #saved.Creatures == 2, "autosave has upgrades and creatures")
 check(saved and #saved.Incubating == 1 and saved.Incubating[1].RarityId == carried, "autosave includes the egg being incubated")
 local before = Inc.GetSnapshot(alice)[1].Remaining
 local coinsAtLeave = profile.Coins
@@ -93,10 +92,9 @@ ADVANCE(30)
 local alice2 = ADD_PLAYER("Alice", 111); SPAWN_CHARACTER(alice2); ADVANCE(1)
 local p2 = PDS.Get(alice2)
 local base2 = BaseService.GetBase(alice2)
-check(p2.Coins >= coinsAtLeave and p2.Coins < coinsAtLeave + 400 and p2.IncubationSpeedLevel == 2 and p2.BaseLevel == 2, "coming back restores coins, upgrades and floors")
-check(#base2.Model.Locks:GetChildren() == 1, "floor 2 is open again")
+check(p2.Coins >= coinsAtLeave and p2.Coins < coinsAtLeave + 400 and p2.IncubationSpeedLevel == 2 and p2.LuckLevel == 2 and alice2:GetAttribute("LuckLevel") == 2, "coming back restores coins and upgrades")
 local income = Config.GetRarity("Legendary").CoinsPerSecond + 1
-check(alice2:GetAttribute("Income") == income, "creatures back on their shelves (income " .. tostring(alice2:GetAttribute("Income")) .. "/s)")
+check(alice2:GetAttribute("Income") == income, "creatures back in the habitat (income " .. tostring(alice2:GetAttribute("Income")) .. "/s)")
 local snap = Inc.GetSnapshot(alice2)[1]
 check(snap and math.abs(snap.Remaining - saved.Incubating[1].Remaining) < 1.5, "the egg keeps incubating where it left off")
 check(alice2.leaderstats.Coins.Value == p2.Coins, "leaderstats show the saved coins")
@@ -111,14 +109,14 @@ local bob = ADD_PLAYER("Bob", 222); SPAWN_CHARACTER(bob); ADVANCE(6)
 check(PDS.Get(bob) and PDS.Get(bob).Coins == 500, "load succeeds after 2 failed attempts")
 
 STORE_DATA[key(333)] = {
-	Coins = "lots", IncubationSpeedLevel = 99, IncubatorCount = -3, BaseLevel = 7,
+	Coins = "lots", IncubationSpeedLevel = 99, IncubatorCount = -3, BaseLevel = 7, LuckLevel = 1e9, CarryLevel = "x",
 	Creatures = { { CreatureId = "FakeCreature", Slot = 1 }, { CreatureId = "SandBunny", Slot = 2 }, { CreatureId = "CoralCat", Slot = 2 }, "garbage" },
 	Incubating = { { Slot = 3, RarityId = "Rare", Remaining = 10 }, { Slot = 1, RarityId = "Nope", Remaining = 5 } },
 }
 local carol = ADD_PLAYER("Carol", 333); SPAWN_CHARACTER(carol); ADVANCE(1)
 local pc = PDS.Get(carol)
-check(pc and pc.Coins <= 2 and pc.IncubationSpeedLevel == 5 and pc.IncubatorCount == 1 and pc.BaseLevel == 3, "broken numbers are fixed")
-check(pc and #pc.Creatures == 1 and pc.Creatures[1].CreatureId == "SandBunny", "unknown creatures and duplicate shelves are dropped")
+check(pc and pc.Coins <= 2 and pc.IncubationSpeedLevel == #Config.Upgrades.IncubationSpeed and pc.IncubatorCount == 1 and pc.LuckLevel == #Config.Upgrades.Luck and pc.CarryLevel == 1, "broken numbers are fixed")
+check(pc and #pc.Creatures == 1 and pc.Creatures[1].CreatureId == "SandBunny", "unknown creatures and duplicate spots are dropped")
 check(#Inc.GetSnapshot(carol) == 0, "eggs in incubators the player doesn't own are dropped")
 
 REMOVE_PLAYER(bob); REMOVE_PLAYER(carol); ADVANCE(1)

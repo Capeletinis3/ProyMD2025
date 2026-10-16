@@ -103,18 +103,18 @@ local args
 for _, e in REMOTE_LOG do if e.remote == "Hatched" and e.player == alice then args = e.args end end
 check(args and args[2] == rarity and args[4] ~= nil, "opening starts the hatch animation (" .. tostring(args and args[1]) .. ")")
 ADVANCE(Config.Effects.HatchAnimationTime + 0.3)
-check(#profile.Creatures == 1 and profile.Creatures[1].Slot == 1 and nestState(alice, 1) == "Empty", "the creature goes to shelf 1 and the nest is empty again")
+check(#profile.Creatures == 1 and profile.Creatures[1].Slot == 1 and nestState(alice, 1) == "Empty", "the creature goes to spot 1 and the nest is empty again")
 local shelf = BaseService.GetBase(alice).CreatureSlots[1]
 local model
 for _, c in BaseService.GetBase(alice).Model:GetChildren() do if c:GetAttribute("CreatureId") then model = c end end
-check(model and math.abs(model.PrimaryPart.Position.X - shelf.Position.X) < 0.1 and model.PrimaryPart.Position.Y > shelf.Position.Y, "the creature model stands on shelf 1")
+check(model and math.abs(model.PrimaryPart.Position.X - shelf.Position.X) < 0.1 and model.PrimaryPart.Position.Y > shelf.Position.Y, "the creature model stands on spot 1 (and wanders from there)")
 check(alice:GetAttribute("Income") == Config.GetRarity(rarity).CoinsPerSecond * Config.GetVariant(profile.Creatures[1].Variant).Multiplier, "income comes from it")
 
--- Estantes llenos (5 en el piso 1)
-for _ = 1, 4 do CreatureService.AddCreature(alice, Creatures.Get("SandBunny")) end
-check(CreatureService.GetFreeSlotCount(alice) == 0, "5 creatures fill floor 1")
+-- Hábitat lleno (20 lugares)
+for _ = 1, Config.Habitat.Capacity - 1 do CreatureService.AddCreature(alice, Creatures.Get("SandBunny")) end
+check(CreatureService.GetFreeSlotCount(alice) == 0, "20 creatures fill the habitat")
 grab(alice, 1)
 useNest(alice, 1)
-check(lastNotify(alice) == "Your shelves are full! Sell a creature (hold E on it) to make room.", "full shelves: can't place another egg")
+check(lastNotify(alice) == "Your habitat is full! Sell a creature (hold E on it) to make room.", "full habitat: can't place another egg")
 
 done()

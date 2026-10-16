@@ -104,7 +104,7 @@ InstMeta.__index = function(self, k)
 	if k == "FireAllClients" then
 		return function(s, ...) table.insert(REMOTE_LOG, { remote = s.Name, player = "ALL", args = table.pack(...) }) end
 	end
-	if k == "Emit" or k == "AddTag" then return function() end end
+	if k == "Emit" then return function() end end
 	if k == "PivotTo" then
 		return function(s, cf)
 			local root = s:FindFirstChild("HumanoidRootPart")
@@ -158,8 +158,8 @@ rawget(TweenService, "_props").Create = function(_, inst, info, goals)
 end
 TweenInfo = { new = function(...) return { ... } end }
 local CollectionService = svc("CollectionService")
-rawget(CollectionService, "_props").AddTag = function() end
-rawget(CollectionService, "_props").RemoveTag = function() end
+TAGS = setmetatable({}, { __mode = "k" }) -- etiquetas de CollectionService: TAGS[instancia][etiqueta] = true
+
 local Players = svc("Players")
 local playerList = {}
 rawget(Players, "_props").GetPlayers = function() return playerList end

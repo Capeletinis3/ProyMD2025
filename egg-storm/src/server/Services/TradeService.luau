@@ -7,7 +7,7 @@
 --   3. Se abre la ventana de intercambio para los dos. Cada uno elige hasta Config.Trade.MaxItems mascotas ("Offer").
 --   4. Cuando los dos aprietan "Ready" empieza una cuenta regresiva. Si alguien cambia algo, se cancela.
 --   5. Al terminar, el servidor vuelve a revisar TODO (que las mascotas sigan siendo de cada uno y que haya
---      lugar en los estantes) e intercambia. Después guarda a los dos.
+--      lugar en el hábitat) e intercambia. Después guarda a los dos.
 -- Mientras una mascota está ofrecida no se puede vender.
 --
 -- Mensajes (RemoteEvent "Trade"):
@@ -164,8 +164,8 @@ local function execute(session: Session)
 		if room < #session.Offers[partner] then
 			changed(session)
 			sendState(session)
-			notify(a, `{player.DisplayName} doesn't have enough free shelves for this trade.`)
-			notify(b, `{player.DisplayName} doesn't have enough free shelves for this trade.`)
+			notify(a, `{player.DisplayName} doesn't have enough room in their habitat for this trade.`)
+			notify(b, `{player.DisplayName} doesn't have enough room in their habitat for this trade.`)
 			return
 		end
 	end

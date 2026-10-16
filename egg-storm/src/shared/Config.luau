@@ -67,6 +67,16 @@ export type WalkSpeedLevel = {
 	Cost: number,
 }
 
+export type LuckLevel = {
+	Chance: number, -- probabilidad (0 a 1) de que el huevo que agarrás suba una rareza
+	Cost: number,
+}
+
+export type CarryLevel = {
+	Extra: number, -- huevos de más que podés llevar (además del primero)
+	Cost: number,
+}
+
 local Config = {}
 
 -- ===== Servidor =====
@@ -80,9 +90,9 @@ Config.Map = {
 	FloorY = 0,
 
 	-- Lobby (plaza de arena en el oeste de la isla)
-	LobbySize = Vector2.new(300, 340), -- X × Z
-	TerraceZ = 145, -- centro de las terrazas de pasto (norte y sur)
-	TerraceDepth = 50,
+	LobbySize = Vector2.new(300, 420), -- X × Z
+	TerraceZ = 165, -- centro de las terrazas de pasto (norte y sur), donde están los hábitats
+	TerraceDepth = 90,
 	SpawnPosition = Vector3.new(0, 2.5, 22), -- al lado del altar: ahí aparecen los jugadores
 
 	-- Cañón (de X = CanyonStartX a CanyonStartX + CanyonLength)
@@ -93,20 +103,18 @@ Config.Map = {
 	CanyonWallHeight = 40,
 	SpawnWallMargin = 6, -- los puntos de huevos quedan a esta distancia de las paredes (y de las cuevas)
 
-	-- Bases (8, mirando al centro del lobby)
-	PlotSize = Vector2.new(60, 44), -- X × Z
+	-- Bases: 8 hábitats de selva (redondos, ~70 de ancho), mirando al centro del lobby
+	PlotSize = Vector2.new(70, 70), -- X × Z
 	BasePositions = {
-		Vector3.new(-117, 0, -148),
-		Vector3.new(-39, 0, -148),
-		Vector3.new(39, 0, -148),
-		Vector3.new(117, 0, -148),
-		Vector3.new(-117, 0, 148),
-		Vector3.new(-39, 0, 148),
-		Vector3.new(39, 0, 148),
-		Vector3.new(117, 0, 148),
+		Vector3.new(-112.5, 0, -165),
+		Vector3.new(-37.5, 0, -165),
+		Vector3.new(37.5, 0, -165),
+		Vector3.new(112.5, 0, -165),
+		Vector3.new(-112.5, 0, 165),
+		Vector3.new(-37.5, 0, 165),
+		Vector3.new(37.5, 0, 165),
+		Vector3.new(112.5, 0, 165),
 	},
-	BaseFloors = 3, -- pisos de la torre
-	ShelvesPerFloor = 5, -- estantes (lugares para mascotas) por piso
 
 }
 
@@ -398,17 +406,43 @@ Config.Effects = {
 }
 
 -- ===== Mejoras (se compran en la Tienda de mejoras del lobby) =====
+-- (Se compran desde cualquier lado: botón "Shop" del costado o el puesto del lobby. Se puede comprar x1, x10 o MAX.)
 Config.Upgrades = {
-	PanelDistance = 14, -- distancia máxima al mostrador de la tienda para poder comprar (studs)
+	PanelDistance = 14, -- distancia para que el puesto del lobby abra la ventana (studs)
 	BuyCooldown = 0.3, -- tiempo mínimo entre compras (anti-spam)
+
+	-- Velocidad de caminata (el nivel 1 es la velocidad normal de Roblox)
+	WalkSpeed = {
+		{ Speed = 16, Cost = 0 },
+		{ Speed = 18, Cost = 150 },
+		{ Speed = 20, Cost = 400 },
+		{ Speed = 22, Cost = 1000 },
+		{ Speed = 24, Cost = 2500 },
+		{ Speed = 26, Cost = 6000 },
+		{ Speed = 28, Cost = 15000 },
+		{ Speed = 30, Cost = 35000 },
+		{ Speed = 32, Cost = 80000 },
+		{ Speed = 34, Cost = 180000 },
+	} :: { WalkSpeedLevel },
+
+	-- Llevar huevos: cuántos huevos de más podés cargar (se suma con el VIP)
+	Carry = {
+		{ Extra = 0, Cost = 0 },
+		{ Extra = 1, Cost = 5000 },
+	} :: { CarryLevel },
 
 	-- Multiplica el tiempo de incubación
 	IncubationSpeed = {
 		{ Multiplier = 1.0, Cost = 0 }, -- nivel 1 (gratis, es el inicial)
-		{ Multiplier = 0.8, Cost = 100 },
-		{ Multiplier = 0.6, Cost = 500 },
-		{ Multiplier = 0.4, Cost = 2000 },
-		{ Multiplier = 0.25, Cost = 10000 },
+		{ Multiplier = 0.92, Cost = 100 },
+		{ Multiplier = 0.85, Cost = 300 },
+		{ Multiplier = 0.78, Cost = 800 },
+		{ Multiplier = 0.71, Cost = 2000 },
+		{ Multiplier = 0.64, Cost = 5000 },
+		{ Multiplier = 0.57, Cost = 12000 },
+		{ Multiplier = 0.5, Cost = 30000 },
+		{ Multiplier = 0.43, Cost = 75000 },
+		{ Multiplier = 0.36, Cost = 180000 },
 	} :: { IncubationSpeedLevel },
 	MinIncubationTime = 5, -- segundos: ningún huevo tarda menos que esto
 
@@ -417,20 +451,34 @@ Config.Upgrades = {
 	MaxIncubators = 3,
 	ExtraIncubatorCosts = { 250, 1500 }, -- precio de la 2.ª y de la 3.ª incubadora
 
-	-- Velocidad de caminata (el nivel 1 es la velocidad normal de Roblox)
-	WalkSpeed = {
-		{ Speed = 16, Cost = 0 },
-		{ Speed = 20, Cost = 300 },
-		{ Speed = 24, Cost = 1500 },
-		{ Speed = 28, Cost = 6000 },
-	} :: { WalkSpeedLevel },
+	-- Suerte: chance de que el huevo que agarrás suba una rareza (los muy raros suben menos, ver LuckByRarity)
+	Luck = {
+		{ Chance = 0, Cost = 0 },
+		{ Chance = 0.03, Cost = 500 },
+		{ Chance = 0.06, Cost = 1500 },
+		{ Chance = 0.09, Cost = 4000 },
+		{ Chance = 0.12, Cost = 10000 },
+		{ Chance = 0.15, Cost = 25000 },
+		{ Chance = 0.18, Cost = 60000 },
+		{ Chance = 0.21, Cost = 150000 },
+		{ Chance = 0.24, Cost = 350000 },
+		{ Chance = 0.27, Cost = 800000 },
+	} :: { LuckLevel },
+	-- Cuánto de la suerte vale para cada rareza (Common, Rare, Epic, Legendary, Mythic). Un Secret no sube.
+	LuckByRarity = { 1, 1, 0.75, 0.5, 0.2 },
+}
+
+-- ===== Hábitat (dónde viven las criaturas) =====
+Config.Habitat = {
+	Capacity = 20, -- criaturas por jugador (todas desde el principio, no hace falta mejorar nada)
+	WanderRadius = 6, -- cuánto se aleja cada criatura de su lugar cuando pasea (lo hace el cliente)
+	WanderViewDistance = 160, -- las criaturas más lejos que esto no se mueven (para no gastar)
 }
 
 -- ===== Renacimiento =====
 -- Renacer reinicia la plata y las mejoras de velocidad (Incubation Speed y Walk Speed).
--- Se conservan las mascotas, los huevos y las incubadoras. A cambio:
---   - el 1.º renacimiento abre el piso 2 de la torre y el 2.º el piso 3
---   - cada renacimiento suma IncomeBonus a la plata de TODAS tus mascotas (para siempre)
+-- Se conservan las mascotas, los huevos, las incubadoras, la Suerte y Llevar huevos.
+-- A cambio, cada renacimiento suma IncomeBonus a la plata de TODAS tus mascotas (para siempre).
 -- Es ilimitado: cada uno cuesta CostGrowth veces el anterior (100K, 250K, 625K, 1.56M, 3.9M...).
 Config.Rebirth = {
 	BaseCost = 100000, -- precio del primero
@@ -553,11 +601,6 @@ function Config.RebirthMultiplier(rebirths: number): number
 	return 1 + Config.Rebirth.IncomeBonus * rebirths
 end
 
--- Cuántos pisos de la torre abre esa cantidad de renacimientos (1 piso sin renacer)
-function Config.FloorsForRebirths(rebirths: number): number
-	return math.min(Config.Map.BaseFloors, 1 + rebirths)
-end
-
 -- Plata por segundo de una mascota de esta rareza y variante.
 function Config.GetIncome(rarity: Rarity, variant: Variant?): number
 	return rarity.CoinsPerSecond * (if variant then variant.Multiplier else 1)
@@ -586,9 +629,22 @@ function Config.IsVip(player: Player): boolean
 	return player:GetAttribute("VIP") == true
 end
 
--- Cuántos huevos puede llevar a la vez
+-- Chance de que un huevo de esta rareza suba una rareza al agarrarlo (mejora Luck × poción de suerte)
+function Config.LuckChance(player: Player, rarityId: string): number
+	local level = player:GetAttribute("LuckLevel")
+	local levels = Config.Upgrades.Luck
+	local base = levels[math.clamp(if typeof(level) == "number" then level else 1, 1, #levels)].Chance
+	local boost = player:GetAttribute("LuckBoost")
+	local factor = Config.Upgrades.LuckByRarity[Config.RarityRank(rarityId)] or 0
+	return math.min(0.9, base * (if typeof(boost) == "number" then boost else 1) * factor)
+end
+
+-- Cuántos huevos puede llevar a la vez: 1 + la mejora "Llevar huevos" + el VIP (se suman)
 function Config.CarryCapacity(player: Player): number
-	return 1 + (if Config.IsVip(player) then Config.Vip.ExtraCarry else 0)
+	local level = player:GetAttribute("CarryLevel")
+	local levels = Config.Upgrades.Carry
+	local extra = levels[math.clamp(if typeof(level) == "number" then level else 1, 1, #levels)].Extra
+	return 1 + extra + (if Config.IsVip(player) then Config.Vip.ExtraCarry else 0)
 end
 
 return Config

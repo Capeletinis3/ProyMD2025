@@ -16,7 +16,7 @@ export type Base = {
 	SignLabel: TextLabel,
 	Facing: CFrame, -- solo la rotación de la base: su LookVector apunta al centro del lobby
 	IncubatorSlots: { BasePart }, -- pedestales de los nidos-incubadora, ordenados por SlotIndex
-	CreatureSlots: { BasePart }, -- estantes de mascotas (5 por piso), ordenados por SlotIndex
+	CreatureSlots: { BasePart }, -- lugares de las mascotas en el hábitat (Config.Habitat.Capacity), ordenados por SlotIndex
 	Owner: Player?,
 }
 

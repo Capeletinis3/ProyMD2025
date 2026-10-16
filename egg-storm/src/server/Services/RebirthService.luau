@@ -4,7 +4,7 @@
 -- que no haya llegado al máximo, que le alcance la plata y que no haga spam. Si está todo bien:
 --   - la plata vuelve a 0 (la plata ganada en total, la de la tabla de récords, no cambia)
 --   - Incubation Speed y Walk Speed vuelven al nivel 1
---   - se abre el piso siguiente de la torre (hasta el 3) y todas sus mascotas ganan +25% para siempre
+--   - todas sus mascotas ganan +25% para siempre
 -- Las mascotas, los huevos y las incubadoras se conservan.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,7 +13,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local BaseService = require(script.Parent.BaseService)
-local BaseFloors = require(script.Parent.BaseFloors)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CreatureService = require(script.Parent.CreatureService)
 local IncubatorService = require(script.Parent.IncubatorService)
@@ -53,11 +52,8 @@ function RebirthService.TryRebirth(player: Player): boolean
 	profile.IncubationSpeedLevel = 1
 	profile.WalkSpeedLevel = 1
 	profile.Rebirths += 1
-	local floorsBefore = profile.BaseLevel
-	profile.BaseLevel = math.max(profile.BaseLevel, Config.FloorsForRebirths(profile.Rebirths))
 
 	-- Aplicar
-	BaseFloors.Apply(base, profile.BaseLevel)
 	IncubatorService.RecalculateTimes(player)
 	UpgradeService.ApplyWalkSpeed(player)
 	CreatureService.RefreshIncome(player)
@@ -65,9 +61,6 @@ function RebirthService.TryRebirth(player: Player): boolean
 
 	local bonus = math.round((Config.RebirthMultiplier(profile.Rebirths) - 1) * 100)
 	local message = `REBIRTH {profile.Rebirths}! Your creatures now make +{bonus}% coins.`
-	if profile.BaseLevel > floorsBefore then
-		message ..= ` Floor {profile.BaseLevel} unlocked!`
-	end
 	notifyRemote:FireClient(player, message)
 	return true
 end

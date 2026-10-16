@@ -94,18 +94,18 @@ check(#profile.Creatures == 1 and profile.Creatures[1].CreatureId == "SandBunny"
 check(profile.Coins - coins >= legendaryPrice and profile.Coins - coins < legendaryPrice + 10, "she gets 7,200 coins")
 check(dragon.Parent == nil and alice:GetAttribute("Income") == 1, "the model disappears and income goes down")
 check(lastNotify(alice) == "Sold Golden Dragon for 7,200 coins!", "message: " .. tostring(lastNotify(alice)))
-check(CreatureService.AddCreature(alice, Creatures.Get("CoralCat")) == 1, "the freed shelf is reused")
-for _ = 1, 3 do CreatureService.AddCreature(alice, Creatures.Get("SandBunny")) end
-check(CreatureService.GetFreeSlotCount(alice) == 0, "5 shelves full")
+check(CreatureService.AddCreature(alice, Creatures.Get("CoralCat")) == 1, "the freed spot is reused")
+while CreatureService.GetFreeSlotCount(alice) > 0 do CreatureService.AddCreature(alice, Creatures.Get("SandBunny")) end
+check(#profile.Creatures == Config.Habitat.Capacity, "habitat full (20 creatures)")
 grab(alice, 1)
 useNest(alice, 1)
-check(lastNotify(alice) == "Your shelves are full! Sell a creature (hold E on it) to make room.", "full shelves tell you to sell")
+check(lastNotify(alice) == "Your habitat is full! Sell a creature (hold E on it) to make room.", "a full habitat tells you to sell")
 local bunny = creatureAt(base, 2)
 MOVE_TO(alice, bunny.Body.Position); ADVANCE(0.6)
 bunny.Body.ProximityPrompt.Triggered:Fire(alice); ADVANCE(0.2)
 useNest(alice, 1)
 check(nestState(alice, 1) == "Incubating", "after selling, the egg can be placed")
 REMOVE_PLAYER(alice); ADVANCE(1)
-check(STORE_DATA[key(801)] and #STORE_DATA[key(801)].Creatures == 4, "the sale is saved (4 creatures left)")
+check(STORE_DATA[key(801)] and #STORE_DATA[key(801)].Creatures == Config.Habitat.Capacity - 1, "the sale is saved (19 creatures left)")
 
 done()

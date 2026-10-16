@@ -28,8 +28,8 @@ parts = [(sim / "mock.luau").read_text()]
 parts.append("task = { spawn = function() end, wait = function() end }")
 parts.append("local __Config = " + module("shared/Config.luau", {}))
 parts.append("local __Island = " + module("server/Services/IslandBuilder.luau", cfg))
-parts.append("local __BaseBuilder = " + module("server/Services/BaseBuilder.luau", {}))
-parts.append("local __MapBuilder = " + module("server/Services/MapBuilder.luau", {**cfg, "require(script.Parent.IslandBuilder)": "__Island", "require(script.Parent.BaseBuilder)": "__BaseBuilder"}))
+parts.append("local __HabitatBuilder = " + module("server/Services/HabitatBuilder.luau", {"require(ReplicatedStorage.Shared.Config)": "__Config"}))
+parts.append("local __MapBuilder = " + module("server/Services/MapBuilder.luau", {**cfg, "require(script.Parent.IslandBuilder)": "__Island", "require(script.Parent.HabitatBuilder)": "__HabitatBuilder"}))
 parts.append(f"""
 local map = __MapBuilder.Build()
 local I = __Config.Island

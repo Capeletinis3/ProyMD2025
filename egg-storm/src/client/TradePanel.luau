@@ -26,7 +26,7 @@ local TradePanel = {}
 local PICKER_SIZE = Vector2.new(560, 470)
 local PICKER_SLOTS = 12
 local TRADE_SIZE = Vector2.new(900, 560)
-local MAX_SHELVES = Config.Map.BaseFloors * Config.Map.ShelvesPerFloor
+local MAX_SPOTS = Config.Habitat.Capacity
 local CLOSE_DISTANCE = 22
 
 type Mine = { Slot: number, CreatureId: string, Variant: string }
@@ -231,10 +231,10 @@ local function buildTrade()
 		tradeRemote:FireServer("Cancel")
 	end)
 
-	-- Izquierda: tus mascotas (15 lugares como máximo, así que entran sin desplazar)
+	-- Izquierda: tus mascotas (20 lugares como máximo, así que entran sin desplazar)
 	UIKit.Label(frame, "YOUR CREATURES", UDim2.fromOffset(400, 30), UDim2.fromOffset(28, 76), 22, C.SubText)
-	local columns, tileW, tileH = 3, 128, 56
-	for i = 1, MAX_SHELVES do
+	local columns, tileW, tileH = 4, 96, 56
+	for i = 1, MAX_SPOTS do
 		local col = (i - 1) % columns
 		local row = (i - 1) // columns
 		local tile = UIKit.Button(frame, "", UDim2.fromOffset(tileW, tileH), UDim2.fromOffset(28 + col * (tileW + 8), 112 + row * (tileH + 8)), 16, C.Row)

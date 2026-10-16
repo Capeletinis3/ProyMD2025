@@ -23,7 +23,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local IslandBuilder = require(script.Parent.IslandBuilder)
-local BaseBuilder = require(script.Parent.BaseBuilder)
+local HabitatBuilder = require(script.Parent.HabitatBuilder)
 
 local MapBuilder = {}
 
@@ -523,11 +523,11 @@ end
 
 -- ===== Bases (§6) =====
 
--- Cada base es una choza tiki de 3 pisos muy decorada: la arma BaseBuilder (ahí están todas sus piezas).
+-- Cada base es un hábitat de selva: lo arma HabitatBuilder (ahí están todas sus piezas).
 local function buildBase(index: number, position: Vector3, parent: Instance): Model
 	-- El frente mira al centro del lobby. En coordenadas locales: -Z = adelante, +Z = atrás.
 	local facing = if position.Z < 0 then Vector3.new(0, 0, 1) else Vector3.new(0, 0, -1)
-	return BaseBuilder.Build(index, CFrame.lookAt(position, position + facing), parent)
+	return HabitatBuilder.Build(index, CFrame.lookAt(position, position + facing), parent)
 end
 
 -- ===== Cañón (§7) =====

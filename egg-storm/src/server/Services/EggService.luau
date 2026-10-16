@@ -174,6 +174,12 @@ end
 
 -- Pinta una Part como huevo de esta rareza y variante. También lo usa la incubadora.
 function EggService.DecorateEgg(part: BasePart, rarity: Rarity, variant: Variant)
+	-- (si ya estaba decorado, por ejemplo cuando la suerte lo sube de rareza, sacamos lo viejo)
+	for _, child in part:GetChildren() do
+		if child:IsA("SpecialMesh") or child:IsA("PointLight") or child.Name == "Sparkles" then
+			child:Destroy()
+		end
+	end
 	local special = variant.Id ~= "Normal"
 	part.Color = eggColor(rarity, variant)
 	part.Material = if special then variant.Material
@@ -553,7 +559,24 @@ function EggService.TryGrab(player: Player, egg: Egg)
 	carriedByPlayer[player] = carried
 	freeSpot(egg) -- el punto queda libre para que salga otro huevo
 	syncCarried(player) -- para que el cliente pueda mostrarlo
-	notify(player, `You grabbed a {eggName(egg.Rarity, egg.Variant)}! Bring it to your base.`)
+	-- Suerte: puede subir una rareza
+	local upgraded = false
+	if random:NextNumber() < Config.LuckChance(player, egg.Rarity.Id) then
+		local better = Config.Rarities[Config.RarityRank(egg.Rarity.Id) + 1]
+		if better then
+			egg.Rarity = better
+			egg.Part.Name = `{better.Id}Egg`
+			egg.Part:SetAttribute("Rarity", better.Id)
+			EggService.DecorateEgg(egg.Part, better, egg.Variant)
+			syncCarried(player)
+			upgraded = true
+		end
+	end
+	if upgraded then
+		notify(player, `🍀 Lucky! It became a {eggName(egg.Rarity, egg.Variant)}! Bring it to your base.`)
+	else
+		notify(player, `You grabbed a {eggName(egg.Rarity, egg.Variant)}! Bring it to your base.`)
+	end
 	TutorialService.OnEvent(player, "Grabbed")
 end
 

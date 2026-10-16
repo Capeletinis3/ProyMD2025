@@ -70,7 +70,7 @@ check(Workspace:GetAttribute("IslandReady") == true and VOXEL_WRITES > 50, "the 
 
 -- El lobby y el cañón nunca quedan tapados
 local covered = 0
-for x = -148, 148, 4 do for z = -168, 168, 4 do
+for x = -148, 148, 4 do for z = -208, 208, 4 do
 	if Island.Sample(x, z) > -2 then covered += 1 end
 end end
 check(covered == 0, "terrain stays under the lobby")
@@ -82,11 +82,11 @@ end end
 check(covered == 0, "terrain stays under the canyon floor, walls and caves " .. tostring(hx) .. "," .. tostring(hz))
 -- Alrededor del lobby: plano
 local bumpy = 0
-for x = -160, 160, 4 do for _, z in { -176, 176 } do
+for x = -160, 160, 4 do for _, z in { -216, 216 } do
 	local h = Island.Sample(x, z)
 	if math.abs(h) > 1 then bumpy += 1 end
 end end
-for z = -176, 176, 4 do
+for z = -216, 216, 4 do
 	local h = Island.Sample(-156, z)
 	if math.abs(h) > 1 then bumpy += 1 end
 end

@@ -1,10 +1,9 @@
 --!strict
--- UpgradePanel: la ventana de mejoras que se abre desde el panel de tu base.
--- Ventana ancha de tamaño fijo (680x500) que se achica entera en pantallas chicas (UIKit.FitToScreen),
--- con columnas separadas para que los textos nunca se pisen:
---   [ícono] [nombre]        [Lv 2/5]            [  Buy 500  ]
---           [descripción de qué cambia...]
--- El botón "Buy" solo PIDE la compra: el servidor decide si se puede (ver UpgradeService).
+-- UpgradePanel: la ventana de mejoras (techo de paja, postes de bambú y tarjetas de papel).
+-- Se abre con el botón "Shop" del costado o con "Open" en el puesto de mejoras del lobby.
+-- Cada tarjeta: ícono redondo, nombre, nivel, qué hace, puntitos de nivel, "ahora → después" y el botón de comprar.
+-- Arriba se elige comprar de a 1, de a 10 o el MÁXIMO que alcance.
+-- El botón solo PIDE la compra: el servidor decide si se puede (ver UpgradeService).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -14,187 +13,245 @@ local RunService = game:GetService("RunService")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Config = require(ReplicatedStorage.Shared.Config)
 local UIKit = require(script.Parent.UIKit)
+local SideMenu = require(script.Parent.SideMenu)
 
 local player = Players.LocalPlayer
 local buyRemote = Remotes.Event("BuyUpgrade")
-local C = UIKit.Colors
 
 local UpgradePanel = {}
 
-local CLOSE_DISTANCE = 20 -- si te alejás más que esto del panel, la ventana se cierra sola
-local ROW_HEIGHT, ROW_GAP, HEADER = 88, 12, 84
--- El alto de la ventana depende de cuántas mejoras hay
-local WIDTH, HEIGHT = 680, HEADER + #Upgrades.Order * (ROW_HEIGHT + ROW_GAP) + 16
+local SIZE = Vector2.new(920, 660)
+local CARD = Vector2.new(400, 150)
+local CLOSE_DISTANCE = 24 -- si la abriste en el puesto y te alejás, se cierra
+local DARK = Color3.fromRGB(42, 22, 8)
+local PAPER = Color3.fromRGB(255, 241, 208)
+local MAX_PIPS = 10
 
-local ICONS: { [string]: string } = {
-	IncubationSpeed = "⏩",
-	ExtraIncubator = "🥚",
-	WalkSpeed = "👟",
-	BaseFloor = "🏠",
-}
-local ICON_COLORS: { [string]: Color3 } = {
-	IncubationSpeed = Color3.fromRGB(255, 150, 60),
-	ExtraIncubator = Color3.fromRGB(90, 190, 255),
-	WalkSpeed = Color3.fromRGB(120, 220, 120),
-	BaseFloor = Color3.fromRGB(200, 130, 255),
+local STYLE: { [string]: { Icon: string, Color: Color3, Shadow: Color3 } } = {
+	WalkSpeed = { Icon = "👟", Color = Color3.fromRGB(255, 90, 77), Shadow = Color3.fromRGB(184, 50, 42) },
+	Carry = { Icon = "🥚", Color = Color3.fromRGB(255, 159, 26), Shadow = Color3.fromRGB(184, 106, 0) },
+	IncubationSpeed = { Icon = "⏳", Color = Color3.fromRGB(178, 107, 255), Shadow = Color3.fromRGB(122, 58, 194) },
+	Luck = { Icon = "🍀", Color = Color3.fromRGB(67, 193, 82), Shadow = Color3.fromRGB(42, 138, 53) },
+	ExtraIncubator = { Icon = "🪺", Color = Color3.fromRGB(63, 180, 240), Shadow = Color3.fromRGB(30, 120, 180) },
 }
 
-type Row = { Level: TextLabel, Description: TextLabel, Button: TextButton }
+type Card = {
+	Level: TextLabel,
+	Pips: { Frame },
+	Values: TextLabel,
+	Button: TextButton,
+	MaxStamp: TextLabel,
+}
 
 local gui: ScreenGui
 local coinsLabel: TextLabel
-local rows: { [string]: Row } = {}
-local openPanelPart: BasePart? = nil
+local modeButtons: { [number]: TextButton } = {}
+local cards: { [string]: Card } = {}
+local mode = 1 -- 1, 10 o 100 (= MÁX)
+local openPart: BasePart? = nil
 local lastClick = 0
 
+local function number(name: string, default: number): number
+	local value = player:GetAttribute(name)
+	return if typeof(value) == "number" then value else default
+end
+
 local function currentState(): Upgrades.State
-	local function attr(name: string): number
-		local value = player:GetAttribute(name)
-		return if typeof(value) == "number" then value else 1
-	end
 	return {
-		IncubationSpeedLevel = attr("IncubationSpeedLevel"),
-		IncubatorCount = attr("IncubatorCount"),
-		WalkSpeedLevel = attr("WalkSpeedLevel"),
-		BaseLevel = attr("BaseLevel"),
+		IncubationSpeedLevel = number("IncubationSpeedLevel", 1),
+		IncubatorCount = number("IncubatorCount", Config.Upgrades.StartingIncubators),
+		WalkSpeedLevel = number("WalkSpeedLevel", 1),
+		LuckLevel = number("LuckLevel", 1),
+		CarryLevel = number("CarryLevel", 1),
 	}
 end
 
-local function refresh()
-	local coins = player:GetAttribute("Coins")
-	local coinValue = if typeof(coins) == "number" then coins else 0
-	coinsLabel.Text = Format.Number(coinValue)
+local function stroked(label: TextLabel, thickness: number?): TextLabel
+	UIKit.Stroke(label, thickness or 2.5, DARK)
+	return label
+end
 
+local function refresh()
 	local state = currentState()
-	for id, row in rows do
+	local coins = number("Coins", 0)
+	coinsLabel.Text = `💰 {Format.Compact(coins)}`
+	for value, button in modeButtons do
+		local on = value == mode
+		button.BackgroundColor3 = if on then Color3.fromRGB(255, 194, 26) else Color3.fromRGB(107, 62, 28)
+		button.TextColor3 = if on then Color3.new(1, 1, 1) else Color3.fromRGB(217, 185, 138)
+	end
+	for _, id in Upgrades.Order do
+		local card = cards[id]
 		local current, max = Upgrades.GetLevel(id, state)
-		local cost = Upgrades.GetNextCost(id, state)
-		row.Level.Text = `Lv {current}/{max}`
-		row.Description.Text = Upgrades.Describe(id, state)
-		if cost == nil then
-			row.Button.Text = "MAX"
-			row.Button.BackgroundColor3 = C.Gray
-			row.Button.AutoButtonColor = false
-		else
-			row.Button.Text = `Buy  {Format.Number(cost)}`
-			local canAfford = coinValue >= cost
-			row.Button.BackgroundColor3 = if canAfford then C.Green else C.Red
-			row.Button.AutoButtonColor = canAfford
+		local maxed = current >= max
+		card.Level.Text = `Lv {current}/{max}`
+		for i, pip in card.Pips do
+			pip.Visible = i <= max
+			pip.BackgroundColor3 = if i <= current then STYLE[id].Color else Color3.fromRGB(233, 210, 166)
+		end
+		card.Values.Text = if maxed
+			then Upgrades.ValueText(id, current)
+			else `{Upgrades.ValueText(id, current)}  ➜  {Upgrades.ValueText(id, current + 1)}`
+		card.MaxStamp.Visible = maxed
+		card.Button.Visible = not maxed
+		if not maxed then
+			local count, total = Upgrades.Plan(id, state, coins, mode)
+			if count == 0 then
+				local nextCost = Upgrades.GetNextCost(id, state) or 0
+				card.Button.Text = `💰 {Format.Compact(nextCost)}`
+				card.Button.BackgroundColor3 = UIKit.Colors.Red
+			else
+				card.Button.Text = if count > 1 then `x{count} · {Format.Compact(total)}` else `💰 {Format.Compact(total)}`
+				card.Button.BackgroundColor3 = Color3.fromRGB(76, 209, 55)
+			end
 		end
 	end
 end
 
 local function close()
 	gui.Enabled = false
-	openPanelPart = nil
+	openPart = nil
 end
 
-local function open(panelPart: BasePart)
-	openPanelPart = panelPart
+-- Abre la ventana. Si viene de un puesto, se cierra sola cuando te alejás.
+function UpgradePanel.Open(part: BasePart?)
+	openPart = part
 	refresh()
 	gui.Enabled = true
 end
 
-local function buildRow(parent: Instance, index: number, id: string)
-	local rowWidth = WIDTH - 48
-	local row = Instance.new("Frame")
-	row.Size = UDim2.fromOffset(rowWidth, ROW_HEIGHT)
-	row.Position = UDim2.fromOffset(24, HEADER + (index - 1) * (ROW_HEIGHT + ROW_GAP))
-	row.BackgroundColor3 = C.Row
-	row.Parent = parent
-	UIKit.Corner(row, 14)
+local function buildCard(frame: Frame, index: number, id: string)
+	local style = STYLE[id]
+	local col = (index - 1) % 2
+	local row = (index - 1) // 2
+	local x = if index == #Upgrades.Order and #Upgrades.Order % 2 == 1 then (SIZE.X - CARD.X) / 2 else 48 + col * (CARD.X + 24)
+	local card = Instance.new("Frame")
+	card.Size = UDim2.fromOffset(CARD.X, CARD.Y)
+	card.Position = UDim2.fromOffset(x, 196 + row * (CARD.Y + 14))
+	card.BackgroundColor3 = PAPER
+	card.Parent = frame
+	UIKit.Corner(card, 18)
+	UIKit.Stroke(card, 4, DARK)
 
-	-- Ícono
-	local icon = Instance.new("TextLabel")
-	icon.Size = UDim2.fromOffset(64, 64)
-	icon.Position = UDim2.fromOffset(12, 12)
-	icon.BackgroundColor3 = ICON_COLORS[id] or C.Gray
-	icon.Text = ICONS[id] or "?"
-	icon.TextSize = 34
-	icon.Font = UIKit.Font
-	icon.Parent = row
-	UIKit.Corner(icon, 12)
+	local icon = UIKit.Label(card, style.Icon, UDim2.fromOffset(78, 78), UDim2.fromOffset(-16, 14), 40)
+	icon.TextXAlignment = Enum.TextXAlignment.Center
+	icon.BackgroundTransparency = 0
+	icon.BackgroundColor3 = style.Color
+	UIKit.Corner(icon, 39)
+	UIKit.Stroke(icon, 4, DARK)
 
-	-- Columna de textos (de x=88 a x=448): nombre + nivel arriba, descripción abajo
-	UIKit.Label(row, Upgrades.DisplayNames[id], UDim2.fromOffset(250, 34), UDim2.fromOffset(88, 10), 26)
+	local left = 74
+	local name = stroked(UIKit.Label(card, Upgrades.DisplayNames[id], UDim2.fromOffset(200, 28), UDim2.fromOffset(left, 8), 24, style.Color), 3)
+	name.TextTruncate = Enum.TextTruncate.None
+	local level = UIKit.Label(card, "", UDim2.fromOffset(100, 22), UDim2.fromOffset(CARD.X - 116, 10), 15, Color3.fromRGB(138, 90, 43))
+	level.TextXAlignment = Enum.TextXAlignment.Right
+	UIKit.Label(card, Upgrades.Descriptions[id], UDim2.fromOffset(CARD.X - left - 16, 20), UDim2.fromOffset(left, 38), 14, Color3.fromRGB(107, 74, 42))
 
-	local level = UIKit.Label(row, "Lv 1/1", UDim2.fromOffset(84, 28), UDim2.fromOffset(346, 13), 18, C.Accent)
-	level.TextXAlignment = Enum.TextXAlignment.Center
-	level.BackgroundTransparency = 0
-	level.BackgroundColor3 = Color3.fromRGB(30, 32, 48)
-	UIKit.Corner(level, 14)
+	local pips: { Frame } = {}
+	for i = 1, MAX_PIPS do
+		local pip = Instance.new("Frame")
+		pip.Size = UDim2.fromOffset(13, 17)
+		pip.Position = UDim2.fromOffset(left + (i - 1) * 17, 64)
+		pip.Parent = card
+		UIKit.Corner(pip, 7)
+		UIKit.Stroke(pip, 1.5, DARK)
+		table.insert(pips, pip)
+	end
 
-	local description = UIKit.Label(row, "", UDim2.fromOffset(354, 28), UDim2.fromOffset(88, 48), 18, C.SubText)
+	local values = stroked(UIKit.Label(card, "", UDim2.fromOffset(170, 44), UDim2.fromOffset(left, 92), 20), 2.5)
+	values.TextXAlignment = Enum.TextXAlignment.Center
+	values.BackgroundTransparency = 0
+	values.BackgroundColor3 = DARK
+	UIKit.Corner(values, 12)
 
-	-- Botón (de x=460 a x=620)
-	local button = UIKit.Button(row, "", UDim2.fromOffset(160, 60), UDim2.fromOffset(rowWidth - 172, 14), 22, C.Green)
+	local button = UIKit.Button(card, "", UDim2.fromOffset(140, 46), UDim2.fromOffset(CARD.X - 156, 91), 19, Color3.fromRGB(76, 209, 55))
+	UIKit.Stroke(button, 2.5, DARK).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 	button.Activated:Connect(function()
-		-- Pequeña pausa entre clics para no mandar 20 pedidos al servidor
 		if os.clock() - lastClick < 0.3 then
 			return
 		end
 		lastClick = os.clock()
-		buyRemote:FireServer(id)
+		buyRemote:FireServer(id, mode)
 	end)
+	local stamp = stroked(UIKit.Label(card, "MAX!", UDim2.fromOffset(140, 46), UDim2.fromOffset(CARD.X - 156, 91), 26, Color3.fromRGB(255, 194, 26)), 3)
+	stamp.TextXAlignment = Enum.TextXAlignment.Center
+	stamp.BackgroundTransparency = 0
+	stamp.BackgroundColor3 = Color3.fromRGB(255, 231, 160)
+	stamp.Rotation = -4
+	UIKit.Corner(stamp, 14)
 
-	rows[id] = { Level = level, Description = description, Button = button }
+	cards[id] = { Level = level, Pips = pips, Values = values, Button = button, MaxStamp = stamp }
 end
 
 local function build()
-	gui = Instance.new("ScreenGui")
-	gui.Name = "UpgradePanel"
-	gui.ResetOnSpawn = false
-	gui.Enabled = false
-	gui.DisplayOrder = 5
-	gui.Parent = player:WaitForChild("PlayerGui")
+	local frame
+	gui, frame = UIKit.Window("UpgradePanel", "", SIZE, 6)
+	frame.BackgroundColor3 = Color3.fromRGB(107, 62, 28)
+	local stroke = frame:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = DARK
+	end
+	-- Postes de bambú a los costados
+	for _, px in { -10, SIZE.X - 20 } do
+		local post = Instance.new("Frame")
+		post.Size = UDim2.fromOffset(30, SIZE.Y + 10)
+		post.Position = UDim2.fromOffset(px, -5)
+		post.BackgroundColor3 = Color3.fromRGB(217, 178, 90)
+		post.Parent = frame
+		UIKit.Corner(post, 15)
+		UIKit.Stroke(post, 3, DARK)
+	end
+	-- Techo de paja
+	local roof = Instance.new("Frame")
+	roof.Size = UDim2.fromOffset(SIZE.X + 60, 70)
+	roof.Position = UDim2.fromOffset(-30, -36)
+	roof.BackgroundColor3 = Color3.fromRGB(217, 164, 65)
+	roof.Parent = frame
+	UIKit.Corner(roof, 22)
+	UIKit.Stroke(roof, 4, DARK)
+	local plaque = stroked(UIKit.Label(frame, "UPGRADES", UDim2.fromOffset(380, 70), UDim2.fromOffset((SIZE.X - 380) / 2, -12), 44, Color3.fromRGB(255, 231, 176)), 4)
+	plaque.TextXAlignment = Enum.TextXAlignment.Center
+	plaque.BackgroundTransparency = 0
+	plaque.BackgroundColor3 = Color3.fromRGB(160, 102, 46)
+	UIKit.Corner(plaque, 12)
+	UIKit.Stroke(plaque, 4, DARK).ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
-	local frame = Instance.new("Frame")
-	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.fromScale(0.5, 0.5)
-	frame.Size = UDim2.fromOffset(WIDTH, HEIGHT)
-	frame.BackgroundColor3 = C.Panel
-	frame.Parent = gui
-	UIKit.Corner(frame, 20)
-	UIKit.Stroke(frame, 4, C.Accent)
-	UIKit.FitToScreen(frame, Vector2.new(WIDTH, HEIGHT))
+	-- Plata y cantidad (x1 / x10 / MÁX)
+	coinsLabel = stroked(UIKit.Label(frame, "", UDim2.fromOffset(220, 44), UDim2.fromOffset(48, 116), 26, Color3.fromRGB(255, 225, 77)), 3)
+	coinsLabel.TextXAlignment = Enum.TextXAlignment.Center
+	coinsLabel.BackgroundTransparency = 0
+	coinsLabel.BackgroundColor3 = DARK
+	UIKit.Corner(coinsLabel, 22)
+	for i, value in { 1, 10, 100 } do
+		local button = UIKit.Button(frame, if value == 100 then "MAX" else `x{value}`, UDim2.fromOffset(80, 44), UDim2.fromOffset(SIZE.X - 48 - (4 - i) * 86, 116), 22, Color3.fromRGB(107, 62, 28))
+		UIKit.Stroke(button, 2.5, DARK).ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+		button.Activated:Connect(function()
+			mode = value
+			refresh()
+		end)
+		modeButtons[value] = button
+	end
 
-	-- Encabezado: título a la izquierda, plata a la derecha, X en la esquina
-	UIKit.Label(frame, "UPGRADES", UDim2.fromOffset(300, 50), UDim2.fromOffset(28, 18), 40, C.Accent)
-
-	local coinsPill = Instance.new("Frame")
-	coinsPill.Size = UDim2.fromOffset(210, 44)
-	coinsPill.Position = UDim2.fromOffset(WIDTH - 210 - 84, 21)
-	coinsPill.BackgroundColor3 = Color3.fromRGB(22, 24, 38)
-	coinsPill.Parent = frame
-	UIKit.Corner(coinsPill, 22)
-	local coinIcon = UIKit.Label(coinsPill, "🪙", UDim2.fromOffset(36, 36), UDim2.fromOffset(8, 4), 26)
-	coinIcon.TextXAlignment = Enum.TextXAlignment.Center
-	coinsLabel = UIKit.Label(coinsPill, "0", UDim2.fromOffset(156, 44), UDim2.fromOffset(46, 0), 24, C.Gold)
-
-	local closeButton = UIKit.Button(frame, "X", UDim2.fromOffset(52, 52), UDim2.fromOffset(WIDTH - 70, 17), 28, C.Red)
-	closeButton.Activated:Connect(close)
-
-	for i, id in Upgrades.Order do
-		buildRow(frame, i, id)
+	for index, id in Upgrades.Order do
+		buildCard(frame, index, id)
 	end
 end
 
--- El prompt "Open" solo se ve en tu propia base. El del puesto del lobby (atributo Shared) lo ve cualquiera con base.
 local function setupPrompt(prompt: Instance)
 	if not prompt:IsA("ProximityPrompt") then
 		return
 	end
 	local function updateVisibility()
-		local myBase = player:GetAttribute("BaseId")
-		prompt.Enabled = if prompt:GetAttribute("Shared") then myBase ~= nil else prompt:GetAttribute("BaseId") == myBase
+		prompt.Enabled = player:GetAttribute("BaseId") ~= nil
 	end
 	updateVisibility()
 	player:GetAttributeChangedSignal("BaseId"):Connect(updateVisibility)
 	prompt.Triggered:Connect(function()
 		local part = prompt.Parent
-		if prompt.Enabled and part and part:IsA("BasePart") then
-			open(part)
+		if prompt.Enabled then
+			UpgradePanel.Open(if part and part:IsA("BasePart") then part else nil)
 		end
 	end)
 end
@@ -206,8 +263,11 @@ function UpgradePanel.Start()
 		setupPrompt(prompt)
 	end
 	CollectionService:GetInstanceAddedSignal("UpgradePrompt"):Connect(setupPrompt)
+	SideMenu.AddButton("🛒 Shop", Color3.fromRGB(63, 160, 230), function()
+		UpgradePanel.Open(nil)
+	end)
 
-	for _, name in { "Coins", "IncubationSpeedLevel", "IncubatorCount", "WalkSpeedLevel", "BaseLevel" } do
+	for _, name in { "Coins", "IncubationSpeedLevel", "IncubatorCount", "WalkSpeedLevel", "LuckLevel", "CarryLevel" } do
 		player:GetAttributeChangedSignal(name):Connect(function()
 			if gui.Enabled then
 				refresh()
@@ -215,9 +275,8 @@ function UpgradePanel.Start()
 		end)
 	end
 
-	-- Si te alejás del panel, se cierra
 	RunService.Heartbeat:Connect(function()
-		local part = openPanelPart
+		local part = openPart
 		if not gui.Enabled or not part then
 			return
 		end

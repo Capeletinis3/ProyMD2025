@@ -86,21 +86,21 @@ check(profile.Rebirths == 1, "rebirth 1 (only once, even spamming)")
 check(profile.Coins == 0 and profile.WalkSpeedLevel == 1 and profile.IncubationSpeedLevel == 1 and alice.Character.Humanoid.WalkSpeed == 16, "coins and speed upgrades reset")
 check(profile.IncubatorCount == 2 and #profile.Creatures == 1, "creatures and incubators are kept")
 check(profile.TotalEarned >= earned, "total earned (records) doesn't go down")
-check(profile.BaseLevel == 2 and #base.Model.Locks:GetChildren() == 1 and CreatureService.GetFreeSlotCount(alice) == 9, "floor 2 unlocked: 10 shelves")
+check(CreatureService.GetFreeSlotCount(alice) == Config.Habitat.Capacity - 1, "the habitat keeps its 20 spots (rebirth doesn't change space)")
 check(alice:GetAttribute("Income") == income * 1.25, "creatures make +25% (" .. tostring(alice:GetAttribute("Income")) .. "/s)")
-check(lastNotify(alice) == "REBIRTH 1! Your creatures now make +25% coins. Floor 2 unlocked!", "message: " .. tostring(lastNotify(alice)))
+check(lastNotify(alice) == "REBIRTH 1! Your creatures now make +25% coins.", "message: " .. tostring(lastNotify(alice)))
 local before = profile.Coins
 ADVANCE(4)
 local gained = profile.Coins - before
 check(gained >= income * 1.25 * 3.5 and gained <= income * 1.25 * 4.5, "income really is +25% (+" .. gained .. " in 4 s)")
--- Segundo: piso 3
+-- Segundo y tercero
 check(Config.RebirthCost(1) == 250000 and Config.RebirthCost(2) == 625000, "each rebirth costs x2.5 (100K, 250K, 625K...)")
 PDS.AddCoins(alice, Config.RebirthCost(1)); ADVANCE(1.1)
 remote.OnServerEvent:Fire(alice, "Rebirth"); ADVANCE(0.1)
-check(profile.Rebirths == 2 and profile.BaseLevel == 3 and #base.Model.Locks:GetChildren() == 0, "rebirth 2 unlocks floor 3")
+check(profile.Rebirths == 2 and lastNotify(alice) == "REBIRTH 2! Your creatures now make +50% coins.", "rebirth 2: +50%")
 PDS.AddCoins(alice, Config.RebirthCost(2)); ADVANCE(1.1)
 remote.OnServerEvent:Fire(alice, "Rebirth"); ADVANCE(0.1)
-check(profile.Rebirths == 3 and profile.BaseLevel == 3 and lastNotify(alice) == "REBIRTH 3! Your creatures now make +75% coins.", "rebirth 3: only the bonus (no more floors)")
+check(profile.Rebirths == 3 and lastNotify(alice) == "REBIRTH 3! Your creatures now make +75% coins.", "rebirth 3: +75%")
 remote.OnServerEvent:Fire(alice, "Hack"); remote.OnServerEvent:Fire(alice, { "Rebirth" }); ADVANCE(1.1)
 check(profile.Rebirths == 3, "junk requests are ignored")
 -- Ilimitado
@@ -111,10 +111,10 @@ check(profile.Rebirths == 13 and alice:GetAttribute("Income") == income * Config
 profile.Rebirths = 2
 -- Se guarda y vuelve
 REMOVE_PLAYER(alice); ADVANCE(1)
-check(STORE_DATA[key(901)].Rebirths == 2 and STORE_DATA[key(901)].BaseLevel == 3, "rebirths are saved")
-STORE_DATA[key(902)] = { Coins = 0, Rebirths = 1, TutorialStep = 5 } -- floors not saved: derived from rebirths
+check(STORE_DATA[key(901)].Rebirths == 2, "rebirths are saved")
+STORE_DATA[key(902)] = { Coins = 0, Rebirths = 1, TutorialStep = 5, BaseLevel = 2 } -- un guardado viejo (con pisos)
 local bob = ADD_PLAYER("Bob", 902); SPAWN_CHARACTER(bob); ADVANCE(1)
-check(PDS.Get(bob).BaseLevel == 2 and bob:GetAttribute("Rebirths") == 1, "a player with 1 rebirth always has floor 2")
+check(bob:GetAttribute("Rebirths") == 1 and CreatureService.GetFreeSlotCount(bob) == Config.Habitat.Capacity, "an old save (with floors) loads fine: 20 free spots")
 -- Ganancia offline con el bonus
 STORE_DATA[key(903)] = { Coins = 0, Rebirths = 2, TutorialStep = 5, SavedAt = os.time() - 3600, Creatures = { { CreatureId = "GoldenDragon", Slot = 1 } } }
 local carol = ADD_PLAYER("Carol", 903); SPAWN_CHARACTER(carol); ADVANCE(1)

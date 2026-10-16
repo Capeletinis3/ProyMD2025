@@ -67,21 +67,25 @@ local bases = BaseService.GetBases()
 check(#bases == 8, "8 bases")
 local allGood = true
 for _, b in bases do
-	local unlocked = 0
-	for _, s in b.CreatureSlots do if s:GetAttribute("Unlocked") then unlocked += 1 end end
 	local center = b.Model.PrimaryPart.Position
+	local look = b.Facing.LookVector
 	local nestsInFront = true
 	for _, ped in b.IncubatorSlots do
-		if ped.Position.Magnitude >= center.Magnitude then nestsInFront = false end
+		if (ped.Position - center):Dot(look) <= 0 then nestsInFront = false end
 	end
-	local look = b.Facing.LookVector
+	local spotsInside = true
+	for _, s in b.CreatureSlots do
+		local flat = Vector3.new(s.Position.X - center.X, 0, s.Position.Z - center.Z)
+		if flat.Magnitude > 26 or s.CanCollide then spotsInside = false end
+	end
 	local toCenter = (Vector3.new(0, 0, 0) - center)
-	if not (#b.IncubatorSlots == 3 and #b.CreatureSlots == 15 and unlocked == 5 and nestsInFront and look:Dot(toCenter) > 0 and #b.Model.Locks:GetChildren() == 2) then
+	if not (#b.IncubatorSlots == 3 and #b.CreatureSlots == 20 and nestsInFront and spotsInside and look:Dot(toCenter) > 0
+		and b.Model:FindFirstChild("Wall") and b.Model:FindFirstChild("InfoLabel", true)) then
 		allGood = false
-		print("  base", b.Id, #b.IncubatorSlots, #b.CreatureSlots, unlocked, nestsInFront)
+		print("  base", b.Id, #b.IncubatorSlots, #b.CreatureSlots, nestsInFront, spotsInside)
 	end
 end
-check(allGood, "every base: faces the altar, 3 incubators in front, 15 shelves (5 open), floors 2-3 locked")
+check(allGood, "every base: jungle habitat facing the altar, 3 nests in front, 20 creature spots inside the wall")
 local spawn = map.Lobby.SpawnLocation
 check(spawn.ClassName == "SpawnLocation" and (spawn.Position - Vector3.new(0, 2.5, 22)).Magnitude < 0.01, "players spawn next to the altar")
 check(map.Lobby.Altar.GoldenEgg:GetAttribute("Spin") == 20, "golden egg on the altar spins")

@@ -38,7 +38,8 @@ export type Profile = {
 	IncubationSpeedLevel: number,
 	IncubatorCount: number,
 	WalkSpeedLevel: number,
-	BaseLevel: number, -- cuántos pisos de la torre tiene abiertos (1 a 3)
+	LuckLevel: number, -- nivel de la mejora Luck
+	CarryLevel: number, -- nivel de la mejora Carry Eggs
 	Rebirths: number, -- cuántas veces renació (ver RebirthService)
 	TutorialStep: number, -- en qué paso del tutorial va (ver TutorialService; el último = terminado)
 	TotalEarned: number, -- plata ganada en toda la historia (no baja al gastar; para la tabla de récords)
@@ -79,7 +80,8 @@ local function newProfile(): Profile
 		IncubationSpeedLevel = 1,
 		IncubatorCount = Config.Upgrades.StartingIncubators,
 		WalkSpeedLevel = 1,
-		BaseLevel = 1,
+		LuckLevel = 1,
+		CarryLevel = 1,
 		Rebirths = 0,
 		TutorialStep = 1,
 		TotalEarned = 0,
@@ -143,8 +145,9 @@ local function profileFromData(data: any): Profile
 	profile.IncubatorCount = cleanNumber(data.IncubatorCount, up.StartingIncubators, 1, up.MaxIncubators)
 	profile.WalkSpeedLevel = cleanNumber(data.WalkSpeedLevel, 1, 1, #up.WalkSpeed)
 	profile.Rebirths = cleanNumber(data.Rebirths, 0, 0, 10000)
-	-- Los pisos abiertos: los que da el renacimiento (o más, si los tenía de antes)
-	profile.BaseLevel = math.max(cleanNumber(data.BaseLevel, 1, 1, Config.Map.BaseFloors), Config.FloorsForRebirths(profile.Rebirths))
+	-- Mejoras de Suerte y Llevar huevos (los guardados viejos con "BaseLevel" de los pisos se ignoran)
+	profile.LuckLevel = cleanNumber(data.LuckLevel, 1, 1, #up.Luck)
+	profile.CarryLevel = cleanNumber(data.CarryLevel, 1, 1, #up.Carry)
 	if typeof(data.TutorialStep) == "number" then
 		profile.TutorialStep = cleanNumber(data.TutorialStep, 1, 1, TUTORIAL_DONE)
 	else
@@ -224,7 +227,8 @@ local function dataFromProfile(profile: Profile, incubating: { IncubatingData })
 		IncubationSpeedLevel = profile.IncubationSpeedLevel,
 		IncubatorCount = profile.IncubatorCount,
 		WalkSpeedLevel = profile.WalkSpeedLevel,
-		BaseLevel = profile.BaseLevel,
+		LuckLevel = profile.LuckLevel,
+		CarryLevel = profile.CarryLevel,
 		Rebirths = profile.Rebirths,
 		TutorialStep = profile.TutorialStep,
 		TotalEarned = profile.TotalEarned,
@@ -301,7 +305,8 @@ local function syncLevels(player: Player, profile: Profile)
 	player:SetAttribute("IncubationSpeedLevel", profile.IncubationSpeedLevel)
 	player:SetAttribute("IncubatorCount", profile.IncubatorCount)
 	player:SetAttribute("WalkSpeedLevel", profile.WalkSpeedLevel)
-	player:SetAttribute("BaseLevel", profile.BaseLevel)
+	player:SetAttribute("LuckLevel", profile.LuckLevel)
+	player:SetAttribute("CarryLevel", profile.CarryLevel)
 	player:SetAttribute("Rebirths", profile.Rebirths)
 	player:SetAttribute("TutorialStep", profile.TutorialStep)
 end
