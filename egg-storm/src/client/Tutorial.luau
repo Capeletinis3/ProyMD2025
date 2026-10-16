@@ -1,13 +1,14 @@
 --!strict
 -- Tutorial: muestra qué hacer ahora (cartel arriba) y una flecha de luz desde tu personaje hasta el objetivo.
 -- El paso lo decide el servidor (atributo "TutorialStep", ver TutorialService). Este módulo solo lo dibuja.
--- Si viene la ola y estás en la arena, el tutorial te avisa que vuelvas a la zona verde.
+-- Si viene la ola y estás en el cañón, el tutorial te lleva a la cueva-refugio más cercana.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local UIKit = require(script.Parent.UIKit)
 
@@ -20,11 +21,12 @@ local Tutorial = {}
 local GRAB_EGG, INCUBATE, WAIT_HATCH, OPEN_UPGRADES, DONE = 1, 2, 3, 4, 5
 
 local TEXTS: { [string]: string } = {
-	Grab = "🥚 Grab an egg in the sand!",
-	Incubate = "🏠 Bring the egg to your incubator!",
-	Wait = "⏳ Your egg is incubating! Get back to the green zone before the wave.",
-	Upgrades = "🪙 Your creature makes coins! Open the Upgrades panel in your base.",
-	Danger = "🌊 WAVE INCOMING! Run back to the green zone!",
+	Grab = "🥚 Go through the tiki portal and grab an egg in the canyon!",
+	Incubate = "🏠 Bring the egg to an incubator in front of your base!",
+	Wait = "⏳ Your egg is incubating! When it says READY!, open it.",
+	Open = "🐣 Your egg is READY! Open it!",
+	Upgrades = "🪙 Your creature makes coins! Visit the Upgrades shop on the island.",
+	Danger = "🌊 THE WAVE IS COMING! Hide in a cave!",
 }
 
 local WIDTH, HEIGHT = 600, 64
@@ -37,6 +39,7 @@ local marker: Part
 local markerGui: BillboardGui
 local lastSearch = 0
 local cachedEgg: BasePart? = nil
+local caveSpots: { Vector3 }? = nil
 
 local function step(): number
 	local value = player:GetAttribute("TutorialStep")
@@ -83,12 +86,44 @@ local function nearestEgg(from: Vector3): BasePart?
 	return best
 end
 
-local function findPart(base: Model?, path: { string }): BasePart?
-	local current: Instance? = base
+local function findPart(root: Instance?, path: { string }): BasePart?
+	local current: Instance? = root
 	for _, name in path do
 		current = current and current:FindFirstChild(name)
 	end
 	return if current and current:IsA("BasePart") then current else nil
+end
+
+-- La cueva-refugio más cercana (las comunes; la VIP no, porque no todos pueden entrar)
+local function nearestCave(from: Vector3): Vector3?
+	if not caveSpots then
+		local found: { Vector3 } = {}
+		local map = Workspace:FindFirstChild("Map")
+		local canyon = map and map:FindFirstChild("Canyon")
+		local caves = canyon and canyon:FindFirstChild("Caves")
+		if caves then
+			for _, cave in caves:GetChildren() do
+				local zone = cave:FindFirstChild("SafeZone")
+				if zone and zone:IsA("BasePart") and not cave:GetAttribute("Vip") then
+					table.insert(found, zone.Position)
+				end
+			end
+		end
+		if #found == 0 then
+			return nil
+		end
+		caveSpots = found
+	end
+	local best: Vector3? = nil
+	local bestDistance = math.huge
+	local spots: { Vector3 } = caveSpots or {}
+	for _, spot in spots do
+		local distance = (spot - from).Magnitude
+		if distance < bestDistance then
+			best, bestDistance = spot, distance
+		end
+	end
+	return best
 end
 
 -- Decide qué texto mostrar y a dónde apunta la flecha
@@ -99,26 +134,30 @@ local function currentGoal(root: BasePart): (string?, Vector3?)
 	end
 	local base = myBase()
 
-	-- Si viene la ola y estás en la arena: ¡volvé!
-	local phase = Workspace:GetAttribute("StormPhase")
-	if (phase == "Warning" or phase == "Wave") and root.Position.Z > 0 then
-		local spawn = findPart(base, { "SpawnPoint" })
-		return TEXTS.Danger, if spawn then spawn.Position else Vector3.new(0, 3, -20)
+	-- Si viene la ola y estás en el cañón: ¡a una cueva!
+	local phase = Workspace:GetAttribute("WavePhase")
+	if (phase == "Warning" or phase == "Wave") and root.Position.X > Config.Map.CanyonStartX then
+		return TEXTS.Danger, nearestCave(root.Position)
 	end
 
 	local carrying = player:GetAttribute("CarriedEggRarity") ~= nil
+	local incubator = findPart(base, { "IncubatorSlots", "Nest1", "Pedestal" })
 	if s == GRAB_EGG or (s == INCUBATE and not carrying) then
 		local egg = nearestEgg(root.Position)
-		-- Si todavía no cayó ninguno, apuntamos a la entrada del pasillo
-		return TEXTS.Grab, if egg then egg.Position else Vector3.new(0, 3, 40)
+		-- Si no ves ninguno cerca, apuntamos al portal tiki (la entrada del cañón)
+		return TEXTS.Grab, if egg then egg.Position else Vector3.new(Config.Map.CanyonStartX, 3, 0)
 	elseif s == INCUBATE then
-		local incubator = findPart(base, { "Incubator1", "Base" })
 		return TEXTS.Incubate, if incubator then incubator.Position else nil
 	elseif s == WAIT_HATCH then
+		local prompt = incubator and incubator:FindFirstChildOfClass("ProximityPrompt")
+		if prompt and prompt:GetAttribute("State") == "Ready" then
+			return TEXTS.Open, incubator and incubator.Position
+		end
 		return TEXTS.Wait, nil
 	elseif s == OPEN_UPGRADES then
-		local panel = findPart(base, { "UpgradePanel", "Screen" })
-		return TEXTS.Upgrades, if panel then panel.Position else nil
+		local map = Workspace:FindFirstChild("Map")
+		local shop = findPart(map and map:FindFirstChild("Stalls", true), { "UpgradeShop", "Counter" })
+		return TEXTS.Upgrades, if shop then shop.Position else nil
 	end
 	return nil, nil
 end

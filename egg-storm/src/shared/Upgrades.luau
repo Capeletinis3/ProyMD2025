@@ -5,7 +5,8 @@
 
 local Config = require(script.Parent.Config)
 
--- "IncubationSpeed", "ExtraIncubator", "WalkSpeed" o "BaseFloor" (ver Upgrades.IsValid)
+-- "IncubationSpeed", "ExtraIncubator" o "WalkSpeed" (ver Upgrades.IsValid).
+-- (Los pisos 2 y 3 de la torre no se compran: se abren con el renacimiento.)
 export type UpgradeId = string
 
 -- Los niveles actuales del jugador (los mismos campos que el perfil del servidor)
@@ -13,22 +14,18 @@ export type State = {
 	IncubationSpeedLevel: number,
 	IncubatorCount: number,
 	WalkSpeedLevel: number,
-	BaseLevel: number,
 }
 
 local Upgrades = {}
 
 -- Orden en el que aparecen en el panel
-Upgrades.Order = { "IncubationSpeed", "ExtraIncubator", "WalkSpeed", "BaseFloor" } :: { UpgradeId }
+Upgrades.Order = { "IncubationSpeed", "ExtraIncubator", "WalkSpeed" } :: { UpgradeId }
 
 Upgrades.DisplayNames = {
 	IncubationSpeed = "Incubation Speed",
 	ExtraIncubator = "Extra Incubator",
 	WalkSpeed = "Walk Speed",
-	BaseFloor = "Base Floor",
 } :: { [UpgradeId]: string }
-
-local MAX_BASE_LEVEL = 2
 
 function Upgrades.IsValid(id: unknown): boolean
 	return typeof(id) == "string" and Upgrades.DisplayNames[id] ~= nil
@@ -41,10 +38,8 @@ function Upgrades.GetLevel(id: UpgradeId, state: State): (number, number)
 		return state.IncubationSpeedLevel, #cfg.IncubationSpeed
 	elseif id == "ExtraIncubator" then
 		return state.IncubatorCount, cfg.MaxIncubators
-	elseif id == "WalkSpeed" then
-		return state.WalkSpeedLevel, #cfg.WalkSpeed
 	else
-		return state.BaseLevel, MAX_BASE_LEVEL
+		return state.WalkSpeedLevel, #cfg.WalkSpeed
 	end
 end
 
@@ -59,10 +54,8 @@ function Upgrades.GetNextCost(id: UpgradeId, state: State): number?
 		return cfg.IncubationSpeed[current + 1].Cost
 	elseif id == "ExtraIncubator" then
 		return cfg.ExtraIncubatorCosts[current] -- con 1 incubadora, cuesta la 1.ª de la lista
-	elseif id == "WalkSpeed" then
-		return cfg.WalkSpeed[current + 1].Cost
 	else
-		return cfg.BaseFloor.Cost
+		return cfg.WalkSpeed[current + 1].Cost
 	end
 end
 
@@ -82,16 +75,11 @@ function Upgrades.Describe(id: UpgradeId, state: State): string
 			return `Incubators: {current}`
 		end
 		return `Incubators: {current} → {current + 1}`
-	elseif id == "WalkSpeed" then
+	else
 		if maxed then
 			return `Speed: {cfg.WalkSpeed[current].Speed}`
 		end
 		return `Speed: {cfg.WalkSpeed[current].Speed} → {cfg.WalkSpeed[current + 1].Speed}`
-	else
-		if maxed then
-			return "2nd floor built!"
-		end
-		return `Build a 2nd floor (+{cfg.BaseFloor.ExtraCreatureSlots} creature spots)`
 	end
 end
 

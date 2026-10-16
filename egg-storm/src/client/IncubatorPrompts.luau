@@ -1,6 +1,7 @@
 --!strict
--- IncubatorPrompts: decide si ESTE jugador ve el botón "Incubate" de cada incubadora.
--- Solo lo ve en su propia base, si la incubadora está libre y si lleva un huevo.
+-- IncubatorPrompts: decide si ESTE jugador ve el botón de cada nido-incubadora.
+--   "Place Egg": solo en tu propia base, si el nido está vacío y llevás un huevo.
+--   "Open":      solo en tu propia base, cuando el huevo está listo.
 -- Esto es solo para que la pantalla no se llene de botones inútiles:
 -- el servidor igual valida todo cuando se aprieta.
 
@@ -15,10 +16,10 @@ local function refresh(prompt: Instance)
 	if not prompt:IsA("ProximityPrompt") then
 		return
 	end
-	local myBase = player:GetAttribute("BaseId")
+	local mine = prompt:GetAttribute("BaseId") == player:GetAttribute("BaseId")
 	local carrying = player:GetAttribute("CarriedEggRarity") ~= nil
-	local available = prompt:GetAttribute("Available") == true
-	prompt.Enabled = available and carrying and prompt:GetAttribute("BaseId") == myBase
+	local state = prompt:GetAttribute("State")
+	prompt.Enabled = mine and ((state == "Empty" and carrying) or state == "Ready")
 end
 
 local function refreshAll()
@@ -27,17 +28,17 @@ local function refreshAll()
 	end
 end
 
-function IncubatorPrompts.Start()
-	CollectionService:GetInstanceAddedSignal("IncubatorPrompt"):Connect(function(prompt)
+local function watch(prompt: Instance)
+	refresh(prompt)
+	prompt:GetAttributeChangedSignal("State"):Connect(function()
 		refresh(prompt)
-		prompt:GetAttributeChangedSignal("Available"):Connect(function()
-			refresh(prompt)
-		end)
 	end)
+end
+
+function IncubatorPrompts.Start()
+	CollectionService:GetInstanceAddedSignal("IncubatorPrompt"):Connect(watch)
 	for _, prompt in CollectionService:GetTagged("IncubatorPrompt") do
-		prompt:GetAttributeChangedSignal("Available"):Connect(function()
-			refresh(prompt)
-		end)
+		watch(prompt)
 	end
 	player:GetAttributeChangedSignal("CarriedEggRarity"):Connect(refreshAll)
 	player:GetAttributeChangedSignal("BaseId"):Connect(refreshAll)

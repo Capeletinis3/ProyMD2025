@@ -38,7 +38,7 @@ export type Profile = {
 	IncubationSpeedLevel: number,
 	IncubatorCount: number,
 	WalkSpeedLevel: number,
-	BaseLevel: number, -- 2 = tiene el segundo piso ("Base Floor")
+	BaseLevel: number, -- cuántos pisos de la torre tiene abiertos (1 a 3)
 	TutorialStep: number, -- en qué paso del tutorial va (ver TutorialService; el último = terminado)
 	TotalEarned: number, -- plata ganada en toda la historia (no baja al gastar; para la tabla de récords)
 	EggsHatched: number, -- huevos abiertos en toda la historia (para la tabla de récords)
@@ -136,7 +136,7 @@ local function profileFromData(data: any): Profile
 	profile.IncubationSpeedLevel = cleanNumber(data.IncubationSpeedLevel, 1, 1, #up.IncubationSpeed)
 	profile.IncubatorCount = cleanNumber(data.IncubatorCount, up.StartingIncubators, 1, up.MaxIncubators)
 	profile.WalkSpeedLevel = cleanNumber(data.WalkSpeedLevel, 1, 1, #up.WalkSpeed)
-	profile.BaseLevel = cleanNumber(data.BaseLevel, 1, 1, 2)
+	profile.BaseLevel = cleanNumber(data.BaseLevel, 1, 1, Config.Map.BaseFloors)
 	if typeof(data.TutorialStep) == "number" then
 		profile.TutorialStep = cleanNumber(data.TutorialStep, 1, 1, TUTORIAL_DONE)
 	else

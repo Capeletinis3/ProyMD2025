@@ -12,8 +12,9 @@ local function check(cond, msg)
 	if cond then print("PASS", msg) else fails += 1; print("FAIL", msg) end
 end
 local function board(id)
-	for _, p in Workspace.Map.Leaderboards:GetChildren() do
-		if p:GetAttribute("Board") == id then return p end
+	for _, m in Workspace.Map:FindFirstChild("Leaderboards", true):GetChildren() do
+		local p = m:FindFirstChild("Board")
+		if p and p:GetAttribute("Board") == id then return p end
 	end
 end
 local function rows(id)
@@ -33,7 +34,7 @@ local function rows(id)
 	return out, subtitle
 end
 
-check(board("TopEarners") ~= nil and board("EggsHatched") ~= nil, "both boards are in the lobby")
+check(board("TopEarners") ~= nil and board("EggsHatched") ~= nil, "both boards are at the Rankings stall")
 local r0 = rows("TopEarners")
 check(#r0 == Config.Leaderboard.Size, "boards have 10 rows")
 

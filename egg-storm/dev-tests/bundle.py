@@ -19,7 +19,7 @@ def module(path, replacements):
 parts = [(sim / "mock.luau").read_text()]
 parts.append("local __Config = " + module("shared/Config.luau", {}))
 parts.append("local __MapBuilder = " + module("server/Services/MapBuilder.luau", {"require(ReplicatedStorage.Shared.Config)": "__Config"}))
-parts.append("local __BaseService = " + module("server/Services/BaseService.luau", {}))
+parts.append("local __BaseService = " + module("server/Services/BaseService.luau", {"require(ReplicatedStorage.Shared.Config)": "__Config"}))
 parts.append("""
 local map = __MapBuilder.Build()
 __BaseService.Init(map)

@@ -8,12 +8,8 @@ export type Rarity = {
 	Id: string, -- identificador interno (no cambiar una vez que haya datos guardados)
 	DisplayName: string, -- texto que ve el jugador
 	Color: Color3,
-	Weight: number, -- probabilidad relativa (los pesos suman 100)
 	BaseIncubationTime: number, -- segundos, antes de aplicar mejoras
 	CoinsPerSecond: number, -- plata que genera la criatura que sale de este huevo
-	-- Cualquier rareza puede caer en cualquier parte del pasillo, pero lejos es un poco mejor:
-	-- la chance se multiplica por (1 + FarBonus × distancia), con distancia de 0 (entrada) a 1 (fondo).
-	FarBonus: number,
 }
 
 -- Variantes: un huevo puede ser además Silver, Golden, Emerald... La mascota sale de ese material y gana más.
@@ -26,12 +22,39 @@ export type Variant = {
 	Weight: number, -- probabilidad relativa
 }
 
+-- Zonas del cañón: cada una da huevos de SU rareza (o, con poca chance, de la siguiente).
+export type Zone = {
+	Id: string,
+	DisplayName: string, -- texto del cartel
+	RarityId: string, -- rareza de la zona
+	NextRarityId: string?, -- la siguiente rareza (nil = no hay)
+	NextChance: number, -- chance de que salga la siguiente (0.1 = 10%)
+	Color: Color3, -- color del piso
+	Material: Enum.Material,
+	SpawnCount: number, -- cuántos puntos de aparición tiene
+	MaxActive: number, -- cuántos huevos puede haber a la vez
+	Respawn: number, -- cada cuántos segundos aparece uno nuevo (si hay lugar)
+}
+
+-- Cuevas-refugio en las paredes del cañón. Side: -1 = pared norte (Z-), 1 = pared sur (Z+).
+export type Cave = {
+	X: number, -- centro de la cueva a lo largo del cañón
+	Side: number,
+	Vip: boolean?,
+}
+
 export type EventInfo = {
 	Id: string,
 	DisplayName: string,
 	Description: string,
 	Color: Color3,
 	Weight: number, -- probabilidad relativa entre eventos
+}
+
+export type WaveKind = {
+	Speed: number, -- studs por segundo
+	Warning: number, -- segundos de aviso antes de que salga
+	Height: number, -- alto de la pared de agua
 }
 
 export type IncubationSpeedLevel = {
@@ -50,95 +73,139 @@ local Config = {}
 -- OJO: el límite real de jugadores se pone en Game Settings (ver README). Esto es solo para el código.
 Config.MaxPlayers = 8
 
--- ===== Mapa =====
--- Forma de T. Eje Z: el lobby (zona segura con las bases en fila) queda en Z < 0,
--- la línea segura está en Z = 0 y el pasillo de arena va de Z = 0 hasta Z = CorridorLength.
--- El ancho y el largo del lobby se calculan solos a partir de la cantidad y el tamaño de las bases.
+-- ===== Mapa: isla tropical + volcán (ver MAPA_SPEC.md) =====
+-- Origen (0, 0, 0) = centro del Altar del volcán. El piso de todo el mapa está en Y = 0.
+-- +X = hacia el cañón y el volcán (este). La ola viaja en dirección -X. -Z = norte (bases 1-4), +Z = sur (bases 5-8).
 Config.Map = {
-	FloorY = 0, -- altura del piso
-	CorridorWidth = 240, -- ancho del pasillo de arena
-	CorridorLength = 1500, -- largo del pasillo de arena (zona de peligro)
-	SeaDepth = 25, -- franja de agua al fondo del pasillo, de donde sale la ola
-	WallHeight = 80,
-	WallThickness = 10,
-	EggSideMargin = 25, -- los huevos no caen en la franja de decoración junto a las paredes
+	FloorY = 0,
 
-	BaseCount = 8, -- todas en una fila, mirando hacia el pasillo
-	PlotWidth = 44, -- ancho de cada parcela
-	PlotDepth = 60, -- profundidad de cada parcela (incubadoras adelante, mascotas a los costados)
-	PlotGap = 16, -- espacio entre parcelas (y entre las parcelas de las puntas y la pared)
-	LobbyFrontWalk = 50, -- espacio para caminar entre las bases y la línea segura
-	LobbyBackMargin = 24, -- espacio detrás de las bases (ahí va el cartel con el nombre)
+	-- Lobby (isla de arena)
+	LobbySize = Vector2.new(300, 340), -- X × Z
+	TerraceZ = 145, -- centro de las terrazas de pasto (norte y sur)
+	TerraceDepth = 50,
+	ShoreWidth = 8,
+	SpawnPosition = Vector3.new(0, 2.5, 22), -- al lado del altar: ahí aparecen los jugadores
 
-	-- Mezcla playa + mar: lobby de arena con baldosas, pasillo de agua turquesa entre paredes azul océano
-	LobbyFloorColor = Color3.fromRGB(235, 200, 155),
-	WaterFloorColor = Color3.fromRGB(70, 215, 230),
-	WallColor = Color3.fromRGB(35, 110, 215),
-	WallTrimColor = Color3.fromRGB(235, 205, 160),
-	SeaColor = Color3.fromRGB(20, 90, 220),
+	-- Cañón (de X = CanyonStartX a CanyonStartX + CanyonLength)
+	CanyonStartX = 150,
+	CanyonLength = 1200,
+	CanyonWidth = 80, -- de Z = -40 a 40
+	CanyonWallThickness = 20,
+	CanyonWallHeight = 40,
+	SpawnWallMargin = 6, -- los puntos de huevos quedan a esta distancia de las paredes (y de las cuevas)
 
-	-- Todas las bases son grises e iguales (se distinguen por el cartel con el nombre del dueño)
-	BaseColor = Color3.fromRGB(160, 165, 175),
+	-- Bases (8, mirando al centro del lobby)
+	PlotSize = Vector2.new(60, 44), -- X × Z
+	BasePositions = {
+		Vector3.new(-117, 0, -148),
+		Vector3.new(-39, 0, -148),
+		Vector3.new(39, 0, -148),
+		Vector3.new(117, 0, -148),
+		Vector3.new(-117, 0, 148),
+		Vector3.new(-39, 0, 148),
+		Vector3.new(39, 0, 148),
+		Vector3.new(117, 0, 148),
+	},
+	BaseFloors = 3, -- pisos de la torre
+	ShelvesPerFloor = 5, -- estantes (lugares para mascotas) por piso
+
+	-- Volcán (en el mar, detrás del final del cañón)
+	VolcanoPosition = Vector3.new(1550, 0, 0),
+	VolcanoBaseDiameter = 260,
+	VolcanoHeight = 220,
 }
 
--- ===== Huevos (se usan desde la fase 2) =====
+-- Paleta y materiales: usar SIEMPRE estos para que todo combine
+Config.Palette = {
+	LobbySand = Color3.fromRGB(246, 221, 176),
+	TerraceGrass = Color3.fromRGB(108, 194, 74),
+	PlotGrass = Color3.fromRGB(93, 179, 61),
+	Wood = Color3.fromRGB(139, 90, 43),
+	DarkWood = Color3.fromRGB(74, 44, 18),
+	Bamboo = Color3.fromRGB(201, 162, 74),
+	Straw = Color3.fromRGB(217, 164, 65),
+	Jungle = Color3.fromRGB(47, 138, 60),
+	WallRock = Color3.fromRGB(122, 110, 98),
+	WetSand = Color3.fromRGB(242, 212, 155),
+	Lava = Color3.fromRGB(255, 106, 26),
+	Crystal = Color3.fromRGB(163, 91, 255),
+	Stone = Color3.fromRGB(142, 133, 122),
+	TorchLight = Color3.fromRGB(255, 138, 31),
+	Water = Color3.fromRGB(22, 147, 181),
+}
+
+-- Iluminación (la propiedad Technology = Future se pone en default.project.json porque un script no puede cambiarla)
+Config.Lighting = {
+	ClockTime = 14.5,
+	Brightness = 2.5,
+	Ambient = Color3.fromRGB(90, 80, 70),
+	OutdoorAmbient = Color3.fromRGB(150, 140, 130),
+	AtmosphereDensity = 0.3,
+	AtmosphereHaze = 1,
+	AtmosphereGlare = 0.2,
+	AtmosphereColor = Color3.fromRGB(199, 232, 240),
+	AtmosphereDecay = Color3.fromRGB(106, 112, 125),
+	BloomIntensity = 0.6,
+	BloomSize = 24,
+	BloomThreshold = 1.5,
+	Saturation = 0.15,
+	Contrast = 0.05,
+	Tint = Color3.fromRGB(255, 245, 230),
+	SunRaysIntensity = 0.08,
+	SunRaysSpread = 1,
+	WaterColor = Color3.fromRGB(22, 147, 181),
+	WaterTransparency = 0.6,
+	WaterWaveSize = 0.15,
+	WaterWaveSpeed = 8,
+}
+
+-- ===== Huevos =====
 Config.Rarities = {
-	{
-		Id = "Common",
-		DisplayName = "Common",
-		Color = Color3.fromRGB(245, 245, 245),
-		Weight = 75,
-		BaseIncubationTime = 30,
-		CoinsPerSecond = 1,
-		FarBonus = 0,
-	},
-	{
-		Id = "Rare",
-		DisplayName = "Rare",
-		Color = Color3.fromRGB(70, 140, 255),
-		Weight = 18,
-		BaseIncubationTime = 60,
-		CoinsPerSecond = 5,
-		FarBonus = 0.5,
-	},
-	{
-		Id = "Epic",
-		DisplayName = "Epic",
-		Color = Color3.fromRGB(170, 80, 255),
-		Weight = 5,
-		BaseIncubationTime = 90,
-		CoinsPerSecond = 20,
-		FarBonus = 1.5,
-	},
-	{
-		Id = "Legendary",
-		DisplayName = "Legendary",
-		Color = Color3.fromRGB(255, 200, 40),
-		Weight = 1.7,
-		BaseIncubationTime = 120,
-		CoinsPerSecond = 100,
-		FarBonus = 3,
-	},
-	{
-		Id = "Secret",
-		DisplayName = "Secret",
-		Color = Color3.fromRGB(20, 20, 25), -- negro; el brillo arcoíris se agrega con efectos
-		Weight = 0.3,
-		BaseIncubationTime = 180,
-		CoinsPerSecond = 500,
-		FarBonus = 5,
-	},
+	{ Id = "Common", DisplayName = "Common", Color = Color3.fromRGB(244, 244, 244), BaseIncubationTime = 30, CoinsPerSecond = 1 },
+	{ Id = "Rare", DisplayName = "Rare", Color = Color3.fromRGB(96, 165, 250), BaseIncubationTime = 60, CoinsPerSecond = 5 },
+	{ Id = "Epic", DisplayName = "Epic", Color = Color3.fromRGB(167, 139, 250), BaseIncubationTime = 180, CoinsPerSecond = 25 },
+	{ Id = "Legendary", DisplayName = "Legendary", Color = Color3.fromRGB(252, 211, 77), BaseIncubationTime = 480, CoinsPerSecond = 120 },
+	{ Id = "Mythic", DisplayName = "Mythic", Color = Color3.fromRGB(248, 113, 113), BaseIncubationTime = 1200, CoinsPerSecond = 600 },
+	-- Secret: negro; el brillo blanco/arcoíris se agrega con efectos
+	{ Id = "Secret", DisplayName = "Secret", Color = Color3.fromRGB(17, 24, 39), BaseIncubationTime = 2700, CoinsPerSecond = 3000 },
 } :: { Rarity }
 
+-- Las 6 zonas del cañón, en orden desde el portal hasta el fondo (cada una mide ZoneLength).
+Config.ZoneLength = 200
+Config.Zones = {
+	{ Id = "Beach", DisplayName = "BEACH", RarityId = "Common", NextRarityId = "Rare", NextChance = 0.1, Color = Color3.fromRGB(242, 212, 155), Material = Enum.Material.Sand, SpawnCount = 16, MaxActive = 8, Respawn = 10 },
+	{ Id = "Jungle", DisplayName = "JUNGLE", RarityId = "Rare", NextRarityId = "Epic", NextChance = 0.1, Color = Color3.fromRGB(124, 196, 107), Material = Enum.Material.Grass, SpawnCount = 14, MaxActive = 6, Respawn = 15 },
+	{ Id = "Rocks", DisplayName = "ROCKS", RarityId = "Epic", NextRarityId = "Legendary", NextChance = 0.1, Color = Color3.fromRGB(171, 162, 148), Material = Enum.Material.Slate, SpawnCount = 12, MaxActive = 5, Respawn = 20 },
+	{ Id = "Basalt", DisplayName = "BASALT", RarityId = "Legendary", NextRarityId = "Mythic", NextChance = 0.1, Color = Color3.fromRGB(110, 104, 99), Material = Enum.Material.Basalt, SpawnCount = 10, MaxActive = 4, Respawn = 30 },
+	{ Id = "CooledLava", DisplayName = "COOLED LAVA", RarityId = "Mythic", NextRarityId = "Secret", NextChance = 0.1, Color = Color3.fromRGB(74, 56, 51), Material = Enum.Material.CrackedLava, SpawnCount = 8, MaxActive = 3, Respawn = 45 },
+	{ Id = "Obsidian", DisplayName = "OBSIDIAN", RarityId = "Secret", NextRarityId = nil, NextChance = 0, Color = Color3.fromRGB(38, 31, 51), Material = Enum.Material.Slate, SpawnCount = 6, MaxActive = 1, Respawn = 90 },
+} :: { Zone }
+
+-- Cuevas-refugio: más separadas a medida que avanzás. La VIP es más ancha y solo entra quien tiene el pase.
+Config.CaveSize = Vector3.new(12, 12, 10) -- ancho (X) × alto × profundidad
+Config.VipCaveWidth = 20
+Config.Caves = {
+	{ X = 200, Side = -1 },
+	{ X = 260, Side = 1 },
+	{ X = 320, Side = -1 },
+	{ X = 400, Side = 1 },
+	{ X = 480, Side = -1, Vip = true },
+	{ X = 560, Side = 1 },
+	{ X = 660, Side = -1 },
+	{ X = 760, Side = 1 },
+	{ X = 880, Side = -1 },
+	{ X = 1000, Side = 1 },
+	{ X = 1150, Side = -1 },
+	{ X = 1300, Side = 1 },
+} :: { Cave }
+
 Config.Eggs = {
-	SpawnInterval = 1.5, -- segundos entre huevo y huevo mientras llueve
-	MaxOnGround = 45, -- si ya hay esta cantidad en el piso (o cayendo), no cae ninguno más
-	FallHeight = 150, -- desde qué altura caen
-	FallTime = 2.5, -- cuánto tarda la caída (segundos)
-	GrabHoldTime = 0.25, -- cuánto hay que mantener apretada la tecla para agarrar
+	Size = Vector3.new(2.5, 3.2, 2.5),
+	SpawnMinDistance = 15, -- distancia mínima entre puntos de aparición
+	FallHeight = 150, -- desde qué altura caen los meteoritos
+	GrabHoldTime = 0.3, -- cuánto hay que mantener apretada la tecla para agarrar
 	GrabDistance = 10, -- distancia máxima para agarrar (studs)
 	GrabCooldown = 0.5, -- tiempo mínimo entre intentos de agarrar (anti-spam)
-	CarryHeight = 2.5, -- cuántos studs sobre la cabeza se lleva el huevo
 }
 
 -- ===== Variantes de huevo =====
@@ -152,27 +219,49 @@ Config.Variants = {
 	{ Id = "Rainbow", DisplayName = "Rainbow", Color = Color3.fromRGB(255, 120, 220), Material = Enum.Material.ForceField, Multiplier = 25, Weight = 0.2 },
 } :: { Variant }
 
--- ===== Eventos de tormenta =====
--- Al empezar cada tormenta hay ChancePerStorm de que sea especial. El evento dura toda la tormenta (hasta la calma).
+-- ===== Eventos =====
+-- Cada Interval segundos hay Chance de que empiece un evento, que dura Duration segundos.
 Config.Events = {
-	ChancePerStorm = 0.4,
+	Interval = 240,
+	Chance = 0.5,
+	Duration = 120,
 	List = {
-		{ Id = "GoldenRain", DisplayName = "GOLDEN RAIN", Description = "Way more Silver, Golden and Emerald eggs!", Color = Color3.fromRGB(255, 205, 60), Weight = 30 },
-		{ Id = "LuckyStorm", DisplayName = "LUCKY STORM", Description = "Epic, Legendary and Secret eggs are 3x more likely!", Color = Color3.fromRGB(110, 255, 140), Weight = 30 },
-		{ Id = "DoubleCoins", DisplayName = "DOUBLE COINS", Description = "All creatures make 2x coins during this storm!", Color = Color3.fromRGB(255, 160, 60), Weight = 25 },
-		{ Id = "MeteorShower", DisplayName = "METEOR SHOWER", Description = "Meteors drop Epic or better eggs. Be the first!", Color = Color3.fromRGB(255, 90, 60), Weight = 15 },
+		{ Id = "GoldenRain", DisplayName = "GOLDEN RAIN", Description = "Egg rain! Way more Silver, Golden and Emerald eggs!", Color = Color3.fromRGB(255, 205, 60), Weight = 30 },
+		{ Id = "LuckyStorm", DisplayName = "LUCKY STORM", Description = "Every zone gives its better eggs 3x more often!", Color = Color3.fromRGB(110, 255, 140), Weight = 30 },
+		{ Id = "DoubleCoins", DisplayName = "DOUBLE COINS", Description = "All creatures make 2x coins!", Color = Color3.fromRGB(255, 160, 60), Weight = 25 },
+		{ Id = "MeteorShower", DisplayName = "METEOR SHOWER", Description = "Meteors drop Epic or better eggs in the canyon!", Color = Color3.fromRGB(255, 90, 60), Weight = 15 },
 	} :: { EventInfo },
 	GoldenRainVariantBoost = 6, -- en Golden Rain, la chance de cada variante (no Normal) se multiplica por esto
-	LuckyRarityBoost = 3, -- en Lucky Storm, la chance de Epic/Legendary/Secret se multiplica por esto
+	GoldenRainRespawnMultiplier = 0.5, -- ...y los huevos reaparecen el doble de rápido
+	LuckyNextChanceMultiplier = 3, -- en Lucky Storm, la chance de la rareza siguiente de cada zona se multiplica por esto
 	DoubleCoinsMultiplier = 2,
 	MeteorInterval = 10, -- segundos entre meteoritos (en Meteor Shower)
-	MeteorRarityWeights = { Epic = 70, Legendary = 25, Secret = 5 } :: { [string]: number },
+	MeteorRarityWeights = { Epic = 55, Legendary = 30, Mythic = 12, Secret = 3 } :: { [string]: number },
 }
 
--- ===== Incubadoras y plata (fase 3) =====
+-- ===== Olas (salen del volcán y barren el cañón hacia el lobby) =====
+Config.Waves = {
+	StartX = 1360, -- donde arranca la ola
+	EndX = 150, -- el portal: la ola nunca entra al lobby
+	Thickness = 6,
+	Width = 84,
+	MinInterval = 60, -- segundos entre una ola y el aviso de la siguiente (al azar entre Min y Max)
+	MaxInterval = 90,
+	Normal = { Speed = 60, Warning = 5, Height = 50 } :: WaveKind,
+	FastChance = 0.25, -- 1 de cada 4 olas es rápida
+	Fast = { Speed = 120, Warning = 3, Height = 50 } :: WaveKind,
+	SuperInterval = 1800, -- Súper tsunami cada 30 minutos
+	Super = { Speed = 90, Warning = 15, Height = 80 } :: WaveKind,
+	FadeTime = 1.5, -- segundos que tarda en desvanecerse al llegar al portal
+	-- Sonidos (podés cambiarlos por IDs de la Creator Store, ej: "rbxassetid://1234567"; "" = sin sonido)
+	WarningSoundId = "rbxasset://sounds/electronicpingshort.wav", -- cuerno de caracol
+	WaveSoundId = "", -- rugido de la ola
+}
+
+-- ===== Incubadoras y plata =====
 Config.Incubators = {
-	HoldTime = 0.3, -- cuánto mantener apretada la tecla para poner el huevo
-	Distance = 12, -- distancia máxima para usar la incubadora (studs)
+	HoldTime = 0.5, -- cuánto mantener apretada la tecla para poner el huevo / abrirlo
+	Distance = 10, -- distancia máxima para usar la incubadora (studs)
 	Cooldown = 0.5, -- tiempo mínimo entre intentos (anti-spam)
 }
 
@@ -181,10 +270,10 @@ Config.Economy = {
 	IncomeInterval = 1, -- cada cuántos segundos se cobra la plata de las mascotas
 
 	-- Vender mascotas (mantener E sobre una mascota tuya)
-	SellValueSeconds = 60, -- precio de venta = esta cantidad de segundos de lo que genera (Common 60, Legendary 6.000...)
+	SellValueSeconds = 60, -- precio de venta = esta cantidad de segundos de lo que genera (Common 60, Legendary 7.200...)
 	SellHoldTime = 1.5, -- segundos que hay que mantener la tecla para vender (así no se vende sin querer)
-	SellHoldTimeRare = 3, -- lo mismo, para Legendary, Secret y variantes Emerald o mejores
-	SellDistance = 16, -- distancia máxima (alcanza para las mascotas del segundo piso desde abajo)
+	SellHoldTimeRare = 3, -- lo mismo, para Legendary o mejores y variantes Emerald o mejores
+	SellDistance = 12, -- distancia máxima
 	SellCooldown = 0.5, -- tiempo mínimo entre ventas (anti-spam)
 
 	-- Ganancia mientras no estás: al volver, tus mascotas te pagan por el tiempo que estuviste afuera
@@ -193,7 +282,7 @@ Config.Economy = {
 	OfflineMinSeconds = 60, -- si estuviste afuera menos que esto, no cuenta (así no sale el cartel cada vez que reentrás)
 }
 
--- ===== Guardado (fase 7) =====
+-- ===== Guardado =====
 Config.Data = {
 	-- Nombre del DataStore. Si lo cambiás, todos empiezan de cero (los datos viejos quedan en el nombre anterior).
 	StoreName = "EggStorm_PlayerData_v1",
@@ -212,17 +301,17 @@ Config.Leaderboard = {
 	HatchedStoreName = "EggStorm_EggsHatched_v1",
 }
 
--- ===== Efectos e interfaz (fase 6) =====
+-- ===== Efectos e interfaz =====
 Config.Effects = {
 	HatchAnimationTime = 3, -- segundos que el huevo tiembla y brilla antes de abrirse
-	RevealDuration = 3, -- segundos que queda el cartel "You got..." (los Legendary y Secret, uno más)
+	RevealDuration = 3, -- segundos que queda el cartel "You got..." (los Legendary o mejores, uno más)
 	-- Sonidos (podés cambiarlos por IDs de la Creator Store, ej: "rbxassetid://1234567"; "" = sin sonido)
 	HatchSoundId = "rbxasset://sounds/electronicpingshort.wav",
 }
 
--- ===== Mejoras (fase 4) =====
+-- ===== Mejoras (se compran en la Tienda de mejoras del lobby) =====
 Config.Upgrades = {
-	PanelDistance = 12, -- distancia máxima al panel de mejoras para poder comprar (studs)
+	PanelDistance = 14, -- distancia máxima al mostrador de la tienda para poder comprar (studs)
 	BuyCooldown = 0.3, -- tiempo mínimo entre compras (anti-spam)
 
 	-- Multiplica el tiempo de incubación
@@ -235,7 +324,7 @@ Config.Upgrades = {
 	} :: { IncubationSpeedLevel },
 	MinIncubationTime = 5, -- segundos: ningún huevo tarda menos que esto
 
-	-- Incubadoras extra
+	-- Incubadoras extra (los 3 nidos están siempre adelante de la base; los que no compraste dicen LOCKED)
 	StartingIncubators = 1,
 	MaxIncubators = 3,
 	ExtraIncubatorCosts = { 250, 1500 }, -- precio de la 2.ª y de la 3.ª incubadora
@@ -247,31 +336,6 @@ Config.Upgrades = {
 		{ Speed = 24, Cost = 1500 },
 		{ Speed = 28, Cost = 6000 },
 	} :: { WalkSpeedLevel },
-
-	-- "Mejorar base": segundo piso con más lugares para mascotas
-	BaseFloor = {
-		Cost = 5000,
-		ExtraCreatureSlots = 6,
-	},
-}
-
--- ===== Tormenta y ola (fase 5) =====
--- Ciclo: lluvia → aviso → ola → calma → lluvia...
-Config.Storm = {
-	-- Con el pasillo de 1500 studs, a velocidad normal (16) en una tormenta llegás a ~800 studs y volvés;
-	-- con las mejoras de "Walk Speed" llegás al fondo. Si cambiás CorridorLength, revisá estos números.
-	RainDuration = 90, -- segundos de lluvia de huevos (cielo oscuro)
-	WarningDuration = 10, -- segundos del cartel "WAVE INCOMING"
-	CalmDuration = 20, -- segundos de calma después de la ola
-
-	WaveSpeed = 100, -- studs por segundo (recorre los 1525 studs del pasillo en ~15 s)
-	WaveHeight = 35, -- altura de la pared de agua
-	WaveThickness = 30, -- grosor de la pared de agua
-	RespawnTime = 3, -- segundos hasta reaparecer en tu base después de que te agarra la ola
-
-	-- Sonidos (podés cambiarlos por IDs de la Creator Store, ej: "rbxassetid://1234567"; "" = sin sonido)
-	WarningSoundId = "rbxasset://sounds/electronicpingshort.wav",
-	WaveSoundId = "",
 }
 
 -- ===== Ayudantes =====
@@ -282,6 +346,16 @@ end
 
 function Config.GetRarity(id: string): Rarity?
 	return raritiesById[id]
+end
+
+-- Posición de la rareza en la lista (Common = 1 ... Secret = 6). Sirve para comparar "Legendary o mejor".
+function Config.RarityRank(id: string): number
+	for i, rarity in Config.Rarities do
+		if rarity.Id == id then
+			return i
+		end
+	end
+	return 0
 end
 
 local variantsById: { [string]: Variant } = {}
@@ -301,6 +375,28 @@ end
 
 function Config.GetEvent(id: string?): EventInfo?
 	return if id then eventsById[id] else nil
+end
+
+-- Desde qué X hasta qué X va la zona número index (1 = Playa ... 6 = Obsidiana).
+function Config.ZoneRange(index: number): (number, number)
+	local startX = Config.Map.CanyonStartX + (index - 1) * Config.ZoneLength
+	return startX, startX + Config.ZoneLength
+end
+
+-- En qué zona está esta X del cañón (nil si está fuera del cañón).
+function Config.ZoneAt(x: number): (Zone?, number?)
+	for i, zone in Config.Zones do
+		local startX, endX = Config.ZoneRange(i)
+		if x >= startX and x < endX then
+			return zone, i
+		end
+	end
+	return nil, nil
+end
+
+-- Ancho de una cueva (la VIP es más ancha)
+function Config.CaveWidth(cave: Cave): number
+	return if cave.Vip then Config.VipCaveWidth else Config.CaveSize.X
 end
 
 -- Plata por segundo de una mascota de esta rareza y variante.

@@ -27,7 +27,7 @@ local HatchReveal = {}
 
 local DESIGN = Vector2.new(700, 420)
 -- Qué tan "fuerte" es el festejo según la rareza (rayos, destello en pantalla)
-local INTENSITY: { [string]: number } = { Common = 0.3, Rare = 0.5, Epic = 0.75, Legendary = 1, Secret = 1 }
+local INTENSITY: { [string]: number } = { Common = 0.3, Rare = 0.5, Epic = 0.75, Legendary = 0.9, Mythic = 1, Secret = 1 }
 
 local gui: ScreenGui
 local flash: Frame
@@ -165,7 +165,7 @@ local function showBanner(name: string, rarity: Rarity, variant: Variant)
 	local hasVariant = variant.Id ~= "Normal"
 	-- Una variante buena festeja como una rareza alta
 	local intensity = math.max(INTENSITY[rarity.Id] or 0.5, if hasVariant then math.min(1, 0.5 + variant.Multiplier / 20) else 0)
-	local special = rarity.Id == "Legendary" or rarity.Id == "Secret" or variant.Multiplier >= 5
+	local special = Config.RarityRank(rarity.Id) >= Config.RarityRank("Legendary") or variant.Multiplier >= 5
 	local color = revealColor(rarity, variant)
 	local nameColor = if rarity.Id == "Secret" then Color3.new(1, 1, 1) else rarity.Color
 
@@ -238,14 +238,14 @@ local function showBanner(name: string, rarity: Rarity, variant: Variant)
 	end
 	if rarity.Id == "Secret" then
 		addRainbow(nameLabel)
-	elseif rarity.Id == "Legendary" then
+	elseif rarity.Id == "Legendary" or rarity.Id == "Mythic" then
 		addShine(nameLabel, rarity.Color)
 	end
 	if variant.Id == "Rainbow" or (rarity.Id == "Secret" and not hasVariant) then
 		addRainbow(rarityLabel)
 	elseif hasVariant then
 		addShine(rarityLabel, variant.Color)
-	elseif rarity.Id == "Legendary" then
+	elseif rarity.Id == "Legendary" or rarity.Id == "Mythic" then
 		addShine(rarityLabel, rarity.Color)
 	end
 

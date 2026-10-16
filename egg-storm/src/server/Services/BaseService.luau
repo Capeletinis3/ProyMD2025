@@ -1,9 +1,12 @@
 --!strict
 -- BaseService: le da una base libre a cada jugador que entra y la libera cuando sale.
--- También lleva al personaje a su base cada vez que aparece (al entrar y al reaparecer).
+-- Los jugadores aparecen en el lobby, junto al Altar del volcán (SpawnLocation del mapa).
 -- Otros sistemas (huevos, incubadoras, ola) le preguntan a este servicio "¿cuál es la base de X?".
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 
 export type Base = {
 	Id: number,
@@ -11,10 +14,9 @@ export type Base = {
 	SpawnPoint: BasePart,
 	SafeZone: BasePart,
 	SignLabel: TextLabel,
-	Facing: CFrame, -- solo la rotación de la base: su LookVector apunta al pasillo
-	UpgradePanel: BasePart, -- la pantalla del panel de mejoras (para medir distancia al comprar)
-	IncubatorSlots: { BasePart }, -- pads de incubadoras, ordenados por SlotIndex
-	CreatureSlots: { BasePart }, -- pads de mascotas, ordenados por SlotIndex
+	Facing: CFrame, -- solo la rotación de la base: su LookVector apunta al centro del lobby
+	IncubatorSlots: { BasePart }, -- pedestales de los nidos-incubadora, ordenados por SlotIndex
+	CreatureSlots: { BasePart }, -- estantes de mascotas (5 por piso), ordenados por SlotIndex
 	Owner: Player?,
 }
 
@@ -67,7 +69,7 @@ function BaseService.OnReleased(callback: BaseCallback)
 	table.insert(releasedCallbacks, callback)
 end
 
--- ¿Este punto está dentro de la zona segura de la base? (lo usa la ola en la fase 5)
+-- ¿Este punto está dentro de la base?
 function BaseService.IsInsideBase(base: Base, position: Vector3): boolean
 	local zone = base.SafeZone
 	local localPos = zone.CFrame:PointToObjectSpace(position)
@@ -84,18 +86,15 @@ function BaseService.TeleportToBase(player: Player)
 	character:PivotTo(base.SpawnPoint.CFrame + Vector3.new(0, 4, 0))
 end
 
--- ===== Entrada / salida de jugadores =====
-
-local function onCharacterAdded(player: Player, character: Model)
-	if not character:WaitForChild("HumanoidRootPart", 10) then
-		return
-	end
-	-- Esperamos un frame para que Roblox termine de ubicar al personaje, y recién ahí lo movemos.
-	task.wait()
-	if player.Character == character then
-		BaseService.TeleportToBase(player)
+-- Lleva al jugador al lado del altar (donde aparece). Lo usa la ola cuando te agarra.
+function BaseService.TeleportToLobby(player: Player)
+	local character = player.Character
+	if character then
+		character:PivotTo(CFrame.new(Config.Map.SpawnPosition + Vector3.new(0, 3, 0)))
 	end
 end
+
+-- ===== Entrada / salida de jugadores =====
 
 -- Reserva una base libre para el jugador (no espera nada). Devuelve nil si el servidor está lleno.
 local function assignBase(player: Player): Base?
@@ -152,14 +151,7 @@ local function onPlayerAdded(player: Player)
 	if not base then
 		return
 	end
-	-- Primero conectamos el "viajar a tu base" (así el personaje va directo aunque los datos tarden en cargar)
-	player.CharacterAdded:Connect(function(character)
-		onCharacterAdded(player, character)
-	end)
-	if player.Character then
-		task.spawn(onCharacterAdded, player, player.Character)
-	end
-	-- Después cargamos los datos y armamos la base
+	-- Cargamos los datos y armamos la base (el personaje aparece solo en el lobby, junto al altar)
 	runAssignedCallbacks(player, base)
 end
 
@@ -168,11 +160,17 @@ local function collectSlots(model: Model, folderName: string): { BasePart }
 	local folder = model:FindFirstChild(folderName)
 	assert(folder, `[BaseService] {model.Name} is missing {folderName}`)
 	local slots: { BasePart } = {}
-	for _, child in folder:GetChildren() do
-		if child:IsA("BasePart") and typeof(child:GetAttribute("SlotIndex")) == "number" then
-			table.insert(slots, child)
+	-- Los pads pueden estar sueltos en la carpeta o adentro de un Model (por ejemplo, el nido Nest1/Pedestal)
+	local function scan(parent: Instance)
+		for _, child in parent:GetChildren() do
+			if child:IsA("BasePart") and typeof(child:GetAttribute("SlotIndex")) == "number" then
+				table.insert(slots, child)
+			elseif child:IsA("Model") then
+				scan(child)
+			end
 		end
 	end
+	scan(folder)
 	table.sort(slots, function(a, b)
 		return (a:GetAttribute("SlotIndex") :: number) < (b:GetAttribute("SlotIndex") :: number)
 	end)
@@ -197,9 +195,6 @@ function BaseService.Init(map: Folder)
 		assert(safeZone and safeZone:IsA("BasePart"), `[BaseService] {model.Name} is missing SafeZone`)
 		assert(signLabel and signLabel:IsA("TextLabel"), `[BaseService] {model.Name} is missing SignLabel`)
 		assert(model.PrimaryPart, `[BaseService] {model.Name} has no PrimaryPart`)
-		local panel = model:FindFirstChild("UpgradePanel")
-		local panelScreen = panel and panel:FindFirstChild("Screen")
-		assert(panelScreen and panelScreen:IsA("BasePart"), `[BaseService] {model.Name} is missing UpgradePanel.Screen`)
 
 		local base: Base = {
 			Id = id,
@@ -208,7 +203,6 @@ function BaseService.Init(map: Folder)
 			SafeZone = safeZone,
 			SignLabel = signLabel,
 			Facing = model.PrimaryPart.CFrame.Rotation,
-			UpgradePanel = panelScreen,
 			IncubatorSlots = collectSlots(model, "IncubatorSlots"),
 			CreatureSlots = collectSlots(model, "CreatureSlots"),
 			Owner = nil,

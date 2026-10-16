@@ -34,6 +34,9 @@ Creatures.List = {
 	-- Legendary
 	{ Id = "GoldenDragon", DisplayName = "Golden Dragon", RarityId = "Legendary", Color = Color3.fromRGB(255, 200, 40), Style = "Dragon" },
 	{ Id = "SunPhoenix", DisplayName = "Sun Phoenix", RarityId = "Legendary", Color = Color3.fromRGB(255, 120, 30), Style = "Bird" },
+	-- Mythic
+	{ Id = "MagmaSerpent", DisplayName = "Magma Serpent", RarityId = "Mythic", Color = Color3.fromRGB(230, 70, 40), Style = "Dragon" },
+	{ Id = "TikiGolem", DisplayName = "Tiki Golem", RarityId = "Mythic", Color = Color3.fromRGB(160, 82, 45), Style = "Blob" },
 	-- Secret
 	{ Id = "RainbowLeviathan", DisplayName = "Rainbow Leviathan", RarityId = "Secret", Color = Color3.fromRGB(25, 25, 35), Style = "Dragon" },
 	{ Id = "VoidCat", DisplayName = "Void Cat", RarityId = "Secret", Color = Color3.fromRGB(15, 10, 25), Style = "Cat" },

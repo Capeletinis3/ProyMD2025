@@ -83,15 +83,19 @@ local function buildBoard(part: BasePart, info: BoardInfo)
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 20 -- el tablero de 56x40 studs queda de 1120x800 píxeles
+	-- Siempre 1120 píxeles de ancho, sea del tamaño que sea el tablero (así el texto entra igual)
+	local pixelsPerStud = 1120 / part.Size.X
+	gui.PixelsPerStud = pixelsPerStud
 	gui.Parent = part
 
-	local width = part.Size.X * 20
+	local width = 1120
+	local height = part.Size.Y * pixelsPerStud
 	label(gui, info.Title, UDim2.fromOffset(width, 90), UDim2.fromOffset(0, 16), 64, Color3.fromRGB(255, 205, 60), Enum.TextXAlignment.Center)
 	info.Subtitle = label(gui, "Loading...", UDim2.fromOffset(width, 36), UDim2.fromOffset(0, 104), 28, Color3.fromRGB(190, 195, 220), Enum.TextXAlignment.Center)
 
 	local size = Config.Leaderboard.Size
-	local top, rowHeight = 156, 62
+	local top = 156
+	local rowHeight = math.floor((height - top - 8) / size)
 	for i = 1, size do
 		local y = top + (i - 1) * rowHeight
 		local row = Instance.new("Frame")
@@ -213,11 +217,12 @@ function LeaderboardService.UpdateNow()
 end
 
 function LeaderboardService.Init(map: Folder)
-	local folder = map:FindFirstChild("Leaderboards")
+	local folder = map:FindFirstChild("Leaderboards", true)
 	if not folder then
 		return -- el mapa no tiene tableros
 	end
-	for _, part in folder:GetChildren() do
+	-- Cada tablero es una Part con el atributo Board (suelta en la carpeta o adentro de un Model con sus postes)
+	local function check(part: Instance)
 		if part:IsA("BasePart") then
 			local id = part:GetAttribute("Board")
 			for _, info in BOARDS do
@@ -225,7 +230,14 @@ function LeaderboardService.Init(map: Folder)
 					buildBoard(part, info)
 				end
 			end
+		elseif part:IsA("Model") then
+			for _, child in part:GetChildren() do
+				check(child)
+			end
 		end
+	end
+	for _, child in folder:GetChildren() do
+		check(child)
 	end
 
 	task.spawn(function()

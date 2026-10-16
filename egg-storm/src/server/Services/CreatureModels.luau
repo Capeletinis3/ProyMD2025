@@ -21,10 +21,11 @@ local CreatureModels = {}
 -- Las mascotas más raras son más grandes
 local SCALE_BY_RARITY: { [string]: number } = {
 	Common = 1,
-	Rare = 1.15,
-	Epic = 1.3,
-	Legendary = 1.5,
-	Secret = 1.7,
+	Rare = 1.1,
+	Epic = 1.2,
+	Legendary = 1.3,
+	Mythic = 1.4,
+	Secret = 1.5,
 }
 
 local RAINBOW = ColorSequence.new({
@@ -124,7 +125,7 @@ function CreatureModels.Build(creature: Creature, cframe: CFrame, variant: Varia
 
 	-- Brillo para las raras y las variantes
 	local glowColor = if variant and special then variant.Color elseif rarity then rarity.Color else color
-	if special or creature.RarityId == "Legendary" or creature.RarityId == "Secret" then
+	if special or Config.RarityRank(creature.RarityId) >= Config.RarityRank("Legendary") then
 		local light = Instance.new("PointLight")
 		light.Color = if rainbow then Color3.new(1, 1, 1) else glowColor
 		light.Brightness = 2

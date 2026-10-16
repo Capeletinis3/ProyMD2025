@@ -1,7 +1,7 @@
 --!strict
--- UpgradeService: cobra y aplica las mejoras que se compran en el panel de la base (o en el puesto del lobby).
+-- UpgradeService: cobra y aplica las mejoras que se compran en la Tienda de mejoras del lobby.
 -- El cliente solo dice "quiero comprar X". El servidor revisa TODO antes de cobrar:
--- que el nombre de la mejora exista, que tengas base, que estés cerca de tu panel o del puesto,
+-- que el nombre de la mejora exista, que tengas base, que estés cerca del mostrador de la tienda,
 -- que no esté al máximo, que te alcance la plata y que no estés haciendo spam.
 
 local Players = game:GetService("Players")
@@ -43,33 +43,31 @@ local function applyWalkSpeed(player: Player)
 	humanoid.WalkSpeed = levels[math.clamp(profile.WalkSpeedLevel, 1, #levels)].Speed
 end
 
-local function isNearPanel(player: Player, base: Base): boolean
+-- ¿Está cerca del mostrador de la Tienda de mejoras? (MapBuilder le pone el atributo Stall = "UpgradeShop")
+local function isNearShop(player: Player): boolean
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root or not root:IsA("BasePart") then
 		return false
 	end
+	local map = Workspace:FindFirstChild("Map")
+	local stalls = map and map:FindFirstChild("Stalls", true)
+	if not stalls then
+		return false
+	end
 	-- Un margen extra por el lag
 	local maxDistance = Config.Upgrades.PanelDistance + 5
-	if (root.Position - base.UpgradePanel.Position).Magnitude <= maxDistance then
-		return true
-	end
-	-- Puestos de mejoras del lobby (MapBuilder les pone el atributo UpgradeStall al mostrador)
-	local map = Workspace:FindFirstChild("Map")
-	local stalls = map and map:FindFirstChild("UpgradeStalls")
-	if stalls then
-		for _, stall in stalls:GetChildren() do
-			local counter = stall:FindFirstChild("CounterTop")
-			if counter and counter:IsA("BasePart") and counter:GetAttribute("UpgradeStall") and (root.Position - counter.Position).Magnitude <= maxDistance then
-				return true
-			end
+	for _, stall in stalls:GetChildren() do
+		local counter = stall:FindFirstChild("Counter")
+		if counter and counter:IsA("BasePart") and counter:GetAttribute("Stall") == "UpgradeShop" and (root.Position - counter.Position).Magnitude <= maxDistance then
+			return true
 		end
 	end
 	return false
 end
 
 -- Hace el cambio de la mejora (ya cobrada). Devuelve false si no se pudo aplicar.
-local function apply(player: Player, base: Base, id: UpgradeId): boolean
+local function apply(player: Player, id: UpgradeId): boolean
 	local profile = PlayerDataService.Get(player)
 	if not profile then
 		return false
@@ -83,10 +81,6 @@ local function apply(player: Player, base: Base, id: UpgradeId): boolean
 	elseif id == "WalkSpeed" then
 		profile.WalkSpeedLevel += 1
 		applyWalkSpeed(player)
-		return true
-	elseif id == "BaseFloor" then
-		BaseFloors.Build(base)
-		profile.BaseLevel = 2
 		return true
 	end
 	return false
@@ -106,7 +100,7 @@ function UpgradeService.TryBuy(player: Player, id: UpgradeId)
 	if not base or not profile then
 		return
 	end
-	if not isNearPanel(player, base) then
+	if not isNearShop(player) then
 		return
 	end
 
@@ -119,7 +113,7 @@ function UpgradeService.TryBuy(player: Player, id: UpgradeId)
 		notify(player, `Not enough coins! You need {Format.Number(cost)}.`)
 		return
 	end
-	if not apply(player, base, id) then
+	if not apply(player, id) then
 		PlayerDataService.AddCoins(player, cost, true) -- algo falló: devolvemos la plata (no cuenta como ganada)
 		return
 	end
@@ -128,18 +122,15 @@ function UpgradeService.TryBuy(player: Player, id: UpgradeId)
 	TutorialService.OnEvent(player, "BoughtUpgrade")
 end
 
--- Cuando el jugador recibe su base: segundo piso (si lo compró) y velocidad de caminata.
--- Tiene que ir ANTES que CreatureService.SetupBase, porque puede haber mascotas en el piso 2.
+-- Cuando el jugador recibe su base: abre los pisos de la torre que tiene desbloqueados y pone su velocidad.
 function UpgradeService.SetupBase(player: Player, base: Base)
 	local profile = PlayerDataService.Get(player)
-	if profile and profile.BaseLevel >= 2 then
-		BaseFloors.Build(base)
-	end
+	BaseFloors.Apply(base, if profile then profile.BaseLevel else 1)
 	applyWalkSpeed(player)
 end
 
 function UpgradeService.ClearBase(player: Player, base: Base)
-	BaseFloors.Remove(base)
+	BaseFloors.Reset(base)
 	lastBuy[player] = nil
 end
 

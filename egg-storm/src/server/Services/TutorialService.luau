@@ -44,7 +44,7 @@ local function setStep(player: Player, step: number)
 	profile.TutorialStep = step
 	PlayerDataService.SyncLevels(player) -- publica el atributo "TutorialStep"
 	if step == TutorialService.Steps.Done then
-		notifyRemote:FireClient(player, "Tutorial complete! Good luck in the storm!")
+		notifyRemote:FireClient(player, "Tutorial complete! Good luck in the canyon!")
 	end
 end
 

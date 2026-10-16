@@ -1,7 +1,7 @@
 --!strict
 -- CreatureService: las mascotas de cada jugador.
--- Las pone en los pads de su base, cada segundo le suma la plata que generan,
--- y deja venderlas (mantener E sobre una mascota tuya) para hacer lugar.
+-- Las pone en los estantes de la torre de su base (5 por piso; solo los pisos abiertos, ver BaseFloors),
+-- cada segundo le suma la plata que generan, y deja venderlas (mantener E sobre una mascota tuya) para hacer lugar.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -15,6 +15,7 @@ local BaseService = require(script.Parent.BaseService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CreatureModels = require(script.Parent.CreatureModels)
 local EventService = require(script.Parent.EventService)
+local BaseFloors = require(script.Parent.BaseFloors)
 
 type Base = BaseService.Base
 type Creature = Creatures.Creature
@@ -36,7 +37,7 @@ local function addSellPrompt(player: Player, model: Model, creature: Creature, v
 		return
 	end
 	-- Las valiosas piden mantener más tiempo, para no venderlas sin querer
-	local rare = creature.RarityId == "Legendary" or creature.RarityId == "Secret" or variant.Multiplier >= 5
+	local rare = Config.RarityRank(creature.RarityId) >= Config.RarityRank("Legendary") or variant.Multiplier >= 5
 	local economy = Config.Economy
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Sell"
@@ -57,8 +58,8 @@ local function spawnModel(player: Player, base: Base, creature: Creature, varian
 	if not pad then
 		return
 	end
-	-- Encima del pad, mirando hacia el pasillo (igual que la base)
-	local padTop = pad.Position + Vector3.new(0, pad.Size.X / 2, 0) -- el pad es un cilindro acostado: su grosor es Size.X
+	-- Encima del estante, mirando hacia el frente de la base (al lobby)
+	local padTop = pad.Position + Vector3.new(0, pad.Size.Y / 2, 0)
 	local model = CreatureModels.Build(creature, CFrame.new(padTop) * base.Facing, variant)
 	model:SetAttribute("OwnerUserId", player.UserId)
 	addSellPrompt(player, model, creature, variant, slot)
@@ -90,14 +91,29 @@ function CreatureService.GetIncomePerSecond(player: Player): number
 	return Creatures.TotalIncome(profile.Creatures)
 end
 
--- Cuántos pads de mascotas libres le quedan al jugador.
+-- Cuántos estantes puede usar el jugador (los de los pisos que tiene abiertos)
+local function usableSlots(base: Base, floors: number): number
+	return math.min(#base.CreatureSlots, BaseFloors.SlotCount(floors))
+end
+
+-- Cuántos estantes libres (en pisos abiertos) le quedan al jugador.
 function CreatureService.GetFreeSlotCount(player: Player): number
 	local base = BaseService.GetBase(player)
 	local profile = PlayerDataService.Get(player)
 	if not base or not profile then
 		return 0
 	end
-	return #base.CreatureSlots - #profile.Creatures
+	local free = 0
+	local used: { [number]: boolean } = {}
+	for _, data in profile.Creatures do
+		used[data.Slot] = true
+	end
+	for slot = 1, usableSlots(base, profile.BaseLevel) do
+		if not used[slot] then
+			free += 1
+		end
+	end
+	return free
 end
 
 -- Elige una mascota al azar de esa rareza.
@@ -123,7 +139,7 @@ function CreatureService.AddCreature(player: Player, creature: Creature, variant
 	for _, data in profile.Creatures do
 		used[data.Slot] = true
 	end
-	for slot = 1, #base.CreatureSlots do
+	for slot = 1, usableSlots(base, profile.BaseLevel) do
 		if not used[slot] then
 			table.insert(profile.Creatures, { CreatureId = creature.Id, Slot = slot, Variant = chosen.Id })
 			spawnModel(player, base, creature, chosen, slot)
@@ -191,10 +207,29 @@ function CreatureService.TrySell(who: Player, owner: Player, slot: number, model
 end
 
 -- Cuando el jugador recibe su base: pone las mascotas que ya tenía.
+-- Si alguna estaba en un lugar que no existe (datos de una versión vieja del mapa), la acomoda en un estante libre.
 function CreatureService.SetupBase(player: Player, base: Base)
 	local profile = PlayerDataService.Get(player)
 	if not profile then
 		return
+	end
+	local used: { [number]: boolean } = {}
+	local misplaced: { PlayerDataService.CreatureData } = {}
+	for _, data in profile.Creatures do
+		if base.CreatureSlots[data.Slot] and not used[data.Slot] then
+			used[data.Slot] = true
+		else
+			table.insert(misplaced, data)
+		end
+	end
+	for _, data in misplaced do
+		for slot = 1, #base.CreatureSlots do
+			if not used[slot] then
+				used[slot] = true
+				data.Slot = slot
+				break
+			end
+		end
 	end
 	for _, data in profile.Creatures do
 		local creature = Creatures.Get(data.CreatureId)

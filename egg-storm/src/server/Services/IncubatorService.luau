@@ -1,7 +1,11 @@
 --!strict
--- IncubatorService: las incubadoras de cada base.
--- El jugador llega con un huevo, aprieta "Incubate", el huevo queda adentro con una cuenta regresiva
--- y al terminar se abre: sale una mascota que va a un pad libre de la base.
+-- IncubatorService: los 3 nidos-incubadora que hay ADELANTE de cada base.
+--   Empty      → "EMPTY". Si llevás un huevo, aparece "Place Egg".
+--   Incubating → el huevo está en el nido, con la luz y las chispitas de su rareza y la cuenta regresiva.
+--   Ready      → el huevo se agrieta, dice "READY!" y aparece "Open". Al abrirlo sale la mascota
+--                y va al primer estante libre de la torre.
+-- Los nidos que todavía no compraste (mejora "Extra Incubator") dicen LOCKED.
+-- Solo el dueño de la base puede usar sus incubadoras.
 --
 -- Cada huevo incubando es un objeto del servidor (IncubatingEgg) con su dueño, rareza, variante y tiempo.
 -- Así más adelante es fácil agregar el robo: alcanza con sacar el IncubatingEgg de una incubadora.
@@ -22,27 +26,31 @@ type Base = BaseService.Base
 type Rarity = Config.Rarity
 type Variant = Config.Variant
 
+export type IncubatorState = "Empty" | "Incubating" | "Ready" | "Hatching"
+
 export type IncubatingEgg = {
 	Id: number,
 	Owner: Player,
 	Rarity: Rarity,
 	Variant: Variant,
 	TotalTime: number, -- segundos que tarda en total (con la mejora de velocidad aplicada)
-	HatchAt: number, -- os.clock() en el que se abre
+	HatchAt: number, -- os.clock() en el que queda listo
 	Part: BasePart,
-	Hatching: boolean, -- true mientras corre la animación de apertura (unos segundos antes de que salga la mascota)
 }
 
 export type Incubator = {
 	Owner: Player,
 	Base: Base,
 	Slot: number,
-	Model: Model,
-	Root: BasePart,
-	Dome: BasePart,
+	Pedestal: BasePart,
+	EggSlot: Attachment, -- donde se apoya el huevo
+	Light: PointLight,
+	Sparkles: ParticleEmitter,
 	Prompt: ProximityPrompt,
-	Title: TextLabel,
-	Timer: TextLabel,
+	Board: Frame, -- cartelito de arriba (cambia de color según el estado)
+	Label: TextLabel,
+	Parts: { Instance }, -- todo lo que agregamos al nido (se borra cuando el dueño se va)
+	State: IncubatorState,
 	Egg: IncubatingEgg?,
 }
 
@@ -56,152 +64,171 @@ local nextEggId = 0
 local notifyRemote = Remotes.Event("Notify")
 local hatchedRemote = Remotes.Event("Hatched")
 
-local METAL = Color3.fromRGB(90, 95, 110)
-local GLOW = Color3.fromRGB(255, 170, 60)
+local EGG_SIZE = Vector3.new(2.4, 3.2, 2.4)
+local EGG_HEIGHT = 3.5 -- el huevo va 3.5 studs arriba del centro del pedestal (sobre el nido)
+local BOARD_COLORS: { [string]: Color3 } = {
+	Empty = Color3.fromRGB(90, 90, 95),
+	Incubating = Color3.fromRGB(10, 31, 77),
+	Ready = Color3.fromRGB(201, 138, 0),
+	Hatching = Color3.fromRGB(201, 138, 0),
+}
+local FULL_MESSAGE = "Your shelves are full! Sell a creature (hold E on it) to make room."
 
 -- ===== Ayudantes visuales =====
 
-local function makePart(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
-	local p = Instance.new("Part")
-	p.Name = name
-	p.Size = size
-	p.CFrame = cframe
-	p.Color = color
-	p.Material = Enum.Material.SmoothPlastic
-	p.TopSurface = Enum.SurfaceType.Smooth
-	p.BottomSurface = Enum.SurfaceType.Smooth
-	p.Anchored = true
-	p.Parent = parent
-	return p
+local function formatTime(seconds: number): string
+	local s = math.max(0, math.ceil(seconds))
+	return string.format("%02d:%02d", s // 60, s % 60)
 end
 
--- Cilindro parado apoyado en "bottom"
-local function makeDisc(name: string, height: number, diameter: number, bottom: Vector3, color: Color3, parent: Instance): Part
-	local p = makePart(name, Vector3.new(height, diameter, diameter), CFrame.new(bottom + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), color, parent)
-	p.Shape = Enum.PartType.Cylinder
-	return p
+local function setBoard(incubator: Incubator, text: string)
+	incubator.Board.BackgroundColor3 = BOARD_COLORS[incubator.State] or BOARD_COLORS.Empty
+	incubator.Label.Text = text
 end
 
-local function makeLabel(name: string, parent: Instance, y: number, height: number, color: Color3): TextLabel
+local function setState(incubator: Incubator, state: IncubatorState)
+	incubator.State = state
+	incubator.Prompt:SetAttribute("State", state) -- el cliente decide si mostrar el botón (IncubatorPrompts)
+	incubator.Prompt.ActionText = if state == "Ready" then "Open" else "Place Egg"
+	local egg = incubator.Egg
+	local color = if egg then (if egg.Rarity.Id == "Secret" then Color3.new(1, 1, 1) else egg.Part.Color) else Color3.new(1, 1, 1)
+	incubator.Light.Enabled = state ~= "Empty"
+	incubator.Light.Color = color
+	incubator.Sparkles.Enabled = state == "Incubating"
+	incubator.Sparkles.Color = ColorSequence.new(color)
+end
+
+-- Cartelito flotante con fondo de color (BillboardGui)
+local function makeBoard(adornee: Attachment, parent: Instance): (BillboardGui, Frame, TextLabel)
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "TimerGui"
+	gui.Adornee = adornee
+	gui.Size = UDim2.fromScale(6, 2)
+	gui.StudsOffset = Vector3.new(0, 4, 0)
+	gui.MaxDistance = 90
+	gui.Parent = parent
+	local board = Instance.new("Frame")
+	board.Size = UDim2.fromScale(1, 1)
+	board.BackgroundColor3 = BOARD_COLORS.Empty
+	board.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.4, 0)
+	corner.Parent = board
 	local label = Instance.new("TextLabel")
-	label.Name = name
-	label.Size = UDim2.fromScale(1, height)
-	label.Position = UDim2.fromScale(0, y)
+	label.Size = UDim2.fromScale(0.9, 0.8)
+	label.Position = UDim2.fromScale(0.05, 0.1)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.FredokaOne
 	label.TextScaled = true
-	label.TextColor3 = color
-	label.Parent = parent
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Parent = label
-	return label
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Parent = board
+	return gui, board, label
 end
 
-local function formatTime(seconds: number): string
-	local s = math.max(0, math.ceil(seconds))
-	return string.format("%d:%02d", s // 60, s % 60)
-end
-
--- ===== Armado de una incubadora =====
-
-local function padTop(pad: BasePart): Vector3
-	-- El pad es un cilindro acostado: su grosor es Size.X
-	return pad.Position + Vector3.new(0, pad.Size.X / 2, 0)
-end
+-- ===== Armado de una incubadora (sobre el nido que armó MapBuilder) =====
 
 local function buildIncubator(player: Player, base: Base, slot: number): Incubator
-	local pad = base.IncubatorSlots[slot]
-	local bottom = padTop(pad)
+	local pedestal = base.IncubatorSlots[slot]
+	local parts: { Instance } = {}
 
-	local model = Instance.new("Model")
-	model.Name = `Incubator{slot}`
+	local eggSlot = Instance.new("Attachment")
+	eggSlot.Name = "EggSlot"
+	eggSlot.Position = Vector3.new(0, EGG_HEIGHT, 0)
+	eggSlot.Parent = pedestal
+	table.insert(parts, eggSlot)
 
-	local root = makeDisc("Base", 1.6, 8, bottom, METAL, model)
-	local ring = makeDisc("Ring", 0.4, 8.4, bottom + Vector3.new(0, 1.6, 0), GLOW, model)
-	ring.Material = Enum.Material.Neon
-	local dome = makePart("Dome", Vector3.new(6.5, 6.5, 6.5), CFrame.new(bottom + Vector3.new(0, 4.6, 0)), Color3.fromRGB(200, 240, 255), model)
-	dome.Shape = Enum.PartType.Ball
-	dome.Material = Enum.Material.Glass
-	dome.Transparency = 0.6
-	dome.CanCollide = false
-	model.PrimaryPart = root
+	local light = Instance.new("PointLight")
+	light.Name = "GlowLight"
+	light.Range = 10
+	light.Brightness = 2
+	light.Enabled = false
+	light.Parent = pedestal
+	table.insert(parts, light)
 
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "Display"
-	gui.Size = UDim2.fromScale(7, 2.6)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, 5.2, 0)
-	gui.MaxDistance = 80
-	gui.Parent = dome
-	local title = makeLabel("Title", gui, 0, 0.5, Color3.new(1, 1, 1))
-	local timer = makeLabel("Timer", gui, 0.5, 0.5, Color3.fromRGB(255, 230, 120))
+	local sparkles = Instance.new("ParticleEmitter")
+	sparkles.Name = "Sparkles"
+	sparkles.Rate = 5
+	sparkles.LightEmission = 1
+	sparkles.Lifetime = NumberRange.new(0.8, 1.4)
+	sparkles.Speed = NumberRange.new(1, 2)
+	sparkles.SpreadAngle = Vector2.new(180, 180)
+	sparkles.Size = NumberSequence.new(0.3, 0)
+	sparkles.Enabled = false
+	sparkles.Parent = eggSlot
+
+	local gui, board, label = makeBoard(eggSlot, pedestal)
+	table.insert(parts, gui)
 
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Incubate"
+	prompt.ActionText = "Place Egg"
 	prompt.ObjectText = "Incubator"
 	prompt.HoldDuration = Config.Incubators.HoldTime
 	prompt.MaxActivationDistance = Config.Incubators.Distance
 	prompt.RequiresLineOfSight = false
-	-- El cliente muestra este prompt solo en su propia base y solo si lleva un huevo (ver IncubatorPrompts).
+	-- El cliente muestra este botón solo en su propia base y cuando sirve (ver IncubatorPrompts).
 	prompt:SetAttribute("BaseId", base.Id)
-	prompt:SetAttribute("Available", true)
 	CollectionService:AddTag(prompt, "IncubatorPrompt")
-	prompt.Parent = root
-
-	model.Parent = base.Model
+	prompt.Parent = pedestal
+	table.insert(parts, prompt)
 
 	local incubator: Incubator = {
 		Owner = player,
 		Base = base,
 		Slot = slot,
-		Model = model,
-		Root = root,
-		Dome = dome,
+		Pedestal = pedestal,
+		EggSlot = eggSlot,
+		Light = light,
+		Sparkles = sparkles,
 		Prompt = prompt,
-		Title = title,
-		Timer = timer,
+		Board = board,
+		Label = label,
+		Parts = parts,
+		State = "Empty",
 		Egg = nil,
 	}
 	prompt.Triggered:Connect(function(who)
-		IncubatorService.TryIncubate(who, incubator)
+		if incubator.State == "Ready" then
+			IncubatorService.TryOpen(who, incubator)
+		else
+			IncubatorService.TryIncubate(who, incubator)
+		end
 	end)
 	return incubator
 end
 
 local function showEmpty(incubator: Incubator)
-	incubator.Title.Text = "Empty"
-	incubator.Title.TextColor3 = Color3.new(1, 1, 1)
-	incubator.Timer.Text = "Bring an egg!"
-	incubator.Prompt:SetAttribute("Available", true)
+	incubator.Egg = nil
+	setState(incubator, "Empty")
+	setBoard(incubator, "EMPTY")
 end
 
--- Cartel "LOCKED" sobre los pads de incubadoras que todavía no se compraron (fase 4).
+-- Cartel "LOCKED" sobre los nidos que todavía no se compraron.
 local function addLockedSign(player: Player, base: Base, slot: number)
-	local pad = base.IncubatorSlots[slot]
-	local holder = Instance.new("Part")
-	holder.Name = `LockedSlot{slot}`
-	holder.Size = Vector3.new(1, 1, 1)
-	holder.CFrame = CFrame.new(padTop(pad) + Vector3.new(0, 3, 0))
-	holder.Transparency = 1
-	holder.Anchored = true
-	holder.CanCollide = false
-	holder.CanQuery = false
-	holder.CanTouch = false
-
+	local pedestal = base.IncubatorSlots[slot]
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromScale(6, 1.5)
-	gui.MaxDistance = 60
-	gui.Parent = holder
-	local label = makeLabel("Locked", gui, 0, 1, Color3.fromRGB(200, 200, 200))
-	label.Text = "LOCKED"
+	gui.Name = "LockedGui"
+	gui.Size = UDim2.fromScale(6, 1.6)
+	gui.StudsOffset = Vector3.new(0, 4, 0)
+	gui.MaxDistance = 70
+	gui.Parent = pedestal
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = Color3.fromRGB(210, 210, 210)
+	label.Text = "🔒 LOCKED"
+	label.Parent = gui
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 2
+	stroke.Parent = label
 
-	holder.Parent = base.Model
 	local signs = lockedSignsByPlayer[player]
 	if not signs then
 		signs = {}
 		lockedSignsByPlayer[player] = signs
 	end
-	signs[slot] = holder
+	signs[slot] = gui
 end
 
 -- ===== Huevos dentro de la incubadora =====
@@ -225,13 +252,46 @@ local function speedLevel(player: Player): number
 	return if profile then profile.IncubationSpeedLevel else 1
 end
 
+-- El huevo se agrieta: unas rayitas oscuras sobre la cáscara
+local function crackEgg(egg: IncubatingEgg)
+	for i, offset in { Vector3.new(0, 0.4, -1.15), Vector3.new(0.5, -0.1, -1.1), Vector3.new(-0.4, 0.8, -1.05) } do
+		local crack = Instance.new("Part")
+		crack.Name = "Crack"
+		crack.Size = Vector3.new(0.15, 0.9, 0.1)
+		crack.CFrame = egg.Part.CFrame * CFrame.new(offset) * CFrame.Angles(0, 0, math.rad(if i % 2 == 0 then 35 else -35))
+		crack.Color = Color3.fromRGB(40, 30, 25)
+		crack.Material = Enum.Material.SmoothPlastic
+		crack.Anchored = true
+		crack.CanCollide = false
+		crack.CanQuery = false
+		crack.CanTouch = false
+		crack.Parent = egg.Part
+	end
+end
+
+local function setReady(incubator: Incubator)
+	local egg = incubator.Egg
+	if not egg then
+		return
+	end
+	setState(incubator, "Ready")
+	setBoard(incubator, "READY!")
+	crackEgg(egg)
+end
+
 local function startIncubation(incubator: Incubator, rarity: Rarity, variant: Variant, remaining: number?)
 	local total = Config.GetIncubationTime(rarity, speedLevel(incubator.Owner))
 	local left = math.clamp(remaining or total, 0, total)
 
-	local eggPart = makePart("Egg", Vector3.new(2.4, 3.2, 2.4), CFrame.new(incubator.Dome.Position), rarity.Color, incubator.Model)
+	local eggPart = Instance.new("Part")
+	eggPart.Name = "Egg"
+	eggPart.Size = EGG_SIZE
+	eggPart.CFrame = CFrame.new(incubator.EggSlot.WorldPosition)
+	eggPart.Anchored = true
 	eggPart.CanCollide = false
-	EggService.DecorateEgg(eggPart, rarity, variant) -- mismo color, material y brillo que en la arena
+	eggPart.CanQuery = false
+	EggService.DecorateEgg(eggPart, rarity, variant) -- mismo color, material y brillo que en el cañón
+	eggPart.Parent = incubator.Pedestal.Parent
 
 	nextEggId += 1
 	incubator.Egg = {
@@ -242,14 +302,12 @@ local function startIncubation(incubator: Incubator, rarity: Rarity, variant: Va
 		TotalTime = total,
 		HatchAt = os.clock() + left,
 		Part = eggPart :: BasePart,
-		Hatching = false,
 	}
-	incubator.Title.Text = Config.WithVariant(variant, `{rarity.DisplayName} Egg`)
-	incubator.Title.TextColor3 = if variant.Id ~= "Normal" then variant.Color
-		elseif rarity.Id == "Secret" then Color3.fromRGB(230, 230, 230)
-		else rarity.Color
-	incubator.Timer.Text = formatTime(left)
-	incubator.Prompt:SetAttribute("Available", false)
+	setState(incubator, "Incubating")
+	setBoard(incubator, formatTime(left))
+	if left <= 0 then
+		setReady(incubator)
+	end
 end
 
 local function burst(position: Vector3, color: Color3, parent: Instance)
@@ -261,18 +319,20 @@ local function burst(position: Vector3, color: Color3, parent: Instance)
 	holder.CanCollide = false
 	holder.CanQuery = false
 	holder.CanTouch = false
+	-- Confeti del color de la rareza
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Color = ColorSequence.new(color)
-	emitter.LightEmission = 1
+	emitter.LightEmission = 0.5
 	emitter.Rate = 0
-	emitter.Lifetime = NumberRange.new(0.5, 1)
-	emitter.Speed = NumberRange.new(12, 20)
+	emitter.Lifetime = NumberRange.new(0.8, 1.4)
+	emitter.Speed = NumberRange.new(14, 24)
 	emitter.SpreadAngle = Vector2.new(180, 180)
-	emitter.Size = NumberSequence.new(0.8, 0)
+	emitter.Acceleration = Vector3.new(0, -30, 0)
+	emitter.Size = NumberSequence.new(0.6, 0.3)
 	emitter.Parent = holder
 	holder.Parent = parent
-	emitter:Emit(40)
-	task.delay(1.5, function()
+	emitter:Emit(60)
+	task.delay(2, function()
 		holder:Destroy()
 	end)
 end
@@ -285,83 +345,53 @@ local function finishHatch(incubator: Incubator, egg: IncubatingEgg, creature: C
 	end
 	local slot = CreatureService.AddCreature(incubator.Owner, creature, egg.Variant)
 	if not slot then
-		-- No hay lugar para la mascota: el huevo espera y reintenta en un rato
-		egg.Hatching = false
-		egg.HatchAt = os.clock() + 2
-		incubator.Timer.Text = "No room!"
+		-- Se llenó mientras se abría: el huevo vuelve a quedar listo
+		setReady(incubator)
+		notifyRemote:FireClient(incubator.Owner, FULL_MESSAGE)
 		return
 	end
-	burst(egg.Part.Position, egg.Part.Color, incubator.Model)
+	burst(egg.Part.Position, egg.Part.Color, incubator.Pedestal.Parent :: Instance)
 	egg.Part:Destroy()
-	incubator.Egg = nil
 	showEmpty(incubator)
 	PlayerDataService.RecordHatch(incubator.Owner)
 	TutorialService.OnEvent(incubator.Owner, "Hatched")
 end
 
--- Empieza la apertura: le avisa al dueño (su pantalla hace temblar y brillar el huevo)
--- y unos segundos después sale la mascota. Así la mascota no aparece antes de la animación.
-local function hatch(incubator: Incubator)
-	local egg = incubator.Egg
-	if not egg or egg.Hatching then
-		return
-	end
-	local player = incubator.Owner
-	if CreatureService.GetFreeSlotCount(player) <= 0 then
-		egg.HatchAt = os.clock() + 2
-		incubator.Timer.Text = "No room!"
-		return
-	end
-	local creature = CreatureService.RollCreature(egg.Rarity.Id)
-	if not creature then
-		warn(`[IncubatorService] No creatures defined for rarity {egg.Rarity.Id}`)
-		return
-	end
-
-	egg.Hatching = true
-	incubator.Timer.Text = "Hatching!"
-	hatchedRemote:FireClient(player, creature.DisplayName, egg.Rarity.Id, egg.Part, egg.Variant.Id)
-	task.delay(Config.Effects.HatchAnimationTime, finishHatch, incubator, egg, creature)
-end
-
 -- ===== API pública =====
 
--- Lo llama el ProximityPrompt "Incubate". Valida TODO en el servidor.
-function IncubatorService.TryIncubate(player: Player, incubator: Incubator)
+local function canUse(player: Player, incubator: Incubator): boolean
 	local now = os.clock()
 	if now - (lastAttempt[player] or 0) < Config.Incubators.Cooldown then
-		return
+		return false
 	end
 	lastAttempt[player] = now
-
 	if incubator.Owner ~= player then
 		notifyRemote:FireClient(player, "This isn't your base!")
-		return
+		return false
 	end
-	if incubator.Egg then
-		return
-	end
-	if not EggService.GetCarriedEgg(player) then
-		notifyRemote:FireClient(player, "Grab an egg first!")
-		return
-	end
-
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart") then
-		return
+		return false
 	end
-	if (root.Position - incubator.Root.Position).Magnitude > Config.Incubators.Distance + 5 then
-		return
-	end
+	return (root.Position - incubator.Pedestal.Position).Magnitude <= Config.Incubators.Distance + 5
+end
 
-	-- Cada huevo necesita un pad libre para su mascota (contando los que ya se están incubando)
+-- "Place Egg": pone el huevo que llevás en el nido. Valida TODO en el servidor.
+function IncubatorService.TryIncubate(player: Player, incubator: Incubator)
+	if not canUse(player, incubator) or incubator.State ~= "Empty" then
+		return
+	end
+	if not EggService.GetCarriedEgg(player) then
+		notifyRemote:FireClient(player, "Grab an egg in the canyon first!")
+		return
+	end
+	-- Cada huevo necesita un estante libre para su mascota (contando los que ya se están incubando)
 	if CreatureService.GetFreeSlotCount(player) - countIncubating(player) <= 0 then
-		notifyRemote:FireClient(player, "Your creature spots are full! Sell a creature (hold E on it) to make room.")
+		notifyRemote:FireClient(player, FULL_MESSAGE)
 		return
 	end
-
 	local rarity, variant = EggService.TakeCarriedEgg(player)
 	if not rarity or not variant then
 		return
@@ -370,7 +400,32 @@ function IncubatorService.TryIncubate(player: Player, incubator: Incubator)
 	TutorialService.OnEvent(player, "Incubated")
 end
 
--- Cuando el jugador recibe su base: arma sus incubadoras y restaura los huevos que tenía.
+-- "Open": abre un huevo listo. La pantalla del dueño hace temblar y explotar el huevo,
+-- y unos segundos después sale la mascota (así no aparece antes de la animación).
+function IncubatorService.TryOpen(player: Player, incubator: Incubator)
+	if not canUse(player, incubator) or incubator.State ~= "Ready" then
+		return
+	end
+	local egg = incubator.Egg
+	if not egg then
+		return
+	end
+	if CreatureService.GetFreeSlotCount(player) <= 0 then
+		notifyRemote:FireClient(player, FULL_MESSAGE)
+		return
+	end
+	local creature = CreatureService.RollCreature(egg.Rarity.Id)
+	if not creature then
+		warn(`[IncubatorService] No creatures defined for rarity {egg.Rarity.Id}`)
+		return
+	end
+	setState(incubator, "Hatching")
+	setBoard(incubator, "OPENING!")
+	hatchedRemote:FireClient(player, creature.DisplayName, egg.Rarity.Id, egg.Part, egg.Variant.Id)
+	task.delay(Config.Effects.HatchAnimationTime, finishHatch, incubator, egg, creature)
+end
+
+-- Cuando el jugador recibe su base: prepara sus nidos y restaura los huevos que tenía.
 function IncubatorService.SetupBase(player: Player, base: Base)
 	local profile = PlayerDataService.Get(player)
 	if not profile then
@@ -390,7 +445,7 @@ function IncubatorService.SetupBase(player: Player, base: Base)
 		addLockedSign(player, base, slot)
 	end
 
-	-- Huevos que estaban incubando cuando se fue (fase 7)
+	-- Huevos que estaban incubando cuando se fue (el tiempo no corre mientras no estás)
 	for _, data in profile.Incubating do
 		local incubator = list[data.Slot]
 		local rarity = Config.GetRarity(data.RarityId)
@@ -401,7 +456,7 @@ function IncubatorService.SetupBase(player: Player, base: Base)
 	profile.Incubating = {}
 end
 
--- Foto de los huevos que se están incubando, para guardarla (fase 7).
+-- Foto de los huevos de las incubadoras, para guardarla (los listos se guardan con 0 segundos).
 function IncubatorService.GetSnapshot(player: Player): { PlayerDataService.IncubatingData }
 	local snapshot = {}
 	local now = os.clock()
@@ -412,21 +467,31 @@ function IncubatorService.GetSnapshot(player: Player): { PlayerDataService.Incub
 				Slot = incubator.Slot,
 				RarityId = egg.Rarity.Id,
 				Variant = egg.Variant.Id,
-				Remaining = math.max(0, egg.HatchAt - now),
+				Remaining = if incubator.State == "Incubating" then math.max(0, egg.HatchAt - now) else 0,
 			})
 		end
 	end
 	return snapshot
 end
 
--- Cuando el jugador se va: guarda los huevos en su perfil y limpia la base.
+-- El estado de un nido (para el cliente del tutorial y las pruebas)
+function IncubatorService.GetIncubators(player: Player): { Incubator }
+	return getIncubators(player)
+end
+
+-- Cuando el jugador se va: guarda los huevos en su perfil y deja los nidos vacíos.
 function IncubatorService.ClearBase(player: Player)
 	local profile = PlayerDataService.Get(player)
 	if profile then
 		profile.Incubating = IncubatorService.GetSnapshot(player)
 	end
 	for _, incubator in getIncubators(player) do
-		incubator.Model:Destroy()
+		if incubator.Egg then
+			incubator.Egg.Part:Destroy()
+		end
+		for _, instance in incubator.Parts do
+			instance:Destroy()
+		end
 	end
 	local signs = lockedSignsByPlayer[player]
 	if signs then
@@ -439,7 +504,7 @@ function IncubatorService.ClearBase(player: Player)
 	lastAttempt[player] = nil
 end
 
--- Suma una incubadora (la compra la hace la fase 4). Devuelve true si se pudo.
+-- Suma una incubadora (mejora "Extra Incubator"). Devuelve true si se pudo.
 function IncubatorService.AddIncubator(player: Player): boolean
 	local base = BaseService.GetBase(player)
 	local profile = PlayerDataService.Get(player)
@@ -463,13 +528,13 @@ function IncubatorService.AddIncubator(player: Player): boolean
 	return true
 end
 
--- Recalcula los tiempos cuando cambia el nivel de "Incubation Speed" (fase 4).
+-- Recalcula los tiempos cuando cambia el nivel de "Incubation Speed".
 -- Se conserva el progreso: si iba por la mitad, sigue por la mitad del tiempo nuevo.
 function IncubatorService.RecalculateTimes(player: Player)
 	local now = os.clock()
 	for _, incubator in getIncubators(player) do
 		local egg = incubator.Egg
-		if egg and not egg.Hatching then
+		if egg and incubator.State == "Incubating" then
 			local progress = 1 - math.max(0, egg.HatchAt - now) / egg.TotalTime
 			local newTotal = Config.GetIncubationTime(egg.Rarity, speedLevel(player))
 			egg.TotalTime = newTotal
@@ -479,7 +544,7 @@ function IncubatorService.RecalculateTimes(player: Player)
 end
 
 function IncubatorService.Init()
-	-- Reloj de las incubadoras: actualiza las cuentas regresivas y abre los huevos que terminaron.
+	-- Reloj de las incubadoras: actualiza las cuentas regresivas y marca los huevos que terminaron.
 	task.spawn(function()
 		while true do
 			task.wait(0.25)
@@ -487,12 +552,12 @@ function IncubatorService.Init()
 			for _, list in incubatorsByPlayer do
 				for _, incubator in list do
 					local egg = incubator.Egg
-					if egg and not egg.Hatching then
+					if egg and incubator.State == "Incubating" then
 						local remaining = egg.HatchAt - now
 						if remaining <= 0 then
-							hatch(incubator)
+							setReady(incubator)
 						else
-							incubator.Timer.Text = formatTime(remaining)
+							setBoard(incubator, formatTime(remaining))
 						end
 					end
 				end

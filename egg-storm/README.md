@@ -6,14 +6,15 @@ Juego de Roblox (MVP). El código está en Luau y se sincroniza con Roblox Studi
 
 ```
 egg-storm/
-├── default.project.json      ← le dice a Rojo dónde va cada carpeta dentro de Studio
+├── default.project.json      ← le dice a Rojo dónde va cada carpeta dentro de Studio (y pone la luz en "Future")
 ├── rokit.toml                ← versión de Rojo del proyecto (si usás Rokit)
+├── MAPA_SPEC.md              ← cómo es el mapa (medidas, colores, zonas): el código lo sigue
 ├── PRUEBAS.md                ← prueba guiada con 2 jugadores
 ├── PUBLICAR.md               ← lo que falta para publicar
 ├── dev-tests/                ← pruebas automáticas (opcional, ver su README)
 └── src/
     ├── shared/   → ReplicatedStorage.Shared           (lo ven servidor y cliente)
-    │   ├── Config.luau                                 todos los números de balance
+    │   ├── Config.luau                                 todos los números: mapa, zonas, cuevas, rarezas, olas, eventos...
     │   ├── Creatures.luau                              catálogo de mascotas
     │   ├── Upgrades.luau                               niveles, precios y textos de las mejoras
     │   ├── Format.luau                                 números lindos (12,345)
@@ -21,19 +22,20 @@ egg-storm/
     ├── server/   → ServerScriptService.Server          (solo servidor)
     │   ├── Main.server.luau                            arranca los servicios
     │   └── Services/
-    │       ├── MapBuilder.luau                         arma el mapa placeholder (playa + mar, bases estantería)
+    │       ├── MapBuilder.luau                         arma la isla, el cañón, las cuevas, las bases, el mar y el volcán
     │       ├── BaseService.luau                        asigna/libera bases
+    │       ├── BaseFloors.luau                         abre y cierra los pisos de la torre (candados)
     │       ├── PlayerDataService.luau                  datos de cada jugador y guardado (DataStore)
-    │       ├── EggService.luau                         lluvia de huevos (rareza + variante), meteoritos, agarrar y llevar
-    │       ├── IncubatorService.luau                   incubadoras y apertura de huevos
-    │       ├── CreatureService.luau                    mascotas en la base, plata por segundo y venta
+    │       ├── EggService.luau                         huevos por zona (rareza + variante), meteoritos, agarrar y llevar
+    │       ├── IncubatorService.luau                   nidos-incubadora: poner huevo, READY!, abrir
+    │       ├── CreatureService.luau                    mascotas en los estantes, plata por segundo y venta
     │       ├── CreatureModels.luau                     modelos placeholder de las mascotas
-    │       ├── UpgradeService.luau                     compra y aplica las mejoras
-    │       ├── BaseFloors.luau                         estante del medio de la base ("Base Floor") con su escalera
+    │       ├── UpgradeService.luau                     compra y aplica las mejoras (Tienda del lobby)
+    │       ├── WaveService.luau                        olas del volcán y cuevas-refugio
+    │       ├── EventService.luau                       eventos especiales (Golden Rain, Lucky Storm...)
+    │       ├── StallService.luau                       puestos del lobby que todavía no tienen sistema
     │       ├── TutorialService.luau                    pasos del tutorial para jugadores nuevos
-    │       ├── LeaderboardService.luau                 tableros de récords del lobby (top 10 de todos los servidores)
-    │       ├── EventService.luau                       evento especial de cada tormenta (Golden Rain, Lucky Storm...)
-    │       └── StormService.luau                       ciclo de tormenta y ola
+    │       └── LeaderboardService.luau                 tableros de récords (top 10 de todos los servidores)
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
         ├── Main.client.luau
         ├── UIKit.luau                                  estilo común de la interfaz (colores, letra, ajuste a pantalla)
@@ -42,11 +44,12 @@ egg-storm/
         ├── HatchReveal.luau                            animación de apertura y cartel "You got..."
         ├── Tutorial.luau                               cartel del tutorial y flecha que guía
         ├── WelcomeBack.luau                            cartel "Welcome back!" con lo que ganaste mientras no estabas
-        ├── EventBoard.luau                             escribe el cartel colgante del lobby (próxima tormenta y evento)
-        ├── IncubatorPrompts.luau                       muestra "Incubate" solo cuando corresponde
+        ├── IncubatorPrompts.luau                       muestra "Place Egg" / "Open" solo cuando corresponde
         ├── SellPrompts.luau                            el botón "Sell" de cada mascota solo lo ve su dueño
         ├── UpgradePanel.luau                           ventana de mejoras
-        └── StormClient.luau                            cartel de fase y de evento, "WAVE INCOMING", lluvia y la ola
+        ├── WaveClient.luau                             próxima ola, "THE WAVE IS COMING!", la ola y los eventos
+        ├── EventBoard.luau                             escribe el tablero de eventos del puesto de Rankings
+        └── EggAnimator.luau                            hace girar y flotar los huevos del piso
 ```
 
 Convención de nombres de Rojo:
@@ -82,6 +85,6 @@ Convención de nombres de Rojo:
 
 Hay que publicar el lugar una vez (File → Publish to Roblox) para poder cambiar estas opciones:
 - **Máximo 8 jugadores**: Home → Game Settings → Places → (tu lugar) → Max Players = 8.
-- **Guardado (fase 7)**: Game Settings → Security → activar **Enable Studio Access to API Services**.
+- **Guardado**: Game Settings → Security → activar **Enable Studio Access to API Services**.
   Sin esto, en Studio se puede jugar igual pero **no se guarda nada** (aparece un aviso amarillo en Output).
   El lugar tiene que estar publicado en Roblox para que el DataStore funcione.

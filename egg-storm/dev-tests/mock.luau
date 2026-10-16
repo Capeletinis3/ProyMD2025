@@ -84,7 +84,7 @@ end })
 -- Instances
 ALL_PARTS = {}
 local Inst = {}
-local PART_CLASSES = { Part = true, TrussPart = true }
+local PART_CLASSES = { Part = true, TrussPart = true, WedgePart = true, SpawnLocation = true }
 local function isA(self, class)
 	if self.ClassName == class then return true end
 	if class == "BasePart" and PART_CLASSES[self.ClassName] then return true end
@@ -113,6 +113,7 @@ Inst.__index = function(self, k)
 		GetAttribute = function(s, k2) return rawget(s, "_attrs")[k2] end,
 		Destroy = function(s) s.Parent = nil end,
 		AddTag = function() end,
+		RemoveTag = function() end,
 		GetFullName = function(s) local p = rawget(s, "_props").Parent; return (p and p:GetFullName() .. "." or "") .. s.Name end,
 	}
 	if methods[k] then return methods[k] end

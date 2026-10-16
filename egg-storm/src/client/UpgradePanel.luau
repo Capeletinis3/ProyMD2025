@@ -24,8 +24,9 @@ local C = UIKit.Colors
 local UpgradePanel = {}
 
 local CLOSE_DISTANCE = 20 -- si te alejás más que esto del panel, la ventana se cierra sola
-local WIDTH, HEIGHT = 680, 500
 local ROW_HEIGHT, ROW_GAP, HEADER = 88, 12, 84
+-- El alto de la ventana depende de cuántas mejoras hay
+local WIDTH, HEIGHT = 680, HEADER + #Upgrades.Order * (ROW_HEIGHT + ROW_GAP) + 16
 
 local ICONS: { [string]: string } = {
 	IncubationSpeed = "⏩",

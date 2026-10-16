@@ -150,6 +150,7 @@ end
 TweenInfo = { new = function(...) return { ... } end }
 local CollectionService = svc("CollectionService")
 rawget(CollectionService, "_props").AddTag = function() end
+rawget(CollectionService, "_props").RemoveTag = function() end
 local Players = svc("Players")
 local playerList = {}
 rawget(Players, "_props").GetPlayers = function() return playerList end
@@ -204,6 +205,7 @@ do
 	local terrain = Instance.new("Terrain")
 	terrain.Name = "Terrain"
 	terrain.Parent = ws
+	rawget(terrain, "_props").FillBlock = function() end
 end
 
 -- Phase 7: fake DataStore with failure injection, BindToClose, IsStudio, IsDescendantOf

@@ -1,0 +1,94 @@
+local C = __mod("Config")
+C.Events.Chance = 0 -- sin eventos (salvo que la prueba los prenda a mano)
+C.Waves.MinInterval = 1e6; C.Waves.MaxInterval = 1e6 -- sin olas
+for _, r in C.Rarities do r.BaseIncubationTime = 100 end
+--@@MAIN
+local Config = __mod("Config")
+local PDS = __mod("PlayerDataService")
+local BaseService = __mod("BaseService")
+local Eggs = __mod("EggService")
+local Inc = __mod("IncubatorService")
+local Remotes = __mod("Remotes")
+local Workspace = game:GetService("Workspace")
+local fails = 0
+local function check(cond, msg)
+	if cond then print("PASS", msg) else fails += 1; print("FAIL", msg) end
+end
+local function lastNotify(p)
+	for i = #REMOTE_LOG, 1, -1 do
+		local e = REMOTE_LOG[i]
+		if e.player == p and e.remote == "Notify" then return e.args[1] end
+	end
+end
+-- Un huevo del piso (de una zona, si se pide)
+local function groundEgg(zoneIndex)
+	for _, child in Workspace.Eggs:GetChildren() do
+		local prompt = child:FindFirstChild("ProximityPrompt")
+		if prompt and prompt.Enabled then
+			local ok = true
+			if zoneIndex then
+				local x0, x1 = Config.ZoneRange(zoneIndex)
+				ok = child.Position.X >= x0 and child.Position.X < x1
+			end
+			if ok then return child end
+		end
+	end
+end
+local function grab(p, zoneIndex)
+	local egg = groundEgg(zoneIndex)
+	if not egg then return nil end
+	MOVE_TO(p, egg.Position); egg.ProximityPrompt.Triggered:Fire(p); ADVANCE(0.6)
+	return egg
+end
+local function nest(p, slot) return BaseService.GetBase(p).IncubatorSlots[slot or 1] end
+local function nestState(p, slot)
+	local prompt = nest(p, slot):FindFirstChild("ProximityPrompt")
+	return prompt and prompt:GetAttribute("State")
+end
+local function nestText(p, slot)
+	local gui = nest(p, slot):FindFirstChild("TimerGui")
+	return gui and gui:FindFirstChildOfClass("Frame"):FindFirstChildOfClass("TextLabel").Text
+end
+local function useNest(p, slot)
+	local ped = nest(p, slot)
+	MOVE_TO(p, ped.Position); ADVANCE(0.6)
+	local prompt = ped:FindFirstChild("ProximityPrompt")
+	if prompt then prompt.Triggered:Fire(p) end
+	ADVANCE(0.2)
+end
+local function shopCounter() return Workspace.Map.Lobby.Stalls.UpgradeShop.Counter end
+local function goToShop(p) MOVE_TO(p, shopCounter().Position + Vector3.new(4, 0, 0)); ADVANCE(0.4) end
+local function key(id) return "Player_" .. id end
+local function done() print(if fails == 0 then "ALL PASSED" else ("FAILURES: " .. fails)) end
+
+local buy = Remotes.Event("BuyUpgrade")
+local alice = ADD_PLAYER("Alice", 401); SPAWN_CHARACTER(alice); ADVANCE(1)
+local profile = PDS.Get(alice)
+PDS.AddCoins(alice, 100000)
+MOVE_TO(alice, Vector3.new(0, 3, 22)); ADVANCE(0.4)
+buy.OnServerEvent:Fire(alice, "IncubationSpeed"); ADVANCE(0.4)
+check(profile.IncubationSpeedLevel == 1, "can't buy away from the Upgrades shop")
+-- Un huevo incubando, para ver que la mejora lo acelera
+grab(alice, 1); useNest(alice, 1)
+local before = Inc.GetSnapshot(alice)[1].Remaining
+goToShop(alice)
+buy.OnServerEvent:Fire(alice, "IncubationSpeed"); ADVANCE(0.4)
+check(profile.IncubationSpeedLevel == 2 and lastNotify(alice) == "Incubation Speed upgraded!", "buys Incubation Speed at the shop")
+local after = Inc.GetSnapshot(alice)[1].Remaining
+check(after < before * 0.85, string.format("the egg already incubating speeds up (%.1f -> %.1f)", before, after))
+buy.OnServerEvent:Fire(alice, "ExtraIncubator"); ADVANCE(0.4)
+buy.OnServerEvent:Fire(alice, "ExtraIncubator"); ADVANCE(0.4)
+check(profile.IncubatorCount == 3 and nest(alice, 3):FindFirstChild("ProximityPrompt") and not nest(alice, 3):FindFirstChild("LockedGui"), "2 extra incubators unlock nests 2 and 3")
+buy.OnServerEvent:Fire(alice, "ExtraIncubator"); ADVANCE(0.4)
+check(lastNotify(alice) == "Extra Incubator is already maxed!", "max 3 incubators")
+buy.OnServerEvent:Fire(alice, "WalkSpeed"); ADVANCE(0.4)
+check(alice.Character.Humanoid.WalkSpeed == 20, "Walk Speed changes the speed")
+local coins = profile.Coins
+buy.OnServerEvent:Fire(alice, "BaseFloor"); ADVANCE(0.4)
+buy.OnServerEvent:Fire(alice, 123); ADVANCE(0.4)
+check(profile.Coins == coins and profile.BaseLevel == 1, "Base Floor isn't sold anymore (floors open with rebirth); junk is ignored")
+PDS.SpendCoins(alice, profile.Coins)
+buy.OnServerEvent:Fire(alice, "WalkSpeed"); ADVANCE(0.4)
+check(profile.WalkSpeedLevel == 2 and lastNotify(alice):find("Not enough coins") ~= nil, "not enough coins: nothing happens")
+
+done()

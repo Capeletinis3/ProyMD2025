@@ -10,9 +10,11 @@ local EggService = require(Services.EggService)
 local CreatureService = require(Services.CreatureService)
 local IncubatorService = require(Services.IncubatorService)
 local UpgradeService = require(Services.UpgradeService)
-local StormService = require(Services.StormService)
+local WaveService = require(Services.WaveService)
+local EventService = require(Services.EventService)
 local TutorialService = require(Services.TutorialService)
 local LeaderboardService = require(Services.LeaderboardService)
+local StallService = require(Services.StallService)
 
 local map = MapBuilder.Build()
 
@@ -27,7 +29,7 @@ TutorialService.Init()
 PlayerDataService.SetIncubatingProvider(IncubatorService.GetSnapshot)
 
 -- Cuando un jugador recibe su base: cargamos sus datos y armamos su base.
--- El orden importa: las mejoras primero (el piso 2 tiene que existir antes de poner mascotas ahí).
+-- El orden importa: primero se abren los pisos de la torre que tiene desbloqueados, después van las mascotas.
 BaseService.OnAssigned(function(player, base)
 	-- Load espera al DataStore. Si devuelve nil, el jugador se fue mientras cargaba (o lo tuvimos que sacar).
 	if not PlayerDataService.Load(player) then
@@ -49,10 +51,12 @@ end)
 -- Init de BaseService va al final: recién ahí empieza a repartir bases (y a llamar a lo de arriba).
 BaseService.Init(map)
 
--- El ciclo de tormenta (lluvia → aviso → ola → calma) prende y apaga la lluvia de huevos.
-StormService.Init()
+-- Las olas del volcán y los eventos especiales
+WaveService.Init(map)
+EventService.Init()
 
--- Tableros de récords del lobby
+-- Puestos del lobby y tableros de récords
+StallService.Init(map)
 LeaderboardService.Init(map)
 
 print("[EggStorm] Server ready")

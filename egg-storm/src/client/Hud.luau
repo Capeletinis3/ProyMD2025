@@ -3,7 +3,7 @@
 --   Abajo a la izquierda: tu plata (salta cuando sube) y cuánto ganás por segundo.
 --   Arriba de la plata: qué huevo estás llevando (con el color de su rareza o variante).
 -- Lee los atributos que publica el servidor: Coins, Income, CarriedEggRarity y CarriedEggVariant,
--- y StormEvent de Workspace (en "Double Coins" la plata por segundo se muestra x2).
+-- y Event de Workspace (en "Double Coins" la plata por segundo se muestra x2).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -43,7 +43,7 @@ local function onCoinsChanged()
 end
 
 local function onIncomeChanged()
-	local doubled = Workspace:GetAttribute("StormEvent") == "DoubleCoins"
+	local doubled = Workspace:GetAttribute("Event") == "DoubleCoins"
 	local income = number("Income") * (if doubled then Config.Events.DoubleCoinsMultiplier else 1)
 	incomeLabel.Text = if doubled
 		then `+{Format.Compact(income)} / sec  (x{Config.Events.DoubleCoinsMultiplier}!)`
@@ -116,7 +116,7 @@ function Hud.Start()
 	player:GetAttributeChangedSignal("Income"):Connect(onIncomeChanged)
 	player:GetAttributeChangedSignal("CarriedEggRarity"):Connect(onCarryChanged)
 	player:GetAttributeChangedSignal("CarriedEggVariant"):Connect(onCarryChanged)
-	Workspace:GetAttributeChangedSignal("StormEvent"):Connect(onIncomeChanged)
+	Workspace:GetAttributeChangedSignal("Event"):Connect(onIncomeChanged)
 	lastCoins = number("Coins")
 	onCoinsChanged()
 	onIncomeChanged()

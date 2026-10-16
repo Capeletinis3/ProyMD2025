@@ -2,8 +2,8 @@ local rf = Instance.new("Folder"); rf.Name = "Remotes"; rf.Parent = game:GetServ
 for _, n in { "BuyUpgrade", "Notify", "Hatched" } do local r = Instance.new("RemoteEvent"); r.Name = n; r.Parent = rf end
 LOCAL:SetAttribute("Coins", 12850); LOCAL:SetAttribute("Income", 125)
 __mod("Hud").Start()
-__mod("StormClient").Start()
-game:GetService("Workspace"):SetAttribute("StormPhase", "Rain"); game:GetService("Workspace"):SetAttribute("PhaseEndsAt", NOW + 42)
+__mod("WaveClient").Start()
+game:GetService("Workspace"):SetAttribute("WavePhase", "Calm"); game:GetService("Workspace"):SetAttribute("PhaseEndsAt", NOW + 42)
 __mod("HatchReveal").Start()
 rf.Hatched.OnClientEvent:Fire("Thunder Cat", "Epic", nil, "Golden")
 ADVANCE(3.7)
