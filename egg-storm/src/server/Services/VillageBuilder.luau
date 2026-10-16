@@ -339,17 +339,21 @@ local function buildLagoon(village: Instance)
 		local angle = 0.6 + k * 0.9
 		local at = c + Vector3.new(math.cos(angle) * 14, 0, math.sin(angle) * 14)
 		local flamingo = group(lagoon, "Flamingo")
-		local legTop = at + Vector3.new(0, Y0 + 3.2, 0)
-		seg(flamingo, "Leg", at + Vector3.new(0, Y0 + 0.5, 0), legTop, 0.2, C.pink, M.SmoothPlastic)
-		ball(flamingo, "Body", Vector3.new(1.6, 1.4, 2.6), legTop + Vector3.new(0, 0.7, 0), C.pink)
-		local neckBase = legTop + Vector3.new(0, 1, -1)
-		local neckMid = neckBase + Vector3.new(0, 1.3, -0.3)
-		local head = neckMid + Vector3.new(0, 1.1, 0.3)
+		-- Cada uno mira para un lado distinto: armamos sus piezas ya giradas alrededor de su pata
+		local turn = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+		local function at3(offset: Vector3): Vector3
+			return at + turn:VectorToWorldSpace(offset) + Vector3.new(0, Y0, 0)
+		end
+		local legTop = at3(Vector3.new(0, 3.2, 0))
+		seg(flamingo, "Leg", at3(Vector3.new(0, 0.5, 0)), legTop, 0.2, C.pink, M.SmoothPlastic)
+		ball(flamingo, "Body", Vector3.new(1.6, 1.4, 2.6), legTop + Vector3.new(0, 0.7, 0), C.pink).CFrame = CFrame.new(legTop + Vector3.new(0, 0.7, 0)) * turn
+		local neckBase = at3(Vector3.new(0, 4.2, -1))
+		local neckMid = at3(Vector3.new(0, 5.5, -1.3))
+		local head = at3(Vector3.new(0, 6.6, -1))
 		seg(flamingo, "Neck", neckBase, neckMid, 0.35, C.pink, M.SmoothPlastic)
 		seg(flamingo, "Neck", neckMid, head, 0.35, C.pink, M.SmoothPlastic)
 		ball(flamingo, "Head", Vector3.new(0.7, 0.7, 0.7), head, C.pink)
-		seg(flamingo, "Beak", head, head + Vector3.new(0, -0.3, -0.8), 0.25, rgb(40, 30, 30), M.SmoothPlastic)
-		flamingo:PivotTo(CFrame.new(at) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0) * CFrame.new(-at))
+		seg(flamingo, "Beak", head, at3(Vector3.new(0, 6.3, -1.8)), 0.25, rgb(40, 30, 30), M.SmoothPlastic)
 	end
 	-- Juncos, nenúfares, bancos y mariposas
 	for k = 1, 14 do

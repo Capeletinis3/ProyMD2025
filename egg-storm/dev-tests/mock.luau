@@ -54,6 +54,7 @@ C.__index = function(self, k)
 	if k == "RightVector" then return self.r end
 	if k == "UpVector" then return self.u end
 	if k == "PointToWorldSpace" then return function(c, v) return c.p + rot(c, v) end end
+	if k == "VectorToWorldSpace" then return function(c, v) return rot(c, v) end end
 	if k == "PointToObjectSpace" then return function(c, v) local d = v - c.p; return vec(d:Dot(c.r), d:Dot(c.u), d:Dot(c.b)) end end
 	return nil
 end
