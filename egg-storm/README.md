@@ -38,7 +38,7 @@ egg-storm/
 │       ├── RebirthService.luau                     renacimiento (abre pisos de la torre, +25% de plata)
 │       ├── MerchantService.luau                    Comerciante misterioso (ofertas de huevos cada 10 min)
 │       ├── TradeService.luau                       intercambio de mascotas entre jugadores
-│       ├── VipService.luau                         pase VIP (cueva VIP con grupos de colisión)
+│       ├── VipService.luau                         pase VIP: ventajas, cueva VIP, huevo diario, corona y regalos
     │       ├── TutorialService.luau                    pasos del tutorial para jugadores nuevos
     │       └── LeaderboardService.luau                 tableros de récords (top 10 de todos los servidores)
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
@@ -56,7 +56,8 @@ egg-storm/
         ├── RebirthPanel.luau                           ventana de renacimiento
         ├── MerchantPanel.luau                          ventana del Comerciante
         ├── TradePanel.luau                             lista de jugadores, invitación y ventana de intercambio
-        ├── VipClient.luau                              botón VIP y esconde "Get VIP" si ya lo tenés
+        ├── VipClient.luau                              botón VIP, [VIP] en el chat y esconde "Get VIP" si ya lo tenés
+        ├── VipPanel.luau                               ventana VIP (ticket dorado, ventajas, regalar)
         ├── WaveClient.luau                             próxima ola, "THE WAVE IS COMING!", la ola y los eventos
         ├── EventBoard.luau                             escribe el tablero de eventos del puesto de Rankings
         └── EggAnimator.luau                            hace girar y flotar los huevos del piso

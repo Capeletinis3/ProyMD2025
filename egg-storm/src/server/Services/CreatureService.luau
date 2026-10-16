@@ -90,8 +90,9 @@ function CreatureService.GetIncomePerSecond(player: Player): number
 	if not profile then
 		return 0
 	end
-	-- Los renacimientos suman un porcentaje a todas las mascotas
-	return Creatures.TotalIncome(profile.Creatures) * Config.RebirthMultiplier(profile.Rebirths)
+	-- Los renacimientos suman un porcentaje a todas las mascotas, y el VIP las duplica
+	local vip = if Config.IsVip(player) then Config.Vip.CoinMultiplier else 1
+	return Creatures.TotalIncome(profile.Creatures) * Config.RebirthMultiplier(profile.Rebirths) * vip
 end
 
 -- Vuelve a calcular la plata por segundo que ve el cliente (por ejemplo, después de renacer)

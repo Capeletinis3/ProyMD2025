@@ -332,4 +332,6 @@ do
 		return PASS_OWNERS[userId .. ":" .. passId] == true
 	end
 	rawget(market, "_props").PromptGamePassPurchase = function(_, player, passId) table.insert(PURCHASE_PROMPTS, { player, passId }) end
+	PRODUCT_PROMPTS = {}
+	rawget(market, "_props").PromptProductPurchase = function(_, player, productId) table.insert(PRODUCT_PROMPTS, { player, productId }) end
 end

@@ -25,9 +25,9 @@ local notifyRemote = Remotes.Event("Notify")
 local rebirthRemote = Remotes.Event("Rebirth")
 local lastAttempt: { [Player]: number } = {}
 
--- Precio del próximo renacimiento (nil si ya está al máximo)
-function RebirthService.NextCost(rebirths: number): number?
-	return Config.Rebirth.Costs[rebirths + 1]
+-- Precio del próximo renacimiento (no hay máximo: cada uno sale más caro)
+function RebirthService.NextCost(rebirths: number): number
+	return Config.RebirthCost(rebirths)
 end
 
 function RebirthService.TryRebirth(player: Player): boolean
@@ -43,10 +43,6 @@ function RebirthService.TryRebirth(player: Player): boolean
 		return false
 	end
 	local cost = RebirthService.NextCost(profile.Rebirths)
-	if not cost then
-		notifyRemote:FireClient(player, "You reached the max number of rebirths!")
-		return false
-	end
 	if profile.Coins < cost then
 		notifyRemote:FireClient(player, `You need {Format.Number(cost)} coins to rebirth.`)
 		return false

@@ -92,7 +92,7 @@ local random = Random.new()
 local eggsFolder: Folder
 local eggs: { [number]: Egg } = {}
 local zones: { ZoneState } = {}
-local carriedByPlayer: { [Player]: Egg } = {}
+local carriedByPlayer: { [Player]: { Egg } } = {} -- los huevos que lleva cada uno (el VIP puede llevar 2)
 local lastGrabAttempt: { [Player]: number } = {}
 local nextEggId = 0
 
@@ -308,14 +308,30 @@ local function freeSpot(egg: Egg)
 	egg.Spot = nil
 end
 
+-- Publica para el cliente el próximo huevo que va a entregar (el primero que agarró) y cuántos lleva
+local function syncCarried(player: Player)
+	local list = carriedByPlayer[player]
+	local first = list and list[1]
+	player:SetAttribute("CarriedEggRarity", if first then first.Rarity.Id else nil)
+	player:SetAttribute("CarriedEggVariant", if first then first.Variant.Id else nil)
+	player:SetAttribute("CarriedEggCount", if list and #list > 0 then #list else nil)
+end
+
 local function destroyEgg(egg: Egg)
 	eggs[egg.Id] = nil
 	freeSpot(egg)
-	if egg.Carrier then
-		carriedByPlayer[egg.Carrier] = nil
-		egg.Carrier:SetAttribute("CarriedEggRarity", nil)
-		egg.Carrier:SetAttribute("CarriedEggVariant", nil)
+	local carrier = egg.Carrier
+	if carrier then
+		local list = carriedByPlayer[carrier]
+		local index = list and table.find(list, egg)
+		if list and index then
+			table.remove(list, index)
+			if #list == 0 then
+				carriedByPlayer[carrier] = nil
+			end
+		end
 		egg.Carrier = nil
+		syncCarried(carrier)
 	end
 	egg.Part:Destroy()
 end
@@ -447,22 +463,25 @@ function EggService.CountInZone(zoneIndex: number): number
 	return if zone then zone.Active else 0
 end
 
--- Dónde se lleva el huevo: en la mano derecha (R15 o R6). Si no hay mano, arriba de la cabeza.
-local function holdPoint(character: Model): (BasePart?, CFrame)
-	local hand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+-- Dónde se lleva el huevo: el 1.º en la mano derecha y el 2.º (VIP) en la izquierda (R15 o R6).
+-- Si no hay manos, arriba de la cabeza (uno arriba del otro).
+local function holdPoint(character: Model, index: number): (BasePart?, CFrame)
+	local hand = if index == 1
+		then character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+		else character:FindFirstChild("LeftHand") or character:FindFirstChild("Left Arm")
 	if hand and hand:IsA("BasePart") then
 		-- Adelante de la mano, como si lo llevara agarrado
 		return hand, CFrame.new(0, -hand.Size.Y / 2 - 0.4, -EGG_SIZE.Z / 2 - 0.2)
 	end
 	local head = character:FindFirstChild("Head")
 	if head and head:IsA("BasePart") then
-		return head, CFrame.new(0, head.Size.Y / 2 + EGG_SIZE.Y / 2 + 0.5, 0)
+		return head, CFrame.new(0, head.Size.Y / 2 + EGG_SIZE.Y * (index - 0.5) + 0.5, 0)
 	end
 	return nil, CFrame.new()
 end
 
-local function attachToCharacter(egg: Egg, character: Model): boolean
-	local holder, offset = holdPoint(character)
+local function attachToCharacter(egg: Egg, character: Model, index: number): boolean
+	local holder, offset = holdPoint(character, index)
 	if not holder then
 		return false
 	end
@@ -501,8 +520,10 @@ function EggService.TryGrab(player: Player, egg: Egg)
 	end
 	lastGrabAttempt[player] = now
 
-	if carriedByPlayer[player] then
-		notify(player, "You can only carry 1 egg at a time!")
+	local carried = carriedByPlayer[player] or {}
+	local capacity = Config.CarryCapacity(player)
+	if #carried >= capacity then
+		notify(player, if capacity == 1 then "You can only carry 1 egg at a time!" else `You can only carry {capacity} eggs at a time!`)
 		return
 	end
 	if not BaseService.GetBase(player) then
@@ -523,27 +544,33 @@ function EggService.TryGrab(player: Player, egg: Egg)
 		return
 	end
 
-	if not attachToCharacter(egg, character) then
+	if not attachToCharacter(egg, character, #carried + 1) then
 		return
 	end
 	egg.State = "Carried"
 	egg.Carrier = player
-	carriedByPlayer[player] = egg
+	table.insert(carried, egg)
+	carriedByPlayer[player] = carried
 	freeSpot(egg) -- el punto queda libre para que salga otro huevo
-	-- Para que el cliente pueda mostrarlo
-	player:SetAttribute("CarriedEggRarity", egg.Rarity.Id)
-	player:SetAttribute("CarriedEggVariant", egg.Variant.Id)
+	syncCarried(player) -- para que el cliente pueda mostrarlo
 	notify(player, `You grabbed a {eggName(egg.Rarity, egg.Variant)}! Bring it to your base.`)
 	TutorialService.OnEvent(player, "Grabbed")
 end
 
+-- El próximo huevo que entregaría (el primero que agarró), o nil si no lleva ninguno
 function EggService.GetCarriedEgg(player: Player): Egg?
-	return carriedByPlayer[player]
+	local list = carriedByPlayer[player]
+	return list and list[1]
 end
 
--- El jugador entrega el huevo que lleva (por ejemplo, a una incubadora). Devuelve su rareza y variante.
+function EggService.GetCarriedCount(player: Player): number
+	local list = carriedByPlayer[player]
+	return if list then #list else 0
+end
+
+-- El jugador entrega un huevo (el primero que agarró), por ejemplo a una incubadora. Devuelve su rareza y variante.
 function EggService.TakeCarriedEgg(player: Player): (Rarity?, Variant?)
-	local egg = carriedByPlayer[player]
+	local egg = EggService.GetCarriedEgg(player)
 	if not egg then
 		return nil, nil
 	end
@@ -552,11 +579,13 @@ function EggService.TakeCarriedEgg(player: Player): (Rarity?, Variant?)
 	return rarity, variant
 end
 
--- El jugador pierde el huevo que lleva (lo agarró la ola, se murió, se fue del juego).
+-- El jugador pierde los huevos que lleva (lo agarró la ola, se murió, se fue del juego).
 function EggService.LoseCarriedEgg(player: Player)
-	local egg = carriedByPlayer[player]
-	if egg then
-		destroyEgg(egg)
+	local list = carriedByPlayer[player]
+	if list then
+		for _, egg in table.clone(list) do
+			destroyEgg(egg)
+		end
 	end
 end
 

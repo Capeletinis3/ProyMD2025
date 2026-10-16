@@ -94,19 +94,20 @@ ADVANCE(4)
 local gained = profile.Coins - before
 check(gained >= income * 1.25 * 3.5 and gained <= income * 1.25 * 4.5, "income really is +25% (+" .. gained .. " in 4 s)")
 -- Segundo: piso 3
-PDS.AddCoins(alice, Config.Rebirth.Costs[2]); ADVANCE(1.1)
+check(Config.RebirthCost(1) == 250000 and Config.RebirthCost(2) == 625000, "each rebirth costs x2.5 (100K, 250K, 625K...)")
+PDS.AddCoins(alice, Config.RebirthCost(1)); ADVANCE(1.1)
 remote.OnServerEvent:Fire(alice, "Rebirth"); ADVANCE(0.1)
 check(profile.Rebirths == 2 and profile.BaseLevel == 3 and #base.Model.Locks:GetChildren() == 0, "rebirth 2 unlocks floor 3")
-PDS.AddCoins(alice, Config.Rebirth.Costs[3]); ADVANCE(1.1)
+PDS.AddCoins(alice, Config.RebirthCost(2)); ADVANCE(1.1)
 remote.OnServerEvent:Fire(alice, "Rebirth"); ADVANCE(0.1)
 check(profile.Rebirths == 3 and profile.BaseLevel == 3 and lastNotify(alice) == "REBIRTH 3! Your creatures now make +75% coins.", "rebirth 3: only the bonus (no more floors)")
 remote.OnServerEvent:Fire(alice, "Hack"); remote.OnServerEvent:Fire(alice, { "Rebirth" }); ADVANCE(1.1)
 check(profile.Rebirths == 3, "junk requests are ignored")
--- Máximo
-profile.Rebirths = #Config.Rebirth.Costs
-PDS.AddCoins(alice, 1e12); ADVANCE(1.1)
+-- Ilimitado
+profile.Rebirths = 12
+PDS.AddCoins(alice, Config.RebirthCost(12)); ADVANCE(1.1)
 remote.OnServerEvent:Fire(alice, "Rebirth"); ADVANCE(0.1)
-check(lastNotify(alice) == "You reached the max number of rebirths!", "max rebirths")
+check(profile.Rebirths == 13 and alice:GetAttribute("Income") == income * Config.RebirthMultiplier(13), "no max: rebirth 13 works (x" .. Config.RebirthMultiplier(13) .. ")")
 profile.Rebirths = 2
 -- Se guarda y vuelve
 REMOVE_PLAYER(alice); ADVANCE(1)

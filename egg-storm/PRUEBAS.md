@@ -10,7 +10,7 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
    - `Config.Upgrades.MinIncubationTime = 1` y los `BaseIncubationTime` de cada rareza a `10`
    - Olas más seguido: `Config.Waves.MinInterval = 20` y `MaxInterval = 25`; para ver el súper tsunami: `SuperInterval = 90`
    - Eventos más seguido: `Config.Events.Interval = 30` y `Chance = 1`
-   - Renacimiento barato: `Config.Rebirth.Costs = { 1000, 2000, 3000, 4000, 5000 }`
+   - Renacimiento barato: `Config.Rebirth.BaseCost = 1000`
    - Comerciante más seguido: `Config.Merchant.RestockInterval = 60`
    - Para probar el VIP sin comprarlo: poné tu UserId en `Config.Vip.TestUserIds = { tuUserId }` (en Studio los jugadores de prueba tienen UserIds negativos: -1 y -2)
 4. Pestaña **Test → Clients and Servers → 2 jugadores → Start**. Se abren 3 ventanas: el servidor y 2 jugadores.
@@ -73,10 +73,11 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
   - **METEOR SHOWER**: cada 10 segundos cae un meteorito en llamas (círculo rojo) con un huevo Epic o mejor.
 
 ### Renacimiento
-- [ ] A la izquierda está el botón **Rebirth**: abre una ventana con el precio, lo que perdés y lo que ganás.
-- [ ] Sin plata suficiente el botón está en rojo y no hace nada. Con plata: la plata vuelve a 0, Incubation Speed y Walk Speed vuelven a nivel 1, se abre el piso 2 de la torre (desaparece la barrera) y la plata por segundo sube un 25%.
+- [ ] A la izquierda está el botón **Rebirth**: ventana naranja con "REBIRTH LEVEL 0 → 1", "∞ UNLIMITED" y tres cuadros: YOU GET (bonus X1.00 → X1.25 y el piso que se abre), YOU LOSE y YOU KEEP.
+- [ ] La barra de abajo muestra tu plata contra el precio ("Ready!" cuando alcanza) y el precio del siguiente.
+- [ ] Sin plata suficiente el botón está apagado y no hace nada. Con plata: la plata vuelve a 0, Incubation Speed y Walk Speed vuelven a nivel 1, se abre el piso 2 de la torre (desaparece la barrera) y la plata por segundo sube un 25%.
 - [ ] Las mascotas, los huevos de los nidos y la mejora de incubadora extra se conservan.
-- [ ] Al segundo renacimiento se abre el piso 3. Se puede renacer hasta 5 veces (los últimos solo suben el bonus). Después de Stop + Play sigue todo igual.
+- [ ] Al segundo renacimiento se abre el piso 3. **No hay máximo**: cada uno cuesta x2.5 el anterior (100K, 250K, 625K...). Después de Stop + Play sigue todo igual.
 
 ### Comerciante misterioso
 - [ ] "Open" en el puesto violeta muestra 3 huevos (Rare o mejores, a veces con variante), su precio y cuánto falta para la próxima tanda.
@@ -93,16 +94,24 @@ Hacela en Studio antes de publicar. Tarda unos 15-20 minutos.
 - [ ] Si a alguien no le alcanzan los estantes, avisa y no cambia nada. Si alguien aprieta Cancel o sale del juego, se cancela para los dos.
 
 ### VIP
-- [ ] Sin VIP: el botón **👑 VIP** de la izquierda y el "Get VIP" de la cueva dicen "VIP isn't available yet" (si `GamePassId = 0`) o abren la compra del pase.
-- [ ] Con VIP (por ejemplo con `TestUserIds`): el botón dice "👑 VIP ✓", no aparece "Get VIP" y podés entrar a la cueva VIP caminando. Un jugador sin VIP choca con la entrada.
-- [ ] La cueva VIP protege de la ola como las otras.
+- [ ] El botón **👑 VIP** de la izquierda y el "Get VIP" de la cueva abren la ventana VIP: ticket dorado con el precio, botón verde "BUY 199" y las 6 ventajas.
+- [ ] "BUY" dice "VIP isn't available yet" (si `GamePassId = 0`) o abre la compra del pase.
+- [ ] Con VIP (por ejemplo con `TestUserIds`):
+  - el botón dice "👑 VIP ✓", la ventana dice "✓ OWNED" y no aparece "Get VIP" en la cueva;
+  - podés entrar a la cueva VIP caminando (un jugador sin VIP choca con la entrada) y protege de la ola;
+  - tu plata por segundo es el doble y los nidos tardan 20% menos;
+  - podés llevar **2 huevos** (uno en cada mano); abajo dice "Carrying: ... (+1)";
+  - al entrar te llega un **huevo Rare dorado** a un nido libre (uno por día; la ventana dice cuánto falta para el próximo);
+  - corona dorada con "VIP" arriba de tu cabeza y **[VIP]** dorado delante de tu nombre en el chat.
+- [ ] "Gift it to a friend? Tap here": lista de jugadores sin VIP. Con `GiftProductId = 0` avisa que no está; con el producto creado abre la compra y al pagar el otro pasa a ser VIP (y lo sigue siendo cuando vuelve).
 
 ### Tutorial (con un jugador nuevo)
 > Para ver el tutorial de nuevo con tu cuenta, cambiá `Config.Data.StoreName` a otro nombre (empezás de cero) y después volvelo como estaba.
-- [ ] "Go through the tiki portal and grab an egg in the canyon!" con una flecha de luz.
-- [ ] Con el huevo: "Bring the egg to an incubator..." y la flecha apunta a tu nido. Si viene la ola y estás en el cañón: "Hide in a cave!" y la flecha apunta a la cueva más cercana.
-- [ ] Cuando está listo: "Your egg is READY! Open it!". Después: "Visit the Upgrades shop" con la flecha al puesto. Al abrirlo: "Tutorial complete!".
-- [ ] "Skip" lo termina en cualquier momento.
+- [ ] Cartel arriba con un círculo de color, "STEP 1/4" y 4 rayitas, el título, qué hacer, la distancia ("➜ 42m") y "Skip tutorial". Una flecha de luz te lleva al objetivo.
+- [ ] 1 **GRAB AN EGG!** (ir por el portal tiki y agarrar un huevo) → 2 **RUN BACK!** (volver a la isla con el huevo; muestra cuánto falta para la ola) → 3 **HATCH IT!** (ponerlo en un nido) → 4 **GET RICH!** (comprar tu primera mejora; muestra el precio).
+- [ ] Al terminar cada paso aparece **"STEP COMPLETE! +100 coins"** y te dan las monedas.
+- [ ] Si viene la ola y estás en el cañón: "HIDE IN A CAVE!" y la flecha apunta a la cueva más cercana. Si perdés el huevo: "GRAB ANOTHER EGG!".
+- [ ] Al final: "Tutorial complete!". "Skip tutorial" lo termina en cualquier momento (sin monedas).
 
 ### Guardado
 - [ ] Con Jugador 1: juntá plata, comprá algo, dejá un huevo incubando y otro listo. Cerrá todo (Stop) y volvé a empezar: tiene que estar todo igual (la cuenta regresiva sigue donde estaba y el listo sigue "READY!").

@@ -58,7 +58,9 @@ local function onCarryChanged()
 	if rarity then
 		local variantId = player:GetAttribute("CarriedEggVariant")
 		local variant = Config.GetVariant(if typeof(variantId) == "string" then variantId else nil)
-		carryLabel.Text = `🥚 Carrying: {Config.WithVariant(variant, rarity.DisplayName .. " Egg")}`
+		local count = player:GetAttribute("CarriedEggCount")
+		local extra = if typeof(count) == "number" and count > 1 then `  (+{count - 1})` else ""
+		carryLabel.Text = `🥚 Carrying: {Config.WithVariant(variant, rarity.DisplayName .. " Egg")}{extra}`
 		carryLabel.TextColor3 = if variant.Id ~= "Normal" then variant.Color
 			elseif rarity.Id == "Secret" then Color3.fromRGB(230, 200, 255)
 			else rarity.Color
@@ -116,6 +118,7 @@ function Hud.Start()
 	player:GetAttributeChangedSignal("Income"):Connect(onIncomeChanged)
 	player:GetAttributeChangedSignal("CarriedEggRarity"):Connect(onCarryChanged)
 	player:GetAttributeChangedSignal("CarriedEggVariant"):Connect(onCarryChanged)
+	player:GetAttributeChangedSignal("CarriedEggCount"):Connect(onCarryChanged)
 	Workspace:GetAttributeChangedSignal("Event"):Connect(onIncomeChanged)
 	lastCoins = number("Coins")
 	onCoinsChanged()

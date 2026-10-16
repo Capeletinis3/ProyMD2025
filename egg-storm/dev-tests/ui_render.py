@@ -39,7 +39,8 @@ for line in res.stdout.splitlines():
     _, cls, x, y, w, h, bg, bt, corner, text, tc, ts, align, scale, name = line.split("\t")
     x, y, w, h, bt, ts = float(x), float(y), float(w), float(h), float(bt), float(ts)
     text = text.replace("\\n", "\n")
-    name, rot = name.rsplit("|", 1); rot = float(rot)
+    text = re.sub(r"<[^>]+>", "", text)  # RichText: sin las etiquetas (los colores no se dibujan)
+    name, wrapped, rot = name.rsplit("|", 2); rot = float(rot); wrapped = wrapped == "true"
     if rot and bg != "-" and bt < 1:
         import matplotlib.transforms as mt
         r, g, b = map(float, bg.split(","))
@@ -58,8 +59,25 @@ for line in res.stdout.splitlines():
         ha = {"TextXAlignment.Left": "left", "TextXAlignment.Right": "right"}.get(align, "center")
         tx = x if ha == "left" else (x + w if ha == "right" else x + w / 2)
         if cls == "TextButton": ha, tx = "center", x + w / 2
-        t = ax.text(tx, y + h / 2, text, ha=ha, va="center", fontsize=ts * 0.72, color=(r, g, b), fontweight="bold",
-                    path_effects=[matplotlib.patheffects.withStroke(linewidth=2, foreground="black")])
+        def draw(s):
+            return ax.text(tx, y + h / 2, s, ha=ha, va="center", fontsize=ts * 0.72, color=(r, g, b), fontweight="bold",
+                           multialignment={"left": "left", "right": "right"}.get(ha, "center"),
+                           path_effects=[matplotlib.patheffects.withStroke(linewidth=2, foreground="black")])
+        t = draw(text)
+        if wrapped and t.get_window_extent(renderer).width > w + 2:
+            # Como TextWrapped de Roblox: corta en renglones por palabras
+            t.remove()
+            lines, cur = [], ""
+            for word in text.split(" "):
+                trial = (cur + " " + word).strip()
+                probe = draw(trial); fits = probe.get_window_extent(renderer).width <= w + 2; probe.remove()
+                if fits or not cur:
+                    cur = trial
+                else:
+                    lines.append(cur); cur = word
+            lines.append(cur)
+            text = "\n".join(lines)
+            t = draw(text)
         bb = t.get_window_extent(renderer)
         if bb.width > w + 2 or bb.height > h + 6:
             problems.append(f"'{text}' needs {bb.width:.0f}x{bb.height:.0f}px but has {w:.0f}x{h:.0f}")

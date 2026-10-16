@@ -9,22 +9,24 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 - 🔴 **Nombre, descripción y género** en inglés.
 - Dispositivos permitidos: PC, celular, tablet y consola (probar con **Test → Device**).
 - 🔴 **Pase VIP**: Creator Dashboard → tu experiencia → **Monetization → Passes → Create a Pass** (nombre "VIP", ícono, y ponerlo **On Sale** con su precio en Robux). Copiá el número del pase (Pass ID) y pegalo en `Config.Vip.GamePassId`. Con 0, el juego funciona pero nadie puede comprar el VIP.
+- **Regalar VIP**: Monetization → **Developer Products → Create** (nombre "VIP Gift", mismo precio que el pase). Pegá su número en `Config.Vip.GiftProductId`. Con 0, el botón de regalo avisa que no está.
+- Si cambiás el precio del pase, cambiá también `Config.Vip.PriceRobux` (es solo lo que muestra la ventana).
 - Dejá `Config.Vip.TestUserIds = {}` vacío (salvo que quieras regalarle el VIP a alguien).
 
 ## 2. Volver los números de prueba a la normalidad
-- 🔴 Revisá `Config` antes de publicar: `StartingCoins = 0`, `MinIncubationTime = 5`, los `BaseIncubationTime` originales (30/60/180/480/1200/2700), `Waves.MinInterval = 60`, `MaxInterval = 90`, `SuperInterval = 1800`, `Events.Interval = 240` y `Chance = 0.5`, `Rebirth.Costs = { 100000, 1000000, 5000000, 25000000, 100000000 }` y `Merchant.RestockInterval = 600`.
+- 🔴 Revisá `Config` antes de publicar: `StartingCoins = 0`, `MinIncubationTime = 5`, los `BaseIncubationTime` originales (30/60/180/480/1200/2700), `Waves.MinInterval = 60`, `MaxInterval = 90`, `SuperInterval = 1800`, `Events.Interval = 240` y `Chance = 0.5`, `Rebirth.BaseCost = 100000` y `Merchant.RestockInterval = 600`.
 
 ## 3. Cosas de juego que todavía no están
 - ✅ ~~¿Qué pasa cuando se llenan los 14 lugares de mascotas?~~ **Hecho:** ahora se pueden vender mascotas (mantener E sobre una mascota tuya). El precio está en `Config.Economy.SellValueSeconds`.
-- ✅ ~~Tutorial corto~~ **Hecho:** cartel con el paso a seguir + flecha de luz, se guarda el progreso y se puede saltear.
+- ✅ ~~Tutorial corto~~ **Hecho:** 4 pasos (Grab an egg, Run back, Hatch it, Get rich) con cartel, flecha de luz y +100 monedas por paso (`Config.Tutorial`). Se guarda el progreso y se puede saltear.
 - ✅ ~~Escalera al segundo piso~~ **Hecho:** escalera de mano al costado de la torre.
 - ✅ ~~Ganancia mientras no estás~~ **Hecho:** 50% de lo normal, tope de 8 horas (`Config.Economy.Offline...`).
 - ✅ ~~Tabla de récords~~ **Hecho:** dos tableros en el lobby (plata ganada en total y huevos abiertos), top 10 de todos los servidores.
 - ✅ **Mapa "Isla tropical + volcán"** (MAPA_SPEC.md): isla con altar y 4 puestos, cañón de 6 zonas (cada una con su rareza), 12 cuevas-refugio, olas del volcán (normal, rápida y súper tsunami), bases torre de 3 pisos con 3 nidos adelante.
-- ✅ **Renacimiento** (botón Rebirth): plata a 0 y velocidades a nivel 1, a cambio de abrir el piso siguiente de la torre y +25% de plata para siempre. Hasta 5 veces (`Config.Rebirth`).
+- ✅ **Renacimiento** (botón Rebirth): plata a 0 y velocidades a nivel 1, a cambio de abrir el piso siguiente de la torre y +25% de plata para siempre. Ilimitado: cada uno cuesta x2.5 el anterior (`Config.Rebirth`).
 - ✅ **Comerciante misterioso**: 3 huevos Rare o mejores cada 10 minutos, iguales para todo el servidor, van directo a un nido libre (`Config.Merchant`).
 - ✅ **Intercambio entre jugadores**: hasta 4 mascotas cada uno, los dos "Ready" + 3 segundos, el servidor revisa todo y guarda enseguida (`Config.Trade`).
-- ✅ **Pase VIP**: abre la cueva VIP (falta crear el pase y poner su número, ver punto 1) (`Config.Vip`).
+- ✅ **Pase VIP** (199 Robux): x2 de plata, cueva VIP, incubación 20% más rápida, 1 huevo más para llevar, huevo Rare dorado gratis cada día, corona y [VIP] en el chat. Se puede regalar. Falta crear el pase y el producto de regalo (ver punto 1) (`Config.Vip`).
 - ✅ **Pulido:** variantes de huevo (Silver x2, Golden x3, Emerald x5, Diamond x10, Rainbow x25), cualquier rareza en cualquier parte del pasillo (lejos un poco mejor), 4 eventos de tormenta, pasillo de 1500 y mapa más colorido. Todo ajustable en `Config.Variants`, `Config.Events` y `Config.Rarities` (`FarBonus`).
 
 ## 4. Modelos y sonidos (reemplazar los placeholders)
@@ -41,7 +43,6 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 - Ajustar el balance mirando cuánto tarda alguien en conseguir su primera mejora y su primer Legendary.
 
 ## 7. Próximas ideas
-- Más ventajas para el VIP (por ejemplo +10% de plata, un nido extra o un color de nombre). Hoy solo abre la cueva VIP.
 - Historial de intercambios (para ayudar a jugadores que digan que les robaron) y confirmación extra si cambiás una mascota muy valiosa.
 - Sonidos de la Creator Store: cuerno de caracol, rugido de la ola, retumbe del volcán, música tiki, olas, "pop" al abrir (los IDs van en `Config.Waves` y `Config.Effects`).
 

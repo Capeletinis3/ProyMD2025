@@ -64,6 +64,7 @@ local function done() print(if fails == 0 then "ALL PASSED" else ("FAILURES: " .
 local buy = Remotes.Event("BuyUpgrade")
 local alice = ADD_PLAYER("Alice", 401); SPAWN_CHARACTER(alice); ADVANCE(1)
 local profile = PDS.Get(alice)
+profile.TutorialStep = 5 -- (sin tutorial: así los mensajes y la plata son los de la tienda)
 PDS.AddCoins(alice, 100000)
 MOVE_TO(alice, Vector3.new(0, 3, 22)); ADVANCE(0.4)
 buy.OnServerEvent:Fire(alice, "IncubationSpeed"); ADVANCE(0.4)

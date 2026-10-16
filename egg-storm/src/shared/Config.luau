@@ -110,6 +110,11 @@ Config.Map = {
 
 }
 
+-- ===== Tutorial =====
+Config.Tutorial = {
+	StepReward = 100, -- monedas por cada paso completado ("STEP COMPLETE! +100 coins")
+}
+
 -- ===== Isla v2 (Terrain) =====
 -- Una forma de la costa (ver Config.Island.Lobes)
 export type IslandLobe = {
@@ -426,8 +431,10 @@ Config.Upgrades = {
 -- Se conservan las mascotas, los huevos y las incubadoras. A cambio:
 --   - el 1.º renacimiento abre el piso 2 de la torre y el 2.º el piso 3
 --   - cada renacimiento suma IncomeBonus a la plata de TODAS tus mascotas (para siempre)
+-- Es ilimitado: cada uno cuesta CostGrowth veces el anterior (100K, 250K, 625K, 1.56M, 3.9M...).
 Config.Rebirth = {
-	Costs = { 100000, 1000000, 5000000, 25000000, 100000000 }, -- precio de cada renacimiento (la cantidad = el máximo)
+	BaseCost = 100000, -- precio del primero
+	CostGrowth = 2.5, -- cada renacimiento cuesta esto × el anterior
 	IncomeBonus = 0.25, -- +25% de plata por renacimiento
 	Cooldown = 1, -- anti-spam
 }
@@ -460,8 +467,19 @@ Config.Trade = {
 -- Con 0, el juego funciona igual pero nadie puede comprar el pase todavía.
 Config.Vip = {
 	GamePassId = 0,
+	PriceRobux = 199, -- solo para mostrarlo en la ventana (el precio de verdad se pone en el Creator Dashboard)
+	-- Regalar VIP: un Developer Product (Monetization → Developer Products). Con 0, el botón de regalo avisa que no está.
+	GiftProductId = 0,
+	GiftStoreName = "EggStormVipGifts", -- DataStore donde se anotan los VIP regalados
 	TestUserIds = {} :: { number }, -- UserIds que son VIP sin comprar (para probar en Studio o regalarlo)
-	PromptCooldown = 2, -- anti-spam del botón "Get VIP"
+	PromptCooldown = 2, -- anti-spam de los botones de compra y regalo
+	-- Ventajas
+	CoinMultiplier = 2, -- x2 de plata de las mascotas (para siempre)
+	HatchSpeedBonus = 0.2, -- los nidos incuban 20% más rápido
+	ExtraCarry = 1, -- puede llevar 1 huevo más a la vez
+	DailyEggRarity = "Rare", -- huevo gratis de cada día...
+	DailyEggVariant = "Golden", -- ...dorado
+	DailyEggInterval = 24 * 3600, -- cada cuánto (segundos)
 }
 
 -- ===== Ayudantes =====
@@ -526,6 +544,11 @@ function Config.CaveWidth(cave: Cave): number
 end
 
 -- Multiplicador de plata por los renacimientos (1 renacimiento = x1.25)
+-- Precio del próximo renacimiento si ya renaciste "rebirths" veces (redondeado a miles)
+function Config.RebirthCost(rebirths: number): number
+	return math.floor(Config.Rebirth.BaseCost * Config.Rebirth.CostGrowth ^ rebirths / 1000 + 0.5) * 1000
+end
+
 function Config.RebirthMultiplier(rebirths: number): number
 	return 1 + Config.Rebirth.IncomeBonus * rebirths
 end
@@ -551,10 +574,21 @@ function Config.WithVariant(variant: Variant, name: string): string
 end
 
 -- Segundos que tarda un huevo de esta rareza con el nivel de "Incubation Speed" dado (con el mínimo aplicado).
-function Config.GetIncubationTime(rarity: Rarity, speedLevel: number): number
+function Config.GetIncubationTime(rarity: Rarity, speedLevel: number, vip: boolean?): number
 	local levels = Config.Upgrades.IncubationSpeed
 	local level = levels[math.clamp(speedLevel, 1, #levels)]
-	return math.max(Config.Upgrades.MinIncubationTime, rarity.BaseIncubationTime * level.Multiplier)
+	local vipFactor = if vip then 1 - Config.Vip.HatchSpeedBonus else 1
+	return math.max(Config.Upgrades.MinIncubationTime, rarity.BaseIncubationTime * level.Multiplier * vipFactor)
+end
+
+-- ¿Es VIP? Lo decide SOLO el servidor (VipService pone el atributo "VIP"; lo que cambia un cliente no le llega al servidor).
+function Config.IsVip(player: Player): boolean
+	return player:GetAttribute("VIP") == true
+end
+
+-- Cuántos huevos puede llevar a la vez
+function Config.CarryCapacity(player: Player): number
+	return 1 + (if Config.IsVip(player) then Config.Vip.ExtraCarry else 0)
 end
 
 return Config

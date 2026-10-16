@@ -280,7 +280,7 @@ local function setReady(incubator: Incubator)
 end
 
 local function startIncubation(incubator: Incubator, rarity: Rarity, variant: Variant, remaining: number?)
-	local total = Config.GetIncubationTime(rarity, speedLevel(incubator.Owner))
+	local total = Config.GetIncubationTime(rarity, speedLevel(incubator.Owner), Config.IsVip(incubator.Owner))
 	local left = math.clamp(remaining or total, 0, total)
 
 	local eggPart = Instance.new("Part")
@@ -354,7 +354,6 @@ local function finishHatch(incubator: Incubator, egg: IncubatingEgg, creature: C
 	egg.Part:Destroy()
 	showEmpty(incubator)
 	PlayerDataService.RecordHatch(incubator.Owner)
-	TutorialService.OnEvent(incubator.Owner, "Hatched")
 end
 
 -- ===== API pública =====
@@ -561,7 +560,7 @@ function IncubatorService.AddIncubator(player: Player): boolean
 	return true
 end
 
--- Recalcula los tiempos cuando cambia el nivel de "Incubation Speed".
+-- Recalcula los tiempos cuando cambia el nivel de "Incubation Speed" (o cuando se hace VIP).
 -- Se conserva el progreso: si iba por la mitad, sigue por la mitad del tiempo nuevo.
 function IncubatorService.RecalculateTimes(player: Player)
 	local now = os.clock()
@@ -569,7 +568,7 @@ function IncubatorService.RecalculateTimes(player: Player)
 		local egg = incubator.Egg
 		if egg and incubator.State == "Incubating" then
 			local progress = 1 - math.max(0, egg.HatchAt - now) / egg.TotalTime
-			local newTotal = Config.GetIncubationTime(egg.Rarity, speedLevel(player))
+			local newTotal = Config.GetIncubationTime(egg.Rarity, speedLevel(player), Config.IsVip(player))
 			egg.TotalTime = newTotal
 			egg.HatchAt = now + newTotal * (1 - progress)
 		end

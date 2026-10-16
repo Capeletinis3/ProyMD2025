@@ -64,39 +64,65 @@ local function done() print(if fails == 0 then "ALL PASSED" else ("FAILURES: " .
 
 local action = Remotes.Event("TutorialAction")
 local buy = Remotes.Event("BuyUpgrade")
+local reward = Config.Tutorial.StepReward
 local function stepOf(p) return p:GetAttribute("TutorialStep") end
+local function completes(p)
+	local n = 0
+	for _, e in REMOTE_LOG do if e.player == p and e.remote == "TutorialAction" and e.args[1] == "StepComplete" then n += 1 end end
+	return n
+end
+local function toLobby(p) MOVE_TO(p, Vector3.new(60, 3, 0)); ADVANCE(0.6) end
 STORE_DATA["Player_702"] = { Coins = 900, Creatures = { { CreatureId = "SandBunny", Slot = 1 } } } -- jugador de antes
 local newbie = ADD_PLAYER("Newbie", 701); SPAWN_CHARACTER(newbie)
 local veteran = ADD_PLAYER("Veteran", 702); SPAWN_CHARACTER(veteran)
 ADVANCE(1)
+local profile = PDS.Get(newbie)
 check(stepOf(newbie) == 1, "new player starts the tutorial at step 1 (grab an egg)")
 check(stepOf(veteran) == 5, "players from before the tutorial don't see it")
 action.OnServerEvent:Fire(newbie, "OpenedUpgrades"); action.OnServerEvent:Fire(newbie, "Hack"); action.OnServerEvent:Fire(newbie, 42); ADVANCE(0.1)
-check(stepOf(newbie) == 1, "out-of-order or invalid actions don't skip steps")
+check(stepOf(newbie) == 1, "invalid actions don't skip steps")
+local coins = profile.Coins
 grab(newbie, 1)
-check(stepOf(newbie) == 2, "grabbing an egg -> step 2 (bring it to the incubator)")
+check(stepOf(newbie) == 2, "grabbing an egg -> step 2 (run back)")
+check(profile.Coins == coins + reward and completes(newbie) == 1, "STEP COMPLETE! +100 coins")
+ADVANCE(1)
+check(stepOf(newbie) == 2, "still in the canyon: still step 2")
 newbie.Character.Humanoid.Died:Fire(); ADVANCE(0.2)
 check(stepOf(newbie) == 2 and Eggs.GetCarriedEgg(newbie) == nil, "losing the egg keeps step 2")
 SPAWN_CHARACTER(newbie); ADVANCE(0.5)
+toLobby(newbie)
+check(stepOf(newbie) == 2, "going back without an egg doesn't count")
 grab(newbie, 1)
+toLobby(newbie)
+check(stepOf(newbie) == 3 and completes(newbie) == 2, "back on the island with the egg -> step 3 (hatch it)")
 useNest(newbie, 1)
-check(stepOf(newbie) == 3, "incubating -> step 3 (wait and open it)")
-ADVANCE(6)
-useNest(newbie, 1); ADVANCE(Config.Effects.HatchAnimationTime + 0.3)
-check(#PDS.Get(newbie).Creatures == 1 and stepOf(newbie) == 4, "first creature hatches -> step 4 (visit the Upgrades shop)")
-action.OnServerEvent:Fire(newbie, "OpenedUpgrades"); ADVANCE(0.1)
-check(stepOf(newbie) == 5, "opening the upgrades window finishes the tutorial")
+check(stepOf(newbie) == 4 and completes(newbie) == 3, "egg in a nest -> step 4 (get rich)")
+goToShop(newbie)
+coins = profile.Coins
+buy.OnServerEvent:Fire(newbie, "IncubationSpeed"); ADVANCE(0.2)
+check(stepOf(newbie) == 5 and completes(newbie) == 4, "buying the first upgrade finishes the tutorial")
+check(profile.Coins == coins - Config.Upgrades.IncubationSpeed[2].Cost + reward, "the last step pays too")
 local doneMsg = false
 for _, e in REMOTE_LOG do if e.player == newbie and e.args[1] == "Tutorial complete! Good luck in the canyon!" then doneMsg = true end end
 check(doneMsg, "player is told the tutorial is complete")
-local p3 = ADD_PLAYER("Buyer", 703); SPAWN_CHARACTER(p3); ADVANCE(1)
-PDS.Get(p3).TutorialStep = 4; PDS.SyncLevels(p3); PDS.AddCoins(p3, 1000)
-goToShop(p3)
-buy.OnServerEvent:Fire(p3, "WalkSpeed"); ADVANCE(0.1)
-check(stepOf(p3) == 5, "buying an upgrade at step 4 also finishes it")
+-- Poner el huevo directo (sin pasar por el chequeo de "volver") completa los dos pasos
+local p3 = ADD_PLAYER("Quick", 703); SPAWN_CHARACTER(p3); ADVANCE(1)
+local c3 = PDS.Get(p3).Coins
+grab(p3, 1)
+PDS.Get(p3).TutorialStep = 2
+useNest(p3, 1)
+check(stepOf(p3) == 4 and PDS.Get(p3).Coins == c3 + reward * 3, "incubating at step 2 completes steps 2 and 3 (+200)")
+-- Saltear: sin recompensa
 local p4 = ADD_PLAYER("Skipper", 704); SPAWN_CHARACTER(p4); ADVANCE(1)
+local c4 = PDS.Get(p4).Coins
 action.OnServerEvent:Fire(p4, "Skip"); ADVANCE(0.1)
-check(stepOf(p4) == 5, "Skip finishes the tutorial")
+check(stepOf(p4) == 5 and PDS.Get(p4).Coins == c4, "Skip finishes the tutorial (no coins)")
+-- Comprar una mejora antes de tiempo no saltea pasos
+local p6 = ADD_PLAYER("Early", 706); SPAWN_CHARACTER(p6); ADVANCE(1)
+PDS.AddCoins(p6, 1000); goToShop(p6)
+buy.OnServerEvent:Fire(p6, "WalkSpeed"); ADVANCE(0.2)
+check(stepOf(p6) == 1, "buying an upgrade at step 1 doesn't skip ahead")
+-- Se guarda
 local p5 = ADD_PLAYER("Halfway", 705); SPAWN_CHARACTER(p5); ADVANCE(1)
 grab(p5, 1)
 REMOVE_PLAYER(p5); ADVANCE(1)

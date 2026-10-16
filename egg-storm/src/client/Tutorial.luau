@@ -1,5 +1,6 @@
 --!strict
--- Tutorial: muestra qué hacer ahora (cartel arriba) y una flecha de luz desde tu personaje hasta el objetivo.
+-- Tutorial: el cartel de arriba con el paso actual (STEP 1/4, título, qué hacer, distancia o tiempo, "Skip tutorial"),
+-- una flecha de luz desde tu personaje hasta el objetivo, y el cartel "STEP COMPLETE! +100 coins" al terminar cada paso.
 -- El paso lo decide el servidor (atributo "TutorialStep", ver TutorialService). Este módulo solo lo dibuja.
 -- Si viene la ola y estás en el cañón, el tutorial te lleva a la cueva-refugio más cercana.
 
@@ -9,30 +10,50 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Upgrades = require(ReplicatedStorage.Shared.Upgrades)
 local UIKit = require(script.Parent.UIKit)
 
 local player = Players.LocalPlayer
 local actionRemote = Remotes.Event("TutorialAction")
+local C = UIKit.Colors
 
 local Tutorial = {}
 
 -- Mismos números que TutorialService.Steps
-local GRAB_EGG, INCUBATE, WAIT_HATCH, OPEN_UPGRADES, DONE = 1, 2, 3, 4, 5
+local GRAB_EGG, RUN_BACK, HATCH_IT, GET_RICH, DONE = 1, 2, 3, 4, 5
+local STEP_COUNT = 4
+local WIDTH, HEIGHT = 600, 96
+local STUDS_TO_METERS = 0.28
+local HIGHLIGHT = "#FFC828"
 
-local TEXTS: { [string]: string } = {
-	Grab = "🥚 Go through the tiki portal and grab an egg in the canyon!",
-	Incubate = "🏠 Bring the egg to an incubator in front of your base!",
-	Wait = "⏳ Your egg is incubating! When it says READY!, open it.",
-	Open = "🐣 Your egg is READY! Open it!",
-	Upgrades = "🪙 Your creature makes coins! Visit the Upgrades shop on the island.",
-	Danger = "🌊 THE WAVE IS COMING! Hide in a cave!",
+type Goal = {
+	Step: number,
+	Icon: string,
+	Color: Color3,
+	Title: string,
+	Text: string, -- con <font> para resaltar (RichText)
+	Target: Vector3?,
+	Metric: string?, -- "distance", "wave" o "coins"
 }
 
-local WIDTH, HEIGHT = 600, 64
+local STEP_COLORS = {
+	Color3.fromRGB(255, 200, 40),
+	Color3.fromRGB(80, 170, 255),
+	Color3.fromRGB(170, 100, 255),
+	Color3.fromRGB(80, 200, 90),
+}
 
 local banner: Frame
-local bannerText: TextLabel
+local iconLabel: TextLabel
+local stepPill: TextLabel
+local dashes: { Frame } = {}
+local titleLabel: TextLabel
+local textLabel: TextLabel
+local metricLabel: TextLabel
+local toast: TextLabel
+local toastUntil = 0
 local beam: Beam
 local targetAttachment: Attachment
 local marker: Part
@@ -40,6 +61,10 @@ local markerGui: BillboardGui
 local lastSearch = 0
 local cachedEgg: BasePart? = nil
 local caveSpots: { Vector3 }? = nil
+
+local function hl(text: string): string
+	return `<font color="{HIGHLIGHT}">{text}</font>`
+end
 
 local function step(): number
 	local value = player:GetAttribute("TutorialStep")
@@ -94,6 +119,22 @@ local function findPart(root: Instance?, path: { string }): BasePart?
 	return if current and current:IsA("BasePart") then current else nil
 end
 
+-- El primer nido vacío de tu base (o el primero, si están todos ocupados)
+local function freeNest(base: Model?): BasePart?
+	local first: BasePart? = nil
+	for i = 1, Config.Upgrades.MaxIncubators do
+		local pedestal = findPart(base, { "IncubatorSlots", `Nest{i}`, "Pedestal" })
+		if pedestal then
+			first = first or pedestal
+			local prompt = pedestal:FindFirstChildOfClass("ProximityPrompt")
+			if prompt and prompt:GetAttribute("State") == "Empty" then
+				return pedestal
+			end
+		end
+	end
+	return first
+end
+
 -- La cueva-refugio más cercana (las comunes; la VIP no, porque no todos pueden entrar)
 local function nearestCave(from: Vector3): Vector3?
 	if not caveSpots then
@@ -126,40 +167,79 @@ local function nearestCave(from: Vector3): Vector3?
 	return best
 end
 
--- Decide qué texto mostrar y a dónde apunta la flecha
-local function currentGoal(root: BasePart): (string?, Vector3?)
+-- La mejora más barata que podés comprar ahora
+local function cheapestUpgrade(): number?
+	local function level(name: string, default: number): number
+		local value = player:GetAttribute(name)
+		return if typeof(value) == "number" then value else default
+	end
+	local state: Upgrades.State = {
+		IncubationSpeedLevel = level("IncubationSpeedLevel", 1),
+		IncubatorCount = level("IncubatorCount", Config.Upgrades.StartingIncubators),
+		WalkSpeedLevel = level("WalkSpeedLevel", 1),
+	}
+	local best: number? = nil
+	for _, id in Upgrades.Order do
+		local cost = Upgrades.GetNextCost(id, state)
+		if cost and (not best or cost < best) then
+			best = cost
+		end
+	end
+	return best
+end
+
+-- Qué mostrar ahora
+local function currentGoal(root: BasePart): Goal?
 	local s = step()
 	if s >= DONE then
-		return nil, nil
+		return nil
 	end
-	local base = myBase()
+	local inCanyon = root.Position.X > Config.Map.CanyonStartX
+	local portal = Vector3.new(Config.Map.CanyonStartX, 3, 0)
 
 	-- Si viene la ola y estás en el cañón: ¡a una cueva!
 	local phase = Workspace:GetAttribute("WavePhase")
-	if (phase == "Warning" or phase == "Wave") and root.Position.X > Config.Map.CanyonStartX then
-		return TEXTS.Danger, nearestCave(root.Position)
+	if (phase == "Warning" or phase == "Wave") and inCanyon then
+		return { Step = s, Icon = "🌊", Color = C.Red, Title = "HIDE IN A CAVE!", Text = `The {hl("wave")} is coming! Get inside a cave`, Target = nearestCave(root.Position), Metric = "wave" }
 	end
 
 	local carrying = player:GetAttribute("CarriedEggRarity") ~= nil
-	local incubator = findPart(base, { "IncubatorSlots", "Nest1", "Pedestal" })
-	if s == GRAB_EGG or (s == INCUBATE and not carrying) then
-		local egg = nearestEgg(root.Position)
-		-- Si no ves ninguno cerca, apuntamos al portal tiki (la entrada del cañón)
-		return TEXTS.Grab, if egg then egg.Position else Vector3.new(Config.Map.CanyonStartX, 3, 0)
-	elseif s == INCUBATE then
-		return TEXTS.Incubate, if incubator then incubator.Position else nil
-	elseif s == WAIT_HATCH then
-		local prompt = incubator and incubator:FindFirstChildOfClass("ProximityPrompt")
-		if prompt and prompt:GetAttribute("State") == "Ready" then
-			return TEXTS.Open, incubator and incubator.Position
+	if s == GRAB_EGG or (s == RUN_BACK and not carrying) then
+		local egg = if inCanyon then nearestEgg(root.Position) else nil
+		local target = if egg then egg.Position else portal
+		if s == RUN_BACK then
+			return { Step = s, Icon = "🥚", Color = STEP_COLORS[1], Title = "GRAB ANOTHER EGG!", Text = `You lost it! Go back into the {hl("canyon")}`, Target = target, Metric = "distance" }
 		end
-		return TEXTS.Wait, nil
-	elseif s == OPEN_UPGRADES then
+		return { Step = s, Icon = "🥚", Color = STEP_COLORS[1], Title = "GRAB AN EGG!", Text = `Go through the {hl("tiki portal")} into the canyon`, Target = target, Metric = "distance" }
+	elseif s == RUN_BACK then
+		local nest = freeNest(myBase())
+		local target = if inCanyon or not nest then portal else nest.Position
+		return { Step = s, Icon = "🏃", Color = STEP_COLORS[2], Title = "RUN BACK!", Text = `Hide in a {hl("cave")} if the wave comes`, Target = target, Metric = "wave" }
+	elseif s == HATCH_IT then
+		local nest = freeNest(myBase())
+		return { Step = s, Icon = "🐣", Color = STEP_COLORS[3], Title = "HATCH IT!", Text = `Put the egg in one of your {hl("3 nests")}`, Target = if carrying and nest then nest.Position elseif carrying then nil else portal, Metric = "distance" }
+	elseif s == GET_RICH then
 		local map = Workspace:FindFirstChild("Map")
 		local shop = findPart(map and map:FindFirstChild("Stalls", true), { "UpgradeShop", "Counter" })
-		return TEXTS.Upgrades, if shop then shop.Position else nil
+		return { Step = s, Icon = "💰", Color = STEP_COLORS[4], Title = "GET RICH!", Text = `Buy your first upgrade at the {hl("shop")}`, Target = if shop then shop.Position else nil, Metric = "coins" }
 	end
-	return nil, nil
+	return nil
+end
+
+local function metricText(goal: Goal, root: BasePart): string
+	if goal.Metric == "wave" then
+		local endsAt = Workspace:GetAttribute("PhaseEndsAt")
+		local left = if typeof(endsAt) == "number" then math.max(0, math.ceil(endsAt - Workspace:GetServerTimeNow())) else 0
+		return string.format("⏱ %02d:%02d", left // 60, left % 60)
+	elseif goal.Metric == "coins" then
+		local cost = cheapestUpgrade()
+		return if cost then `💰 {Format.Number(cost)}` else "💰"
+	end
+	local target = goal.Target
+	if not target then
+		return ""
+	end
+	return `➜ {math.floor((target - root.Position).Magnitude * STUDS_TO_METERS)}m`
 end
 
 -- ===== Armado =====
@@ -173,24 +253,71 @@ local function buildBanner()
 
 	banner = Instance.new("Frame")
 	banner.AnchorPoint = Vector2.new(0.5, 0)
-	banner.Position = UDim2.new(0.5, 0, 0, 116) -- abajo del cartel de la tormenta
+	banner.Position = UDim2.new(0.5, 20, 0, 114) -- abajo del cartel de la ola
 	banner.Size = UDim2.fromOffset(WIDTH, HEIGHT)
-	banner.BackgroundColor3 = UIKit.Colors.Panel
-	banner.BackgroundTransparency = 0.1
+	banner.BackgroundColor3 = Color3.fromRGB(24, 30, 58)
 	banner.Visible = false
 	banner.Parent = gui
-	UIKit.Corner(banner, 16)
-	UIKit.Stroke(banner, 3, UIKit.Colors.Accent)
-	UIKit.FitToScreen(banner, Vector2.new(WIDTH, HEIGHT), Vector2.new(24, 0))
+	UIKit.Corner(banner, 20)
+	UIKit.Stroke(banner, 3, Color3.fromRGB(10, 12, 24))
+	UIKit.FitToScreen(banner, Vector2.new(WIDTH + 60, HEIGHT), Vector2.new(24, 0))
 
-	bannerText = UIKit.Label(banner, "", UDim2.fromOffset(WIDTH - 110, HEIGHT - 8), UDim2.fromOffset(16, 4), 20)
-	bannerText.TextWrapped = true
-	bannerText.TextTruncate = Enum.TextTruncate.None
+	-- Círculo con el ícono del paso (sale un poco por la izquierda)
+	iconLabel = UIKit.Label(banner, "🥚", UDim2.fromOffset(88, 88), UDim2.fromOffset(-40, 4), 44)
+	iconLabel.TextXAlignment = Enum.TextXAlignment.Center
+	iconLabel.BackgroundTransparency = 0
+	UIKit.Corner(iconLabel, 44)
+	UIKit.Stroke(iconLabel, 3, Color3.fromRGB(10, 12, 24))
 
-	local skip = UIKit.Button(banner, "Skip", UDim2.fromOffset(76, 40), UDim2.fromOffset(WIDTH - 88, 12), 18, UIKit.Colors.Gray)
+	stepPill = UIKit.Label(banner, "STEP 1/4", UDim2.fromOffset(76, 22), UDim2.fromOffset(60, 10), 14, Color3.fromRGB(30, 30, 30))
+	stepPill.TextXAlignment = Enum.TextXAlignment.Center
+	stepPill.BackgroundTransparency = 0
+	UIKit.Corner(stepPill, 11)
+	for i = 1, STEP_COUNT do
+		local dash = Instance.new("Frame")
+		dash.Size = UDim2.fromOffset(24, 8)
+		dash.Position = UDim2.fromOffset(144 + (i - 1) * 30, 17)
+		dash.BorderSizePixel = 0
+		dash.Parent = banner
+		UIKit.Corner(dash, 4)
+		table.insert(dashes, dash)
+	end
+
+	titleLabel = UIKit.Label(banner, "", UDim2.fromOffset(390, 34), UDim2.fromOffset(60, 34), 30)
+	UIKit.Stroke(titleLabel, 2.5)
+	textLabel = UIKit.Label(banner, "", UDim2.fromOffset(400, 22), UDim2.fromOffset(60, 68), 16, C.SubText)
+	textLabel.RichText = true
+
+	metricLabel = UIKit.Label(banner, "", UDim2.fromOffset(110, 34), UDim2.fromOffset(WIDTH - 126, 16), 20, Color3.fromRGB(130, 255, 130))
+	metricLabel.TextXAlignment = Enum.TextXAlignment.Center
+	metricLabel.BackgroundTransparency = 0
+	metricLabel.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
+	UIKit.Corner(metricLabel, 10)
+
+	local skip = Instance.new("TextButton")
+	skip.Size = UDim2.fromOffset(110, 22)
+	skip.Position = UDim2.fromOffset(WIDTH - 126, 58)
+	skip.BackgroundTransparency = 1
+	skip.Font = UIKit.Font
+	skip.TextSize = 15
+	skip.TextColor3 = Color3.fromRGB(150, 170, 230)
+	skip.RichText = true
+	skip.Text = "<u>Skip tutorial</u>"
+	skip.Parent = banner
 	skip.Activated:Connect(function()
 		actionRemote:FireServer("Skip")
 	end)
+
+	-- "STEP COMPLETE! +100 coins"
+	toast = UIKit.Label(gui, "", UDim2.fromOffset(460, 64), UDim2.new(0.5, -230, 0.62, 0), 26)
+	toast.TextXAlignment = Enum.TextXAlignment.Center
+	toast.BackgroundTransparency = 0
+	toast.BackgroundColor3 = Color3.fromRGB(70, 160, 50)
+	toast.RichText = true
+	toast.Visible = false
+	UIKit.Corner(toast, 18)
+	UIKit.Stroke(toast, 3, Color3.fromRGB(20, 50, 20)).ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	UIKit.FitToScreen(toast, Vector2.new(460, 64), Vector2.new(24, 0))
 end
 
 local function buildArrow()
@@ -247,18 +374,41 @@ local function attachToCharacter()
 	beam.Attachment0 = source
 end
 
+-- Muestra un objetivo en el cartel (lo usan también las vistas previas)
+function Tutorial.Show(goal: Goal?, metric: string?)
+	banner.Visible = goal ~= nil
+	if not goal then
+		return
+	end
+	iconLabel.Text = goal.Icon
+	iconLabel.BackgroundColor3 = goal.Color
+	local shown = math.clamp(goal.Step, 1, STEP_COUNT)
+	stepPill.Text = `STEP {shown}/{STEP_COUNT}`
+	stepPill.BackgroundColor3 = goal.Color
+	for i, dash in dashes do
+		dash.BackgroundColor3 = if i <= shown then goal.Color else Color3.fromRGB(60, 66, 100)
+	end
+	titleLabel.Text = goal.Title
+	textLabel.Text = goal.Text
+	metricLabel.Text = metric or ""
+	metricLabel.Visible = metric ~= nil and metric ~= ""
+end
+
+function Tutorial.ShowStepComplete(coins: number)
+	toast.Text = `✅ STEP COMPLETE!  <font color="#FFE27A">+{Format.Number(coins)} coins</font>`
+	toast.Visible = true
+	toastUntil = os.clock() + 2.5
+end
+
 local function update()
 	local root = rootPart()
-	local text, target = nil, nil
-	if root then
-		text, target = currentGoal(root)
+	local goal = if root then currentGoal(root) else nil
+	Tutorial.Show(goal, if goal and root then metricText(goal, root) else nil)
+	if toast.Visible and os.clock() > toastUntil then
+		toast.Visible = false
 	end
 
-	banner.Visible = text ~= nil
-	if text then
-		bannerText.Text = text
-	end
-
+	local target = goal and goal.Target
 	local showArrow = target ~= nil and root ~= nil and beam.Attachment0 ~= nil
 	beam.Enabled = showArrow
 	markerGui.Enabled = showArrow
@@ -272,6 +422,11 @@ end
 function Tutorial.Start()
 	buildBanner()
 	buildArrow()
+	actionRemote.OnClientEvent:Connect(function(kind: unknown, _step: unknown, coins: unknown)
+		if kind == "StepComplete" and typeof(coins) == "number" then
+			Tutorial.ShowStepComplete(coins)
+		end
+	end)
 	player.CharacterAdded:Connect(function(character)
 		character:WaitForChild("HumanoidRootPart", 10)
 		attachToCharacter()

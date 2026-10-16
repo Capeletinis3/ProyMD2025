@@ -43,6 +43,8 @@ export type Profile = {
 	TutorialStep: number, -- en qué paso del tutorial va (ver TutorialService; el último = terminado)
 	TotalEarned: number, -- plata ganada en toda la historia (no baja al gastar; para la tabla de récords)
 	EggsHatched: number, -- huevos abiertos en toda la historia (para la tabla de récords)
+	LastDailyEgg: number, -- cuándo recibió el último huevo diario VIP (os.time)
+	Vip: boolean, -- si era VIP la última vez (para la ganancia mientras no está: x2 también)
 	Creatures: { CreatureData },
 	Incubating: { IncubatingData }, -- se llena al salir (mientras jugás, los huevos viven en IncubatorService)
 }
@@ -82,6 +84,8 @@ local function newProfile(): Profile
 		TutorialStep = 1,
 		TotalEarned = 0,
 		EggsHatched = 0,
+		LastDailyEgg = 0,
+		Vip = false,
 		Creatures = {},
 		Incubating = {},
 	}
@@ -138,7 +142,7 @@ local function profileFromData(data: any): Profile
 	profile.IncubationSpeedLevel = cleanNumber(data.IncubationSpeedLevel, 1, 1, #up.IncubationSpeed)
 	profile.IncubatorCount = cleanNumber(data.IncubatorCount, up.StartingIncubators, 1, up.MaxIncubators)
 	profile.WalkSpeedLevel = cleanNumber(data.WalkSpeedLevel, 1, 1, #up.WalkSpeed)
-	profile.Rebirths = cleanNumber(data.Rebirths, 0, 0, #Config.Rebirth.Costs)
+	profile.Rebirths = cleanNumber(data.Rebirths, 0, 0, 10000)
 	-- Los pisos abiertos: los que da el renacimiento (o más, si los tenía de antes)
 	profile.BaseLevel = math.max(cleanNumber(data.BaseLevel, 1, 1, Config.Map.BaseFloors), Config.FloorsForRebirths(profile.Rebirths))
 	if typeof(data.TutorialStep) == "number" then
@@ -179,6 +183,8 @@ local function profileFromData(data: any): Profile
 	-- Récords. Si son datos de antes de la tabla de récords, arrancamos con algo razonable.
 	profile.TotalEarned = cleanNumber(data.TotalEarned, profile.Coins, 0, 1e15)
 	profile.EggsHatched = cleanNumber(data.EggsHatched, #profile.Creatures, 0, 1e9)
+	profile.LastDailyEgg = cleanNumber(data.LastDailyEgg, 0, 0, 1e12)
+	profile.Vip = data.Vip == true
 	return profile
 end
 
@@ -195,6 +201,9 @@ local function offlineEarnings(data: any, profile: Profile): (number, number)
 	end
 	seconds = math.min(seconds, economy.OfflineMaxHours * 3600)
 	local income = Creatures.TotalIncome(profile.Creatures) * Config.RebirthMultiplier(profile.Rebirths)
+	if profile.Vip then
+		income *= Config.Vip.CoinMultiplier
+	end
 	local earned = math.floor(income * seconds * economy.OfflineRate)
 	return earned, seconds
 end
@@ -220,6 +229,8 @@ local function dataFromProfile(profile: Profile, incubating: { IncubatingData })
 		TutorialStep = profile.TutorialStep,
 		TotalEarned = profile.TotalEarned,
 		EggsHatched = profile.EggsHatched,
+		LastDailyEgg = profile.LastDailyEgg,
+		Vip = profile.Vip,
 		Creatures = creatures,
 		Incubating = eggs,
 		SavedAt = os.time(),
@@ -322,6 +333,7 @@ function PlayerDataService.Load(player: Player): Profile?
 		offlineCoins, offlineSeconds = offlineEarnings(data, profile)
 		profile.Coins += offlineCoins
 		profile.TotalEarned += offlineCoins
+		profile.Vip = Config.IsVip(player) -- (VipService lo vuelve a marcar si sigue siendo VIP)
 	elseif RunService:IsStudio() then
 		warn("[PlayerData] Couldn't load data. Playing WITHOUT saving. In Studio, turn on Game Settings > Security > 'Enable Studio Access to API Services'.")
 		profile = newProfile()

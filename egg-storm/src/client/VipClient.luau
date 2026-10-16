@@ -1,44 +1,67 @@
 --!strict
--- VipClient: lo del pase VIP en la pantalla del jugador.
---   * Botón "👑 VIP" en el costado (pide al servidor que abra la compra; si ya sos VIP, cambia a "👑 VIP ✓").
---   * Si ya sos VIP, se esconde el botón "Get VIP" de la cueva (solo para vos).
+-- VipClient: lo del VIP en la pantalla del jugador.
+--   * Botón "👑 VIP" en el costado y "Get VIP" en la cueva VIP: abren la ventana VIP (VipPanel).
+--   * Si ya sos VIP, se esconde el "Get VIP" de la cueva (solo para vos).
+--   * [VIP] dorado delante del nombre en el chat, para todos los jugadores VIP.
 -- Quién es VIP lo decide el servidor (atributo "VIP"); acá solo se muestra.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
 
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SideMenu = require(script.Parent.SideMenu)
+local VipPanel = require(script.Parent.VipPanel)
 
 local player = Players.LocalPlayer
-local vipRemote = Remotes.Event("Vip")
 
 local VipClient = {}
 
-local function isVip(): boolean
-	return player:GetAttribute("VIP") == true
+local function isVip(who: Player): boolean
+	return who:GetAttribute("VIP") == true
 end
 
-local function updatePrompt(prompt: Instance)
-	if prompt:IsA("ProximityPrompt") then
-		prompt.Enabled = not isVip()
+local function setupPrompt(prompt: Instance)
+	if not prompt:IsA("ProximityPrompt") then
+		return
 	end
+	prompt.Enabled = not isVip(player)
+	prompt.Triggered:Connect(function()
+		VipPanel.Open()
+	end)
+end
+
+-- Etiqueta en el chat (con el chat nuevo de Roblox, TextChatService)
+local function setupChatTag()
+	TextChatService.OnIncomingMessage = (function(message: TextChatMessage): TextChatMessageProperties?
+		local source = message.TextSource
+		local sender = source and Players:GetPlayerByUserId(source.UserId)
+		if sender and isVip(sender) then
+			local properties = Instance.new("TextChatMessageProperties")
+			properties.PrefixText = `<font color="#FFC828">[VIP]</font> {message.PrefixText}`
+			return properties
+		end
+		return nil
+	end) :: any
 end
 
 function VipClient.Start()
-	local button = SideMenu.AddButton("👑 VIP", Color3.fromRGB(230, 170, 20), function()
-		vipRemote:FireServer("Buy")
-	end)
+	VipPanel.Start()
+	local button = SideMenu.AddButton("👑 VIP", Color3.fromRGB(230, 170, 20), VipPanel.Open)
 	local function refresh()
-		button.Text = if isVip() then "👑 VIP ✓" else "👑 VIP"
+		button.Text = if isVip(player) then "👑 VIP ✓" else "👑 VIP"
 		for _, prompt in CollectionService:GetTagged("VipPrompt") do
-			updatePrompt(prompt)
+			if prompt:IsA("ProximityPrompt") then
+				prompt.Enabled = not isVip(player)
+			end
 		end
 	end
-	CollectionService:GetInstanceAddedSignal("VipPrompt"):Connect(updatePrompt)
+	for _, prompt in CollectionService:GetTagged("VipPrompt") do
+		setupPrompt(prompt)
+	end
+	CollectionService:GetInstanceAddedSignal("VipPrompt"):Connect(setupPrompt)
 	player:GetAttributeChangedSignal("VIP"):Connect(refresh)
 	refresh()
+	pcall(setupChatTag) -- (si el juego usa el chat viejo, simplemente no hay etiqueta)
 end
 
 return VipClient

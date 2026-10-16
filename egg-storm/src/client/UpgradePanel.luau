@@ -18,7 +18,6 @@ local UIKit = require(script.Parent.UIKit)
 
 local player = Players.LocalPlayer
 local buyRemote = Remotes.Event("BuyUpgrade")
-local tutorialRemote = Remotes.Event("TutorialAction")
 local C = UIKit.Colors
 
 local UpgradePanel = {}
@@ -95,10 +94,6 @@ local function open(panelPart: BasePart)
 	openPanelPart = panelPart
 	refresh()
 	gui.Enabled = true
-	-- Paso 4 del tutorial: "abrí el panel de mejoras"
-	if player:GetAttribute("TutorialStep") == 4 then
-		tutorialRemote:FireServer("OpenedUpgrades")
-	end
 end
 
 local function buildRow(parent: Instance, index: number, id: string)
