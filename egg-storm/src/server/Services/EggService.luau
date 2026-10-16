@@ -321,6 +321,13 @@ local function syncCarried(player: Player)
 	player:SetAttribute("CarriedEggRarity", if first then first.Rarity.Id else nil)
 	player:SetAttribute("CarriedEggVariant", if first then first.Variant.Id else nil)
 	player:SetAttribute("CarriedEggCount", if list and #list > 0 then #list else nil)
+	-- Todos los que lleva, para los casilleros del HUD: "Epic/Normal,Rare/Golden"
+	local all = {}
+	local eggsList: { Egg } = list or {}
+	for _, egg in eggsList do
+		table.insert(all, `{egg.Rarity.Id}/{egg.Variant.Id}`)
+	end
+	player:SetAttribute("CarriedEggs", if #all > 0 then table.concat(all, ",") else nil)
 end
 
 local function destroyEgg(egg: Egg)

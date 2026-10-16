@@ -110,9 +110,11 @@ function CreatureService.GetIncomePerSecond(player: Player): number
 	if not profile then
 		return 0
 	end
-	-- Los renacimientos suman un porcentaje a todas las mascotas, y el VIP las duplica
+	-- Los renacimientos suman un porcentaje a todas las mascotas, el VIP las duplica y los amigos suman (ver FriendService)
 	local vip = if Config.IsVip(player) then Config.Vip.CoinMultiplier else 1
-	return Creatures.TotalIncome(profile.Creatures) * Config.RebirthMultiplier(profile.Rebirths) * vip
+	local friends = player:GetAttribute("FriendBonus")
+	local friendBonus = 1 + (if typeof(friends) == "number" then math.clamp(friends, 0, Config.Friends.MaxBonus) else 0)
+	return Creatures.TotalIncome(profile.Creatures) * Config.RebirthMultiplier(profile.Rebirths) * vip * friendBonus
 end
 
 -- Vuelve a calcular la plata por segundo que ve el cliente (por ejemplo, después de renacer)
@@ -171,6 +173,7 @@ function CreatureService.AddCreature(player: Player, creature: Creature, variant
 	for slot = 1, usableSlots(base) do
 		if not used[slot] then
 			table.insert(profile.Creatures, { CreatureId = creature.Id, Slot = slot, Variant = chosen.Id })
+			PlayerDataService.Discover(player, creature.Id) -- (para el Índice)
 			spawnModel(player, base, creature, chosen, slot)
 			updateIncomeAttribute(player)
 			return slot

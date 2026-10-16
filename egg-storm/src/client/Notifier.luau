@@ -30,7 +30,7 @@ local function getContainer(): Frame
 
 	local frame = Instance.new("Frame")
 	frame.AnchorPoint = Vector2.new(0.5, 1)
-	frame.Position = UDim2.new(0.5, 0, 1, -20) -- bien abajo, para no tapar la ventana de mejoras
+	frame.Position = UDim2.new(0.5, 0, 1, -130) -- arriba de los nidos y los casilleros del HUD
 	frame.Size = UDim2.fromOffset(520, (TOAST_HEIGHT + TOAST_GAP) * MAX_TOASTS)
 	frame.BackgroundTransparency = 1
 	frame.Parent = gui

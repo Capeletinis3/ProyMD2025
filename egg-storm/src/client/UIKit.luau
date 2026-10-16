@@ -98,6 +98,94 @@ function UIKit.FitToScreen(frame: GuiObject, designSize: Vector2, margin: Vector
 	end
 end
 
+-- Escala para las piezas del HUD (diseñadas para una pantalla de 1280×720): en pantallas chicas se achican todas igual.
+local hudScales: { UIScale } = {}
+local hudConnected = false
+
+local function hudFactor(): number
+	local camera = Workspace.CurrentCamera
+	if not camera then
+		return 1
+	end
+	local viewport = camera.ViewportSize
+	return math.clamp(math.min(viewport.X / 1280, viewport.Y / 720), 0.5, 1)
+end
+
+function UIKit.HudScale(frame: GuiObject)
+	local scale = Instance.new("UIScale")
+	scale.Scale = hudFactor()
+	scale.Parent = frame
+	table.insert(hudScales, scale)
+	local camera = Workspace.CurrentCamera
+	if camera and not hudConnected then
+		hudConnected = true
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			local factor = hudFactor()
+			for _, s in hudScales do
+				s.Scale = factor
+			end
+		end)
+	end
+end
+
+-- Texto con contorno grueso negro (el estilo de los textos del HUD)
+function UIKit.Outlined(parent: Instance, text: string, size: UDim2, position: UDim2, textSize: number, color: Color3?, thickness: number?): TextLabel
+	local label = UIKit.Label(parent, text, size, position, textSize, color)
+	label.TextXAlignment = Enum.TextXAlignment.Center
+	UIKit.Stroke(label, thickness or 2.5, Color3.fromRGB(17, 17, 17))
+	return label
+end
+
+-- Ruleta de colores (para el botón GIRAR y la ventana de la ruleta). Son rayos finitos que salen del centro,
+-- así que se puede girar entera cambiando el Rotation del marco que devuelve.
+function UIKit.Wheel(parent: Instance, diameter: number, colors: { Color3 }): Frame
+	local wheel = Instance.new("Frame")
+	wheel.Name = "Wheel"
+	wheel.Size = UDim2.fromOffset(diameter, diameter)
+	wheel.BackgroundColor3 = Color3.new(1, 1, 1)
+	wheel.Parent = parent
+	local round = Instance.new("UICorner")
+	round.CornerRadius = UDim.new(0.5, 0)
+	round.Parent = wheel
+	UIKit.Stroke(wheel, math.max(2, diameter / 24), Color3.fromRGB(42, 10, 26))
+	local radius = diameter / 2 - 2
+	local rays = 72
+	local width = math.max(3, 2 * math.pi * radius / rays + 1.5)
+	for i = 0, rays / 2 - 1 do
+		-- Cada línea cruza todo el círculo: la mitad de un lado tiene un color y la otra mitad el de enfrente
+		local angle = i * 360 / rays
+		local line = Instance.new("Frame")
+		line.AnchorPoint = Vector2.new(0.5, 0.5)
+		line.Position = UDim2.fromScale(0.5, 0.5)
+		line.Size = UDim2.fromOffset(radius * 2, width)
+		line.Rotation = angle
+		line.BackgroundTransparency = 1
+		line.Parent = wheel
+		for half = 0, 1 do
+			local a = (angle + half * 180) % 360 -- ángulo de este rayo (0 = derecha, sentido del reloj)
+			local segment = math.floor(((a + 90) % 360) / (360 / #colors)) + 1
+			local ray = Instance.new("Frame")
+			ray.BorderSizePixel = 0
+			ray.Size = UDim2.new(0.5, 0, 1, 0)
+			ray.Position = UDim2.fromScale(if half == 0 then 0.5 else 0, 0)
+			ray.BackgroundColor3 = colors[segment]
+			ray.Parent = line
+		end
+	end
+	local hub = Instance.new("Frame")
+	hub.AnchorPoint = Vector2.new(0.5, 0.5)
+	hub.Position = UDim2.fromScale(0.5, 0.5)
+	hub.Size = UDim2.fromOffset(diameter * 0.2, diameter * 0.2)
+	hub.BackgroundColor3 = Color3.new(1, 1, 1)
+	hub.ZIndex = 3
+	hub.Parent = wheel
+	local hubRound = Instance.new("UICorner")
+	hubRound.CornerRadius = UDim.new(0.5, 0)
+	hubRound.Parent = hub
+	UIKit.Stroke(hub, math.max(1.5, diameter / 32), Color3.fromRGB(42, 10, 26))
+	return wheel
+end
+
 -- Ventana centrada con título, borde dorado y botón X (se achica sola en pantallas chicas).
 -- Devuelve el ScreenGui (empieza cerrado), el marco y el botón de cerrar.
 function UIKit.Window(name: string, title: string, size: Vector2, displayOrder: number?): (ScreenGui, Frame, TextButton)

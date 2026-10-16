@@ -196,7 +196,15 @@ function RebirthPanel.Start()
 			end
 		end)
 	end
-	SideMenu.AddButton("🔄 Rebirth", Color3.fromRGB(200, 70, 90), RebirthPanel.Open)
+	SideMenu.Bind("Rebirth", RebirthPanel.Open)
+	local function updateButton()
+		SideMenu.SetText("Rebirth", `Rebirth [{number("Rebirths")}]`)
+		-- Si ya alcanza la plata, el botón avisa
+		SideMenu.SetBadge("Rebirth", if number("Coins") >= Config.RebirthCost(number("Rebirths")) then "READY!" else nil, Color3.fromRGB(108, 255, 77))
+	end
+	player:GetAttributeChangedSignal("Rebirths"):Connect(updateButton)
+	player:GetAttributeChangedSignal("Coins"):Connect(updateButton)
+	updateButton()
 	-- Cualquier botón con la etiqueta "RebirthPrompt" en el mapa también abre esta ventana
 	local function setupPrompt(prompt: Instance)
 		if prompt:IsA("ProximityPrompt") then

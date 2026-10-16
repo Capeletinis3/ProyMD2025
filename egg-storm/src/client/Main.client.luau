@@ -22,6 +22,7 @@ local HatchReveal = require(script.Parent.HatchReveal)
 local Tutorial = require(script.Parent.Tutorial)
 local WelcomeBack = require(script.Parent.WelcomeBack)
 local EventBoard = require(script.Parent.EventBoard)
+local IndexPanel = require(script.Parent.IndexPanel)
 
 local player = Players.LocalPlayer
 
@@ -57,3 +58,4 @@ HatchReveal.Start()
 Tutorial.Start()
 WelcomeBack.Start()
 EventBoard.Start()
+IndexPanel.Start()

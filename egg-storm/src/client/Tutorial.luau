@@ -255,7 +255,7 @@ local function buildBanner()
 
 	banner = Instance.new("Frame")
 	banner.AnchorPoint = Vector2.new(0.5, 0)
-	banner.Position = UDim2.new(0.5, 20, 0, 114) -- abajo del cartel de la ola
+	banner.Position = UDim2.new(0.5, 20, 0, 170) -- abajo del cartel de la ola y del evento
 	banner.Size = UDim2.fromOffset(WIDTH, HEIGHT)
 	banner.BackgroundColor3 = Color3.fromRGB(24, 30, 58)
 	banner.Visible = false

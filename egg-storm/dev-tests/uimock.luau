@@ -14,7 +14,7 @@ do
 	local probe = Instance.new("Folder")
 	local M = getmetatable(probe)
 	local idx = M.__index
-	local EXTRA = { Activated = true, Heartbeat = true, RenderStepped = true }
+	local EXTRA = { Activated = true, Heartbeat = true, RenderStepped = true, InputBegan = true, InputEnded = true }
 	M.__index = function(self, k)
 		if EXTRA[k] then
 			local sigs = rawget(self, "_signals")

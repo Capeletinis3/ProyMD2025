@@ -46,9 +46,9 @@ end
 
 function VipClient.Start()
 	VipPanel.Start()
-	local button = SideMenu.AddButton("👑 VIP", Color3.fromRGB(230, 170, 20), VipPanel.Open)
+	SideMenu.Bind("Vip", VipPanel.Open)
 	local function refresh()
-		button.Text = if isVip(player) then "👑 VIP ✓" else "👑 VIP"
+		SideMenu.SetBadge("Vip", if isVip(player) then "✓" else nil, Color3.fromRGB(108, 255, 77))
 		for _, prompt in CollectionService:GetTagged("VipPrompt") do
 			if prompt:IsA("ProximityPrompt") then
 				prompt.Enabled = not isVip(player)

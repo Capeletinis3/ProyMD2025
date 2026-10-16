@@ -97,9 +97,7 @@ CreatureService.AddCreature(bob, Creatures.Get("SunPhoenix"))                   
 local aliceIncome = alice:GetAttribute("Income")
 
 -- Invitación
-fire(alice, "Request", bob.UserId)
-check(lastTrade(bob) == nil, "can't send a request away from the Trading stall")
-MOVE_TO(alice, counter.Position + Vector3.new(0, 0, 4)); ADVANCE(0.1)
+MOVE_TO(alice, Vector3.new(0, 3, 22)); ADVANCE(0.1) -- lejos del puesto: igual se puede (botón Trade del HUD)
 fire(alice, "Request", alice.UserId); fire(alice, "Request", 123456); fire(alice, "Request", "Bob")
 check(lastTrade(alice) == nil and lastTrade(bob) == nil, "junk requests are ignored")
 fire(alice, "Request", bob.UserId)

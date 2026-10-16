@@ -47,7 +47,6 @@ local sessions: { [Player]: Session } = {}
 local invites: { [Player]: Invite } = {} -- por destinatario
 local lastRequest: { [Player]: { [Player]: number } } = {}
 local lastAction: { [Player]: number } = {}
-local stall: BasePart? = nil
 
 local function notify(player: Player, text: string)
 	notifyRemote:FireClient(player, text)
@@ -71,15 +70,6 @@ end
 
 local function canTrade(player: Player): boolean
 	return PlayerDataService.Get(player) ~= nil and BaseService.GetBase(player) ~= nil
-end
-
-local function nearStall(player: Player): boolean
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not stall or not root or not root:IsA("BasePart") then
-		return false
-	end
-	return (root.Position - stall.Position).Magnitude <= Config.Trade.Distance + 5
 end
 
 -- Lo que ve cada uno en su ventana
@@ -198,9 +188,7 @@ function TradeService.Request(player: Player, target: Player)
 	if target == player or not canTrade(player) or not canTrade(target) then
 		return
 	end
-	if not nearStall(player) then
-		return
-	end
+	-- (se puede invitar desde cualquier lado: el HUD tiene el botón "Trade")
 	if sessions[player] or sessions[target] then
 		notify(player, `{target.DisplayName} is already trading.`)
 		return
@@ -325,13 +313,7 @@ function TradeService.IsOffered(player: Player, slot: number): boolean
 	return false
 end
 
-function TradeService.Init(map: Folder)
-	local stalls = map:FindFirstChild("Stalls", true)
-	local trading = stalls and stalls:FindFirstChild("Trading")
-	local counter = trading and trading:FindFirstChild("Counter")
-	if counter and counter:IsA("BasePart") then
-		stall = counter
-	end
+function TradeService.Init(_map: Folder)
 	CreatureService.SetLockCheck(TradeService.IsOffered)
 
 	tradeRemote.OnServerEvent:Connect(function(player: Player, action: unknown, a: unknown, b: unknown)

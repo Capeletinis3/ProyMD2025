@@ -16,6 +16,7 @@ local Creatures = require(ReplicatedStorage.Shared.Creatures)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local UIKit = require(script.Parent.UIKit)
+local SideMenu = require(script.Parent.SideMenu)
 
 local player = Players.LocalPlayer
 local tradeRemote = Remotes.Event("Trade")
@@ -365,6 +366,9 @@ function TradePanel.Start()
 	buildPicker()
 	buildInvite()
 	buildTrade()
+	SideMenu.Bind("Trade", function()
+		TradePanel.OpenPicker(nil)
+	end)
 
 	for _, prompt in CollectionService:GetTagged("TradePrompt") do
 		setupPrompt(prompt)

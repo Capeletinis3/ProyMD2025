@@ -38,7 +38,9 @@ function UpgradeService.ApplyWalkSpeed(player: Player)
 		return
 	end
 	local levels = Config.Upgrades.WalkSpeed
-	humanoid.WalkSpeed = levels[math.clamp(profile.WalkSpeedLevel, 1, #levels)].Speed
+	local speed = levels[math.clamp(profile.WalkSpeedLevel, 1, #levels)].Speed
+	player:SetAttribute("WalkSpeed", speed) -- para el HUD y para volver de "caminar lento" ([T])
+	humanoid.WalkSpeed = speed
 end
 
 -- Hace el cambio de la mejora (ya cobrada). Devuelve false si no se pudo aplicar.

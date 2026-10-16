@@ -46,6 +46,11 @@ export type Profile = {
 	EggsHatched: number, -- huevos abiertos en toda la historia (para la tabla de récords)
 	LastDailyEgg: number, -- cuándo recibió el último huevo diario VIP (os.time)
 	Vip: boolean, -- si era VIP la última vez (para la ganancia mientras no está: x2 también)
+	Discovered: { [string]: boolean }, -- criaturas que tuvo alguna vez (para el Índice)
+	LuckPotion: number, -- segundos que le quedan a la poción de Suerte x2 (solo corren mientras juega)
+	FastNestPotion: number, -- segundos que le quedan a la poción de Nidos rápidos
+	LastFreeSpin: number, -- cuándo usó el último giro gratis de la ruleta (os.time)
+	SpinTokens: number, -- giros extra comprados con Robux (o ganados) que todavía no usó
 	Creatures: { CreatureData },
 	Incubating: { IncubatingData }, -- se llena al salir (mientras jugás, los huevos viven en IncubatorService)
 }
@@ -88,6 +93,11 @@ local function newProfile(): Profile
 		EggsHatched = 0,
 		LastDailyEgg = 0,
 		Vip = false,
+		Discovered = {},
+		LuckPotion = 0,
+		FastNestPotion = 0,
+		LastFreeSpin = 0,
+		SpinTokens = 0,
 		Creatures = {},
 		Incubating = {},
 	}
@@ -188,6 +198,22 @@ local function profileFromData(data: any): Profile
 	profile.EggsHatched = cleanNumber(data.EggsHatched, #profile.Creatures, 0, 1e9)
 	profile.LastDailyEgg = cleanNumber(data.LastDailyEgg, 0, 0, 1e12)
 	profile.Vip = data.Vip == true
+	-- Índice: las que tuvo alguna vez (y, en guardados viejos, por lo menos las que tiene ahora)
+	if typeof(data.Discovered) == "table" then
+		for _, id in data.Discovered do
+			if typeof(id) == "string" and Creatures.Get(id) then
+				profile.Discovered[id] = true
+			end
+		end
+	end
+	for _, c in profile.Creatures do
+		profile.Discovered[c.CreatureId] = true
+	end
+	local maxPotion = 24 * 3600
+	profile.LuckPotion = cleanNumber(data.LuckPotion, 0, 0, maxPotion)
+	profile.FastNestPotion = cleanNumber(data.FastNestPotion, 0, 0, maxPotion)
+	profile.LastFreeSpin = cleanNumber(data.LastFreeSpin, 0, 0, 1e12)
+	profile.SpinTokens = cleanNumber(data.SpinTokens, 0, 0, 100000)
 	return profile
 end
 
@@ -217,6 +243,11 @@ local function dataFromProfile(profile: Profile, incubating: { IncubatingData })
 	for _, c in profile.Creatures do
 		table.insert(creatures, { CreatureId = c.CreatureId, Slot = c.Slot, Variant = c.Variant })
 	end
+	local discovered = {}
+	for id in profile.Discovered do
+		table.insert(discovered, id)
+	end
+	table.sort(discovered)
 	local eggs = {}
 	for _, e in incubating do
 		table.insert(eggs, { Slot = e.Slot, RarityId = e.RarityId, Variant = e.Variant, Remaining = math.floor(e.Remaining * 10) / 10 })
@@ -235,6 +266,11 @@ local function dataFromProfile(profile: Profile, incubating: { IncubatingData })
 		EggsHatched = profile.EggsHatched,
 		LastDailyEgg = profile.LastDailyEgg,
 		Vip = profile.Vip,
+		Discovered = discovered,
+		LuckPotion = math.floor(profile.LuckPotion),
+		FastNestPotion = math.floor(profile.FastNestPotion),
+		LastFreeSpin = profile.LastFreeSpin,
+		SpinTokens = profile.SpinTokens,
 		Creatures = creatures,
 		Incubating = eggs,
 		SavedAt = os.time(),
@@ -309,6 +345,12 @@ local function syncLevels(player: Player, profile: Profile)
 	player:SetAttribute("CarryLevel", profile.CarryLevel)
 	player:SetAttribute("Rebirths", profile.Rebirths)
 	player:SetAttribute("TutorialStep", profile.TutorialStep)
+	local discovered = {}
+	for id in profile.Discovered do
+		table.insert(discovered, id)
+	end
+	table.sort(discovered)
+	player:SetAttribute("Discovered", table.concat(discovered, ",")) -- para la ventana del Índice
 end
 
 -- ===== API pública =====
@@ -409,6 +451,17 @@ function PlayerDataService.AddCoins(player: Player, amount: number, isRefund: bo
 		profile.TotalEarned += amount
 	end
 	syncCoins(player, profile)
+end
+
+-- Anota que el jugador tuvo esta criatura (para el Índice). Devuelve true si es la primera vez.
+function PlayerDataService.Discover(player: Player, creatureId: string): boolean
+	local profile = profiles[player]
+	if not profile or profile.Discovered[creatureId] or not Creatures.Get(creatureId) then
+		return false
+	end
+	profile.Discovered[creatureId] = true
+	syncLevels(player, profile)
+	return true
 end
 
 -- Suma un huevo abierto (para la tabla de récords).

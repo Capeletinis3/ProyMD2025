@@ -263,7 +263,7 @@ function UpgradePanel.Start()
 		setupPrompt(prompt)
 	end
 	CollectionService:GetInstanceAddedSignal("UpgradePrompt"):Connect(setupPrompt)
-	SideMenu.AddButton("🛒 Shop", Color3.fromRGB(63, 160, 230), function()
+	SideMenu.Bind("Upgrades", function()
 		UpgradePanel.Open(nil)
 	end)
 

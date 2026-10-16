@@ -1,6 +1,6 @@
 --!strict
 -- WaveClient: todo lo que el jugador VE y ESCUCHA de las olas y los eventos.
---   - Arriba de la pantalla: cuánto falta para la próxima ola (y abajo, el evento activo si hay).
+--   - Arriba de la pantalla: "NEXT WAVE / Run to a cave! / 00:42" (y abajo, el evento activo si hay).
 --   - Durante el aviso: cartel grande "THE WAVE IS COMING!" con cuenta regresiva, cuerno y la cámara tiembla
 --     (si estás en el cañón).
 --   - La ola: este cliente la dibuja con la misma fórmula que usa el servidor para decidir a quién agarra,
@@ -21,14 +21,16 @@ local player = Players.LocalPlayer
 local WaveClient = {}
 
 local FONT = Enum.Font.FredokaOne
-local BANNER_TOP = 160 -- px desde arriba donde empiezan los carteles grandes (debajo de los cartelitos de arriba)
-local TUTORIAL_SPACE = 76 -- si el tutorial está activo, su cartel ocupa ese lugar: bajamos los nuestros
+local BANNER_TOP = 180 -- px desde arriba donde empiezan los carteles grandes (debajo de los cartelitos de arriba)
+local TUTORIAL_SPACE = 96 -- si el tutorial está activo, su cartel ocupa ese lugar: bajamos los nuestros
 local TUTORIAL_DONE = 5 -- igual que en TutorialService
 local EVENT_BANNER_TIME = 5 -- segundos que se ve el cartel grande del evento
 local WAVE_COLOR = Color3.fromRGB(168, 238, 246)
 local RED = Color3.fromRGB(255, 80, 80)
 
 local phaseLabel: TextLabel
+local phaseHint: TextLabel
+local phaseTime: TextLabel
 local eventPill: Frame
 local eventPillLabel: TextLabel
 local banner: TextLabel
@@ -110,24 +112,27 @@ local function buildGui()
 	gui.IgnoreGuiInset = true
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- Cartelito de arriba: cuánto falta para la ola
+	-- Arriba al medio: título, consejo y cuánto falta (sin fondo, con contorno grueso, como en el diseño)
 	local pill = Instance.new("Frame")
+	pill.Name = "NextWave"
 	pill.AnchorPoint = Vector2.new(0.5, 0)
-	pill.Position = UDim2.new(0.5, 0, 0, 62)
-	pill.Size = UDim2.fromOffset(320, 46)
-	pill.BackgroundColor3 = UIKit.Colors.Panel
-	pill.BackgroundTransparency = 0.15
+	pill.Position = UDim2.new(0.5, 0, 0, 46)
+	pill.Size = UDim2.fromOffset(400, 84)
+	pill.BackgroundTransparency = 1
 	pill.Parent = gui
-	UIKit.Corner(pill, 23)
-	UIKit.FitToScreen(pill, Vector2.new(320, 46), Vector2.new(24, 0))
-	phaseLabel = UIKit.Label(pill, "", UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 26)
-	phaseLabel.TextXAlignment = Enum.TextXAlignment.Center
-	stroke(phaseLabel, 2)
+	UIKit.HudScale(pill)
+	phaseLabel = UIKit.Outlined(pill, "", UDim2.fromOffset(400, 30), UDim2.fromOffset(0, 0), 28, Color3.fromRGB(255, 159, 26), 3)
+	local titleStroke = phaseLabel:FindFirstChildOfClass("UIStroke")
+	if titleStroke then
+		titleStroke.Color = Color3.fromRGB(58, 26, 0)
+	end
+	phaseHint = UIKit.Outlined(pill, "", UDim2.fromOffset(400, 24), UDim2.fromOffset(0, 30), 20, nil, 2.5)
+	phaseTime = UIKit.Outlined(pill, "", UDim2.fromOffset(400, 30), UDim2.fromOffset(0, 54), 26, nil, 3)
 
 	-- Debajo: el evento activo (si hay)
 	eventPill = Instance.new("Frame")
 	eventPill.AnchorPoint = Vector2.new(0.5, 0)
-	eventPill.Position = UDim2.new(0.5, 0, 0, 114)
+	eventPill.Position = UDim2.new(0.5, 0, 0, 134)
 	eventPill.Size = UDim2.fromOffset(280, 34)
 	eventPill.BackgroundColor3 = UIKit.Colors.Panel
 	eventPill.BackgroundTransparency = 0.15
@@ -265,15 +270,22 @@ local function update()
 	local super = isSuper()
 
 	-- Cartelito de arriba
+	local safe = not inCanyon()
 	if current == "Warning" then
-		phaseLabel.Text = if super then `SUPER TSUNAMI {formatTime(left)}` else `WAVE INCOMING {formatTime(left)}`
+		phaseLabel.Text = if super then "SUPER TSUNAMI!" else "WAVE INCOMING!"
 		phaseLabel.TextColor3 = RED
+		phaseHint.Text = if safe then "You're safe here" else "Get into a cave NOW!"
+		phaseTime.Text = formatTime(left)
 	elseif current == "Wave" then
 		phaseLabel.Text = if super then "SUPER TSUNAMI!" else "WAVE!"
 		phaseLabel.TextColor3 = RED
+		phaseHint.Text = if safe then "You're safe here" else "Stay in a cave!"
+		phaseTime.Text = ""
 	else
-		phaseLabel.Text = `🌋 NEXT WAVE {formatTime(left)}`
-		phaseLabel.TextColor3 = Color3.fromRGB(150, 230, 255)
+		phaseLabel.Text = "NEXT WAVE"
+		phaseLabel.TextColor3 = Color3.fromRGB(255, 159, 26)
+		phaseHint.Text = if safe then "The village is safe" else "Run to a cave!"
+		phaseTime.Text = formatTime(left)
 	end
 
 	local event = currentEvent()

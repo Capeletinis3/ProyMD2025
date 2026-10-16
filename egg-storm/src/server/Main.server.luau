@@ -19,6 +19,7 @@ local RebirthService = require(Services.RebirthService)
 local MerchantService = require(Services.MerchantService)
 local TradeService = require(Services.TradeService)
 local VipService = require(Services.VipService)
+local FriendService = require(Services.FriendService)
 
 local map = MapBuilder.Build()
 
@@ -66,5 +67,6 @@ MerchantService.Init(map)
 TradeService.Init(map)
 VipService.Init(map)
 LeaderboardService.Init(map)
+FriendService.Init()
 
 print("[EggStorm] Server ready")

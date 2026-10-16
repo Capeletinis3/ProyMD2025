@@ -84,6 +84,8 @@ end
 local function setBoard(incubator: Incubator, text: string)
 	incubator.Board.BackgroundColor3 = BOARD_COLORS[incubator.State] or BOARD_COLORS.Empty
 	incubator.Label.Text = text
+	-- Para los cartelitos "Nest 1 00:45" del HUD: "Estado|texto"
+	incubator.Owner:SetAttribute(`Nest{incubator.Slot}`, `{incubator.State}|{text}`)
 end
 
 local function setState(incubator: Incubator, state: IncubatorState)
@@ -229,6 +231,7 @@ local function addLockedSign(player: Player, base: Base, slot: number)
 		lockedSignsByPlayer[player] = signs
 	end
 	signs[slot] = gui
+	player:SetAttribute(`Nest{slot}`, "Locked|LOCKED")
 end
 
 -- ===== Huevos dentro de la incubadora =====
@@ -533,6 +536,9 @@ function IncubatorService.ClearBase(player: Player)
 	end
 	incubatorsByPlayer[player] = nil
 	lockedSignsByPlayer[player] = nil
+	for slot = 1, Config.Upgrades.MaxIncubators do
+		player:SetAttribute(`Nest{slot}`, nil)
+	end
 	lastAttempt[player] = nil
 end
 
