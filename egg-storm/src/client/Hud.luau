@@ -242,8 +242,7 @@ local function build(gui: ScreenGui)
 	money.BackgroundTransparency = 1
 	money.Parent = gui
 	UIKit.HudScale(money)
-	local speedIcon = UIKit.Label(money, "👟", UDim2.fromOffset(34, 34), UDim2.fromOffset(0, 0), 26)
-	speedIcon.TextXAlignment = Enum.TextXAlignment.Center
+	UIKit.Icon(money, "Speed", "👟", UDim2.fromOffset(34, 34), UDim2.fromOffset(0, 0), 26)
 	speedLabel = UIKit.Label(money, "16", UDim2.fromOffset(52, 34), UDim2.fromOffset(40, 0), 30)
 	UIKit.Stroke(speedLabel, 3, EDGE)
 	local speedWord = UIKit.Label(money, "speed", UDim2.fromOffset(70, 34), UDim2.fromOffset(94, 1), 17, PINK)
@@ -253,8 +252,7 @@ local function build(gui: ScreenGui)
 	plus.Activated:Connect(function()
 		SideMenu.Press("Upgrades")
 	end)
-	local coinIcon = UIKit.Label(money, "💰", UDim2.fromOffset(38, 44), UDim2.fromOffset(0, 44), 30)
-	coinIcon.TextXAlignment = Enum.TextXAlignment.Center
+	UIKit.Icon(money, "Coin", "💰", UDim2.fromOffset(38, 44), UDim2.fromOffset(0, 44), 30)
 	coinsLabel = UIKit.Label(money, "0", UDim2.fromOffset(150, 44), UDim2.fromOffset(42, 44), 34, YELLOW)
 	coinsLabel.AutomaticSize = Enum.AutomaticSize.X
 	UIKit.Stroke(coinsLabel, 3.5, EDGE)
@@ -385,10 +383,9 @@ local function build(gui: ScreenGui)
 	icons.Visible = not (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled)
 	icons.Parent = gui
 	UIKit.HudScale(icons)
-	for i, icon in { "🌊", "🥚", "⏰" } do
+	for i, icon in { { "Wave", "🌊" }, { "EggRain", "🥚" }, { "SuperTsunami", "⏰" } } do
 		local x = (i - 1) * 70
-		local emoji = UIKit.Label(icons, icon, UDim2.fromOffset(70, 44), UDim2.fromOffset(x, 0), 34)
-		emoji.TextXAlignment = Enum.TextXAlignment.Center
+		UIKit.Icon(icons, icon[1], icon[2], UDim2.fromOffset(70, 44), UDim2.fromOffset(x, 0), 34)
 		local time = UIKit.Label(icons, "--:--", UDim2.fromOffset(70, 24), UDim2.fromOffset(x, 44), 18)
 		time.TextXAlignment = Enum.TextXAlignment.Center
 		UIKit.Stroke(time, 2.5, EDGE)

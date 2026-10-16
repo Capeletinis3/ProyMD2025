@@ -33,7 +33,7 @@ local CLOSE_DISTANCE = 22
 local MYSTERY_COLOR = Color3.fromRGB(176, 38, 255)
 
 type Card = {
-	Frame: Frame, Tag: TextLabel, Icon: Frame, IconText: TextLabel, Name: TextLabel, Description: TextLabel,
+	Frame: Frame, Tag: TextLabel, Icon: Frame, IconText: TextLabel, Image: ImageLabel, Name: TextLabel, Description: TextLabel,
 	Button: TextButton, Left: TextLabel, SoldOut: TextLabel,
 }
 type Offer = { Kind: string, Id: string, VariantId: string, Price: number, Left: number }
@@ -101,6 +101,15 @@ local function showOffer(card: Card, offer: Offer, coins: number)
 	card.Tag.BackgroundColor3 = tagColor
 	card.Icon.BackgroundColor3 = iconColor
 	card.IconText.Text = iconText
+	-- Si ya subiste las imágenes del diseño, se ve la imagen (el huevo y la poción se pintan del color de la oferta)
+	local imageKey = if offer.Kind == "Potion" then "Potion" elseif offer.Kind == "Mystery" then "MysteryEgg" else "Egg"
+	local imageId = UIKit.ImageId(imageKey)
+	card.Image.Visible = imageId ~= nil
+	card.Icon.Visible = imageId == nil
+	if imageId then
+		card.Image.Image = imageId
+		card.Image.ImageColor3 = if offer.Kind == "Mystery" then Color3.new(1, 1, 1) else iconColor
+	end
 	card.Name.Text = name
 	card.Description.Text = description
 	local soldOut = offer.Left <= 0
@@ -167,6 +176,14 @@ local function buildCard(parent: Frame, index: number): Card
 	round.Parent = icon
 	UIKit.Stroke(icon, 3, Color3.new(1, 1, 1))
 	local iconText = UIKit.Outlined(icon, "", UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 34, nil, 2.5)
+	local image = Instance.new("ImageLabel")
+	image.Name = "OfferImage"
+	image.BackgroundTransparency = 1
+	image.Size = UDim2.fromOffset(72, 86)
+	image.Position = UDim2.fromOffset(11, 22)
+	image.ScaleType = Enum.ScaleType.Fit
+	image.Visible = false
+	image.Parent = frame
 	local name = UIKit.Label(frame, "", UDim2.fromOffset(CARD.X - 104, 30), UDim2.fromOffset(92, 28), 21)
 	UIKit.Stroke(name, 2, Color3.fromRGB(17, 17, 17))
 	local description = UIKit.Label(frame, "", UDim2.fromOffset(CARD.X - 104, 44), UDim2.fromOffset(92, 58), 14, C.SubText)
@@ -186,7 +203,7 @@ local function buildCard(parent: Frame, index: number): Card
 		end
 	end)
 	return {
-		Frame = frame, Tag = tag, Icon = icon, IconText = iconText, Name = name, Description = description,
+		Frame = frame, Tag = tag, Icon = icon, IconText = iconText, Image = image, Name = name, Description = description,
 		Button = button, Left = left, SoldOut = soldOut,
 	}
 end

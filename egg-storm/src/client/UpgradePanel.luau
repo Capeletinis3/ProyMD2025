@@ -29,6 +29,14 @@ local DARK = Color3.fromRGB(42, 22, 8)
 local PAPER = Color3.fromRGB(255, 241, 208)
 local MAX_PIPS = 10
 
+-- Imagen de Config.Images de cada mejora (Extra Nest no tiene en el diseño: queda el emoji)
+local IMAGES: { [string]: string } = {
+	WalkSpeed = "UpgradeSpeed",
+	Carry = "UpgradeCarry",
+	IncubationSpeed = "UpgradeHatching",
+	Luck = "UpgradeLuck",
+}
+
 local STYLE: { [string]: { Icon: string, Color: Color3, Shadow: Color3 } } = {
 	WalkSpeed = { Icon = "👟", Color = Color3.fromRGB(255, 90, 77), Shadow = Color3.fromRGB(184, 50, 42) },
 	Carry = { Icon = "🥚", Color = Color3.fromRGB(255, 159, 26), Shadow = Color3.fromRGB(184, 106, 0) },
@@ -135,12 +143,18 @@ local function buildCard(frame: Frame, index: number, id: string)
 	UIKit.Corner(card, 18)
 	UIKit.Stroke(card, 4, DARK)
 
-	local icon = UIKit.Label(card, style.Icon, UDim2.fromOffset(78, 78), UDim2.fromOffset(-16, 14), 40)
+	local imageKey = IMAGES[id]
+	local hasImage = imageKey ~= nil and UIKit.ImageId(imageKey) ~= nil
+	local icon = UIKit.Label(card, if hasImage then "" else style.Icon, UDim2.fromOffset(78, 78), UDim2.fromOffset(-16, 14), 40)
 	icon.TextXAlignment = Enum.TextXAlignment.Center
 	icon.BackgroundTransparency = 0
 	icon.BackgroundColor3 = style.Color
 	UIKit.Corner(icon, 39)
 	UIKit.Stroke(icon, 4, DARK)
+	if hasImage and imageKey then
+		-- La imagen del diseño adentro del círculo de color
+		UIKit.Icon(icon, imageKey, "", UDim2.fromScale(0.72, 0.72), UDim2.fromScale(0.14, 0.14), 40)
+	end
 
 	local left = 74
 	local name = stroked(UIKit.Label(card, Upgrades.DisplayNames[id], UDim2.fromOffset(200, 28), UDim2.fromOffset(left, 8), 24, style.Color), 3)

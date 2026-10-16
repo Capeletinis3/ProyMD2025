@@ -2,7 +2,10 @@
 -- UIKit: ayudantes para armar la interfaz con el mismo estilo en todos lados
 -- (colores, letra, bordes redondeados, contornos) y para que las ventanas entren en cualquier pantalla.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local UIKit = {}
 
@@ -126,6 +129,36 @@ function UIKit.HudScale(frame: GuiObject)
 			end
 		end)
 	end
+end
+
+-- El id de una imagen de Config.Images ("rbxassetid://..."), o nil si todavía no la subiste
+function UIKit.ImageId(key: string): string?
+	local value = Config.Images[key]
+	if typeof(value) ~= "string" or value == "" then
+		return nil
+	end
+	-- (también se puede pegar solo el número)
+	return if string.match(value, "^%d+$") then "rbxassetid://" .. value else value
+end
+
+-- Imagen (si ya la subiste) o el emoji de reemplazo, del mismo tamaño y en el mismo lugar.
+function UIKit.Icon(parent: Instance, key: string, emoji: string, size: UDim2, position: UDim2, textSize: number): GuiObject
+	local id = UIKit.ImageId(key)
+	if id then
+		local image = Instance.new("ImageLabel")
+		image.Name = key .. "Icon"
+		image.BackgroundTransparency = 1
+		image.Size = size
+		image.Position = position
+		image.Image = id
+		image.ScaleType = Enum.ScaleType.Fit
+		image.Parent = parent
+		return image
+	end
+	local label = UIKit.Label(parent, emoji, size, position, textSize)
+	label.Name = key .. "Icon"
+	label.TextXAlignment = Enum.TextXAlignment.Center
+	return label
 end
 
 -- Texto con contorno grueso negro (el estilo de los textos del HUD)

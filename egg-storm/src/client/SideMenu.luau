@@ -69,8 +69,7 @@ local function gridButton(parent: Instance, info: Info, position: UDim2)
 	button.Parent = parent
 	UIKit.Corner(button, 4)
 	UIKit.Stroke(button, 3, info.Border or EDGE).ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	local icon = UIKit.Label(button, info.Icon, UDim2.fromOffset(107, 46), UDim2.fromOffset(0, 2), 34)
-	icon.TextXAlignment = Enum.TextXAlignment.Center
+	UIKit.Icon(button, info.Id, info.Icon, UDim2.fromOffset(107, 46), UDim2.fromOffset(0, 2), 34)
 	labels[info.Id] = UIKit.Outlined(button, info.Text, UDim2.fromOffset(107, 24), UDim2.fromOffset(0, 50), info.TextSize, info.TextColor, 2.5)
 	-- Cartelito chiquito (NEW!, +20%...), escondido hasta que alguien lo prenda
 	local badge = UIKit.Outlined(button, "", UDim2.fromOffset(60, 20), UDim2.fromOffset(56, -12), 15, Color3.fromRGB(255, 59, 59), 2)
@@ -89,8 +88,7 @@ local function bigIcon(parent: Instance, id: string, icon: string, top: string, 
 	button.Size = UDim2.fromOffset(120, 100)
 	button.Position = UDim2.fromOffset(0, y)
 	button.Parent = parent
-	local emoji = UIKit.Label(button, icon, UDim2.fromOffset(120, 70), UDim2.fromOffset(0, 14), 58)
-	emoji.TextXAlignment = Enum.TextXAlignment.Center
+	UIKit.Icon(button, if id == "Upgrades" then "UpgradeShop" else id, icon, UDim2.fromOffset(120, 70), UDim2.fromOffset(0, 14), 58)
 	UIKit.Outlined(button, top, UDim2.fromOffset(120, 22), UDim2.fromOffset(0, -8), 19, color, 3)
 	UIKit.Outlined(button, bottom, UDim2.fromOffset(120, 22), UDim2.fromOffset(0, 80), if #bottom > 9 then 15 else 19, color, 3)
 	hookButton(id, button)
@@ -124,12 +122,17 @@ local function build()
 	spin.Position = UDim2.fromOffset(46, 0)
 	spin.Parent = left
 	UIKit.Outlined(spin, "SPIN", UDim2.fromOffset(130, 26), UDim2.fromOffset(0, 0), 24, Color3.fromRGB(255, 95, 162), 3)
-	local wheel = UIKit.Wheel(spin, 92, WHEEL_COLORS)
-	wheel.Position = UDim2.fromOffset(19, 28)
-	local pointer = UIKit.Label(spin, "▼", UDim2.fromOffset(30, 20), UDim2.fromOffset(50, 18), 20, Color3.fromRGB(229, 57, 53))
-	pointer.TextXAlignment = Enum.TextXAlignment.Center
-	pointer.ZIndex = 4
-	UIKit.Stroke(pointer, 1.5, Color3.fromRGB(42, 10, 26))
+	-- La ruleta: la imagen del diseño si ya la subiste, si no una dibujada con su flechita
+	if UIKit.ImageId("Spin") then
+		UIKit.Icon(spin, "Spin", "", UDim2.fromOffset(96, 96), UDim2.fromOffset(17, 24), 20)
+	else
+		local wheel = UIKit.Wheel(spin, 92, WHEEL_COLORS)
+		wheel.Position = UDim2.fromOffset(19, 28)
+		local pointer = UIKit.Label(spin, "▼", UDim2.fromOffset(30, 20), UDim2.fromOffset(50, 18), 20, Color3.fromRGB(229, 57, 53))
+		pointer.TextXAlignment = Enum.TextXAlignment.Center
+		pointer.ZIndex = 4
+		UIKit.Stroke(pointer, 1.5, Color3.fromRGB(42, 10, 26))
+	end
 	local spinBadge = UIKit.Outlined(spin, "", UDim2.fromOffset(80, 20), UDim2.fromOffset(70, 96), 15, Color3.fromRGB(108, 255, 77), 2)
 	spinBadge.Rotation = -6
 	spinBadge.ZIndex = 5

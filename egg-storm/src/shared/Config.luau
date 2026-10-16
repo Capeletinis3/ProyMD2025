@@ -131,6 +131,39 @@ Config.Village = {
 	EggGarden = Vector3.new(100, 0, 74), -- jardín con los 6 huevos gigantes (abajo a la derecha)
 }
 
+-- ===== Imágenes de la interfaz =====
+-- Los íconos del diseño están en la carpeta "imagenes" (PNG). Roblox no deja usar archivos sueltos:
+-- hay que subirlos (Studio → View → Asset Manager → Bulk Import) y pegar acá el número de cada uno
+-- (clic derecho en la imagen → Copy Asset ID). Ejemplo: Shop = "rbxassetid://1234567890".
+-- Mientras uno esté vacío (""), en su lugar se ve un emoji, así que el juego anda igual (ver IMAGENES.md).
+Config.Images = {
+	-- Botones del HUD
+	Spin = "", -- la ruleta (si está, reemplaza a la ruleta dibujada del botón SPIN)
+	Shop = "",
+	Trade = "",
+	Index = "",
+	Vip = "",
+	Rebirth = "",
+	Invite = "",
+	UpgradeShop = "", -- ícono grande de la derecha
+	Merchant = "", -- ícono grande de la derecha
+	-- Abajo
+	Speed = "",
+	Coin = "",
+	Wave = "",
+	EggRain = "",
+	SuperTsunami = "",
+	-- Comerciante (el huevo y la poción son blancos: se pintan del color de cada oferta)
+	Egg = "",
+	Potion = "",
+	MysteryEgg = "",
+	-- Ventana de mejoras
+	UpgradeSpeed = "",
+	UpgradeCarry = "",
+	UpgradeHatching = "",
+	UpgradeLuck = "",
+} :: { [string]: string }
+
 -- ===== Ruleta (botón SPIN del HUD) =====
 -- Un giro gratis cada FreeInterval segundos; los giros extra se compran con Robux (Developer Product, ver PUBLICAR.md).
 -- Con ProductId = 0 el juego funciona igual, pero todavía no se pueden comprar giros.

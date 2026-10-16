@@ -11,6 +11,8 @@ egg-storm/
 ├── MAPA_SPEC.md              ← cómo es el mapa (medidas, colores, zonas): el código lo sigue
 ├── PRUEBAS.md                ← prueba guiada con 2 jugadores
 ├── PUBLICAR.md               ← lo que falta para publicar
+├── IMAGENES.md               ← cómo subir los íconos del diseño a Roblox
+├── imagenes/                 ← los íconos del diseño en PNG (para subir con el Asset Manager)
 ├── dev-tests/                ← pruebas automáticas (opcional, ver su README)
 └── src/
     ├── shared/   → ReplicatedStorage.Shared           (lo ven servidor y cliente)

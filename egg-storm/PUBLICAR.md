@@ -38,7 +38,8 @@ Ordenado por importancia. Lo marcado con 🔴 conviene hacerlo **sí o sí** ant
 - ✅ **Pase VIP** (199 Robux): x2 de plata, cueva VIP, incubación 20% más rápida, 1 huevo más para llevar, huevo Rare dorado gratis cada día, corona y [VIP] en el chat. Se puede regalar. Falta crear el pase y el producto de regalo (ver punto 1) (`Config.Vip`).
 - ✅ **Pulido:** variantes de huevo (Silver x2, Golden x3, Emerald x5, Diamond x10, Rainbow x25), cualquier rareza en cualquier parte del pasillo (lejos un poco mejor), 4 eventos de tormenta, pasillo de 1500 y mapa más colorido. Todo ajustable en `Config.Variants`, `Config.Events` y `Config.Rarities` (`FarBonus`).
 
-## 4. Modelos y sonidos (reemplazar los placeholders)
+## 4. Modelos, imágenes y sonidos (reemplazar los placeholders)
+- **Íconos del HUD, comerciante y mejoras**: están en `imagenes/`. Subilos con el Asset Manager y pegá los números en `Config.Images` (paso a paso en `IMAGENES.md`). Mientras no estén, se ven emojis.
 - Modelos de mascotas (15), huevos, incubadora y panel de mejoras. Al reemplazarlos, el resto del código sigue igual (ver `CreatureModels.luau` y `MapBuilder.luau`).
 - Sonidos: ver "Próximas fases" (los IDs van en `Config.Waves` y `Config.Effects`).
 
