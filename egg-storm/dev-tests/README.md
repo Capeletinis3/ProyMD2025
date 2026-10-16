@@ -10,11 +10,11 @@ Desde la carpeta `egg-storm`:
 ```
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_map.luau         # el mapa respeta MAPA_SPEC (bases, cuevas, puntos de huevos...)
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_eggs.luau        # huevos por zona, reaparición, variantes, meteoritos
-python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_incubators.luau  # nidos: poner huevo, READY!, abrir, estantes
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_incubators.luau  # nidos: poner huevo, READY!, abrir, hábitat lleno
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_waves.luau       # olas, cuevas-refugio, súper tsunami, ola rápida
-python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_upgrades.luau    # Tienda de mejoras
-python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tower.luau       # torre de 3 pisos, candados y escalera
-python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_lobby.luau       # puestos del lobby y tablero de eventos
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_upgrades.luau    # mejoras (x1/x10/MAX, Suerte, Llevar huevos)
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_habitat.luau     # hábitat de selva: muro, cascada, 20 lugares, criaturas que pasean
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_lobby.luau       # aldea de la selva: puestos, foso, puentes, laguna, árbol, fogón, jardín, pasarela
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_events.luau      # eventos (Golden Rain, Lucky Storm...)
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_sell.luau        # vender mascotas
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_save.luau        # guardado
@@ -23,15 +23,18 @@ python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tutorial.luau    # tu
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_offline.luau     # ganancia mientras no estás
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_leaderboard.luau # tablas de récords
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_rebirth.luau     # renacimiento
-python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_merchant.luau    # Comerciante misterioso
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_merchant.luau    # Comerciante v2 y pociones
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_rain.luau        # Lluvia de huevos
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_spin.luau        # ruleta (gratis y con Robux)
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_hud.luau         # datos del HUD: nidos, huevos que llevás, Índice, bonus por amigos
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_trade.luau       # intercambio entre jugadores
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_vip.luau         # pase VIP y cueva VIP
 python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_island.luau      # isla v2 de Terrain y volcán
-python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tower.luau > salida.txt   # (también imprime las piezas de 2 bases)
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_habitat.luau > salida.txt # (también imprime las piezas de 2 bases)
 python3 dev-tests/render_parts.py salida.txt bases.png                               # dibujo de las bases
 python3 dev-tests/bundle.py src <ruta-a-luau> mapa.png                               # dibujo del mapa desde arriba
 python3 dev-tests/island_preview.py src <ruta-a-luau> isla.png volcan.png           # isla v2 (terreno) y corte del volcán
-python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_tower.luau > salida.txt && python3 dev-tests/render3d.py salida.txt base.png -117,15,-142 -164,40,-72 45   # base en 3D
+python3 dev-tests/flow.py src <ruta-a-luau> dev-tests/test_habitat.luau > salida.txt && python3 dev-tests/render3d.py salida.txt base.png -112.5,8,-165 -112.5,70,-100 50   # hábitat en 3D
 python3 dev-tests/ui_render.py src <ruta-a-luau> dev-tests/ui_upgrades.luau mejoras.png 1280 720   # interfaz
 ```
 

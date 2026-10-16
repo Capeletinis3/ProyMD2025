@@ -25,6 +25,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local ReceiptService = require(script.Parent.ReceiptService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local CreatureService = require(script.Parent.CreatureService)
 local IncubatorService = require(script.Parent.IncubatorService)
@@ -264,9 +265,9 @@ end
 
 -- Roblox confirma un pago de un Developer Product. Solo devolvemos "Granted" cuando el regalo quedó guardado:
 -- si algo falla, Roblox lo vuelve a intentar más tarde (así nadie paga sin recibir).
-local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseDecision
+local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseDecision?
 	if receipt.ProductId ~= Config.Vip.GiftProductId or Config.Vip.GiftProductId <= 0 then
-		return Enum.ProductPurchaseDecision.NotProcessedYet
+		return nil -- no es un regalo de VIP (ver ReceiptService)
 	end
 	local buyer = Players:GetPlayerByUserId(receipt.PlayerId)
 	local targetId = buyer and pendingGift[buyer]
@@ -331,7 +332,7 @@ function VipService.Init(map: Folder)
 			notify(player, "👑 Thanks for getting VIP! All your perks are on.")
 		end
 	end)
-	MarketplaceService.ProcessReceipt = processReceipt
+	ReceiptService.Register(processReceipt)
 
 	vipRemote.OnServerEvent:Connect(function(player: Player, action: unknown, userId: unknown)
 		if action == "Buy" then

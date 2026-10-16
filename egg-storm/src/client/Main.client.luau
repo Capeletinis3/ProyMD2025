@@ -23,6 +23,8 @@ local Tutorial = require(script.Parent.Tutorial)
 local WelcomeBack = require(script.Parent.WelcomeBack)
 local EventBoard = require(script.Parent.EventBoard)
 local IndexPanel = require(script.Parent.IndexPanel)
+local SpinPanel = require(script.Parent.SpinPanel)
+local ShopPanel = require(script.Parent.ShopPanel)
 
 local player = Players.LocalPlayer
 
@@ -59,3 +61,5 @@ Tutorial.Start()
 WelcomeBack.Start()
 EventBoard.Start()
 IndexPanel.Start()
+SpinPanel.Start()
+ShopPanel.Start()

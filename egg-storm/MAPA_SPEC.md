@@ -15,7 +15,7 @@
 4. Cada cierto tiempo el **volcán** (al fondo, en el mar) entra en erupción y manda una **ola** que barre el cañón hacia el lobby.
    Para salvarse hay que meterse en una **cueva-refugio**. Si la ola te toca fuera de una cueva: perdés el huevo que llevabas y volvés al lobby.
 5. En la base, el jugador pone el huevo en una de sus **3 incubadoras** (están ADELANTE de la base). Tras un timer, nace una criatura.
-6. La criatura va a un **estante** de la torre de la base y genera dinero por segundo.
+6. La criatura vive suelta en el **hábitat** de la base (20 lugares) y genera dinero por segundo.
 7. Con el dinero compra mejoras en la **Tienda de mejoras** (incubación más rápida, etc.).
 
 ---
@@ -49,13 +49,15 @@
 Workspace
 └── Map
     ├── Lobby
-    │   ├── Ground            (piso de arena + terrazas de pasto)
+    │   ├── Ground            (piso de pasto + terrazas de los hábitats)
     │   ├── Altar
-    │   ├── Stalls            (TiendaMejoras, Comerciante, Rankings, Intercambio)
+    │   ├── Stalls            (UpgradeShop, Merchant, Rankings, Trading)
+    │   ├── Path              (camino de piedras al portal)
     │   ├── Portal
-    │   └── Decor             (Palms, Torches, Flowers, Stones)
+    │   └── Village           (Moat con 4 Bridges, Lagoon, GiantTree, FirePit, EggGarden, Boardwalk, DirtPath, Jungle)
     ├── Bases
-    │   ├── Base1 … Base8     (cada una: Plot, Tower, Floors, Shelves, Incubators, Sign, SpawnPoint)
+    │   ├── Base1 … Base8     (cada una: Ground/Plot, Wall, Entrance, Water, Shelter, Grottos, Jungle,
+    │   │                      IncubatorSlots, CreatureSlots, InfoSign, SpawnPoint, SafeZone)
     ├── Canyon
     │   ├── Floor             (Zone1 … Zone6)
     │   ├── Walls
@@ -130,17 +132,29 @@ Terrain.WaterColor = (22, 147, 181), WaterTransparency = 0.6, WaterWaveSize = 0.
 
 ---
 
-## 5. Lobby (isla)
+## 5. Lobby — Aldea de la selva
+
+> Lo arman `MapBuilder.luau` (piso, altar, puestos, camino y portal) y `VillageBuilder.luau` (todo lo demás).
+> Las medidas principales están en `Config.Village`. Vista desde arriba: -Z = norte (arriba), +X = hacia el cañón.
+
+```
+            Hábitats 1-4 (en la selva) ── pasarela de madera Z = -116 ──
+   Laguna con cascada (-105,-72)                     Fogón tiki + escenario (100,-76)
+             TIENDA (-44,-44)        │        RANKINGS (44,-44)
+                         ~~~~ foso ~ puente N ~ foso ~~~~
+   ── camino ── puente O ─  ALTAR (0,0,0)  ─ puente E ── camino de piedras ──▶ PORTAL (150, 0)
+                         ~~~~ foso ~ puente S ~ foso ~~~~
+         COMERCIANTE (-44,44)        │        INTERCAMBIO (44,44)
+   Árbol gigante + casita (-105,72)                  Jardín de los huevos (100,74)
+            Hábitats 5-8 (en la selva) ── pasarela de madera Z = 116 ──
+```
 
 ### 5.1 Piso
 | Part | Tamaño | Posición (centro) | Material/color |
 |---|---|---|---|
-| LobbySand | 300 × 2 × 340 | (0, -1, 0) | Sand #F6DDB0 |
-| TerraceNorth | 300 × 2.2 × 50 | (0, -0.9, -145) | Grass #6CC24A (queda 0.2 más alto que la arena) |
-| TerraceSouth | 300 × 2.2 × 50 | (0, -0.9, 145) | Grass #6CC24A |
-| Shore (borde) | anillo de 8 de ancho alrededor de la isla, Y = -1.5 | — | Sand #F2D49B (orilla mojada) |
-
-Las esquinas de la isla se ven redondeadas: poné 4 cilindros de arena (diámetro 60, altura 2) en las esquinas para suavizar.
+| LobbyGrass | 300 × 2 × 420 | (0, -1, 0) | Grass #6CC24A |
+| Terrace (norte y sur) | 300 × 2.2 × 90 | (0, -0.9, ±165) | Grass #5DB33D (donde están los hábitats) |
+| PlazaStone | disco de diámetro 60 | (0, 0, 0), arriba en Y = 0.15 | Slate #D6C4A0 |
 
 ### 5.2 Altar del volcán (spawn) — centro (0, 0, 0)
 | Part | Forma | Tamaño | Posición | Material/color |
@@ -149,117 +163,112 @@ Las esquinas de la isla se ven redondeadas: poné 4 cilindros de arena (diámetr
 | AltarRingEdge | Cylinder | diámetro 36, alto 1.5 | (0, 0.75, 0) | Slate #5E5751 |
 | LavaPool | Cylinder | diámetro 18, alto 0.4 | (0, 2.1, 0) | Neon #FF6A1A |
 | Pedestal | Block | 6 × 6 × 6 | (0, 5, 0) | Slate #8E857A |
-| GoldenEgg | Sphere escalada a 5 × 7 × 5 (o MeshPart huevo) | — | (0, 11.5, 0) | Neon #FFD84D, gira 20°/s en Y y sube/baja ±0.5 |
+| GoldenEgg | Sphere escalada a 5 × 7 × 5 | — | (0, 11.5, 0) | Neon #FFD84D, gira 20°/s en Y y sube/baja ±0.5 |
 | SpawnLocation | 12 × 1 × 12, invisible | (0, 2.5, 22) | Transparency 1 |
 
-- **8 antorchas tiki** en círculo de radio 22 alrededor del altar, cada 45°. (Modelo en §9.2)
-- PointLight dentro de LavaPool: color #FF6A1A, Range 16, Brightness 3.
-- ParticleEmitter en LavaPool: chispas naranjas, Rate 8, Lifetime 1–2, Speed 4–8 hacia arriba.
+- **8 antorchas tiki** en círculo de radio 22 alrededor del altar. Luz y chispas en la pileta de lava.
 
-### 5.3 Puestos (Stalls) — mismo modelo, cambia color de toldo y cartel
-Modelo base 24 × 16 × 14 (§9.5). Frente mirando al altar.
+### 5.3 Foso y puentes
+- **Foso** de agua entre el radio 30 y el 40 (40 tramos `Water`, Glass #3FD8F0, transparencia 0.25, **no choca**: se cruza mojándose los pies), fondo #28AAD2 y bordes de piedra por dentro y por fuera.
+- Nenúfares (#46AA46) con flores de loto rosas y peces koi naranjas con manchas blancas.
+- **4 puentes** de madera (N, S, E, O), de 8 de ancho, del radio 27 al 43, arqueados (1.6 de alto en el medio), con barandas de soga y un farol en cada punta.
 
-| Puesto | Posición del centro | Frente mira hacia | Color toldo |
-|---|---|---|---|
-| TiendaMejoras | (-95, 0, -55) | +X/+Z (al altar) | #1E88E5 + blanco |
-| Comerciante | (-95, 0, 55) | al altar | #8E3FD6 + blanco |
-| Rankings | (95, 0, -55) | al altar | #E8590C + blanco |
-| Intercambio | (95, 0, 55) | al altar | #0F9D8A + blanco |
+### 5.4 Puestos (Stalls) — en diagonal, del otro lado del foso
+Modelo base 24 × 16 × 14 (§9.5), frente mirando al altar, a 62 del centro (`Config.Village.StallRadius`).
 
-- Rankings: tablero de madera 20 × 12 × 1 con SurfaceGui (top 10 de dinero) y al lado un **tablero de eventos** (SurfaceGui con timers: próxima ola, súper tsunami, lluvia de huevos).
-- Cada puesto tiene un ProximityPrompt en el mostrador que abre su GUI.
+| Puesto | Posición del centro | Color toldo |
+|---|---|---|
+| UpgradeShop | (-43.8, 0, -43.8) | #1E88E5 + blanco |
+| Merchant | (-43.8, 0, 43.8) | #8E3FD6 + blanco |
+| Rankings | (43.8, 0, -43.8) | #E8590C + blanco |
+| Trading | (43.8, 0, 43.8) | #0F9D8A + blanco |
 
-### 5.4 Camino de piedras (altar → portal)
-Piedras planas (Cylinder diámetro 5, alto 0.4, Slate #B8B0A3) a lo largo de Z = 0, desde X = 30 hasta X = 145, una cada 8 studs, alternando Z = -2 y Z = +2.
+- Rankings: tablero de récords de plata arriba, de huevos abiertos a un costado y el **tablero de eventos** al otro.
+- Cada puesto tiene un ProximityPrompt en el mostrador que abre su ventana (las mismas ventanas también se abren desde el HUD).
 
-### 5.5 Portal tiki — entrada del cañón (X = 150)
+### 5.5 Rincones
+| Rincón | Centro | Qué tiene |
+|---|---|---|
+| Laguna con cascada (arriba a la izquierda) | (-105, -72) | Agua de diámetro 44 con arena alrededor; acantilado de 26 × 24 con **cascada** y niebla; 7 piedras para cruzar (se pisan); 3 flamencos; juncos, nenúfares, 2 bancos y mariposas. |
+| Árbol gigante (abajo a la izquierda) | (-105, 72) | Tronco de diámetro 9 y 44 de alto con raíces, ramas y copa enorme; **plataforma** redonda (diámetro 32) a Y = 22 con baranda y **casita de paja**; **escalera de soga** (TrussPart, se trepa) con cartel "CLIMB ↑"; columpio; lianas con faroles; hongos que brillan y luciérnagas. |
+| Fogón tiki (arriba a la derecha) | (100, -76) | Fogata con aro de piedras, fuego, chispas y luz; **3 filas de troncos** (18) en semicírculo; **escenario** de 26 × 12 detrás, con máscara tiki gigante (ojos que brillan, plumas de colores), 3 tambores y 2 faroles. |
+| Jardín de los huevos (abajo a la derecha) | (100, 74) | Pasto en un círculo de diámetro 58; los **6 huevos gigantes** (6 × 8 × 6) de las rarezas, de Common a Secret, en nidos de paja con cartel; Legendary, Mythic y Secret son de Neon, giran y tienen luz y brillitos; flores gigantes y un **arco de flores** con el cartel "EGG GARDEN" mirando a la plaza. |
+
+### 5.6 Caminos
+- **Camino de piedras** (Cylinder diámetro 5, Slate #B8B0A3) a lo largo de Z = 0, desde el puente este (X = 46) hasta X = 145, uno cada 8 studs.
+- **Pasarela de madera** (8 de ancho): de los puentes norte y sur hasta Z = ±112, y a lo largo de Z = ±116 de X = -146 a 146, con faroles cada 35. Un tramo de 6 de ancho llega a la entrada de cada hábitat.
+- **Caminito de tierra** del puente oeste a la laguna y al árbol gigante.
+- Nada sólido tapa los puentes, la pasarela ni el camino al cañón (lo revisa `test_lobby.luau`).
+
+### 5.7 Portal tiki — entrada del cañón (X = 150)
 | Part | Tamaño | Posición | Material/color |
 |---|---|---|---|
-| TotemNorth | 6 × 18 × 6 | (150, 9, -44) | Wood #A0522D, cara tallada con Decal (ojos #FFE27A) |
+| TotemNorth | 6 × 18 × 6 | (150, 9, -44) | Wood #A0522D, cara tallada (ojos #FFE27A) |
 | TotemSouth | 6 × 18 × 6 | (150, 9, 44) | igual |
 | Beam | 4 × 3 × 96 | (150, 19.5, 0) | WoodPlanks #8B5A2B |
-| Sign | 2 × 4 × 24 | (149, 16, 0) | WoodPlanks, SurfaceGui: "AL CAÑÓN ⚠" |
+| Sign | 2 × 4 × 24 | (149, 16, 0) | WoodPlanks, SurfaceGui: "TO THE CANYON ⚠" / "SAFE ISLAND" |
 | Antorchas | 2 | (146, 0, ±50) | modelo TikiTorch |
 
-### 5.6 Decoración del lobby
-- **Palmeras** (modelo §9.1) en: (-60, 0, -95), (60, 0, -95), (-60, 0, 95), (60, 0, 95), (-135, 0, -10), (-135, 0, 25), (135, 0, -95), (135, 0, 95). Altura variada 18–26, rotación Y aleatoria.
-- **Flores de hibisco**: 20 repartidas en el borde de las terrazas (Z = ±120 aprox.), esferas 1.2 rosas #FF4F8B y amarillas #FFE27A, CanCollide false.
-- **Conchas y estrellas de mar**: 15 en la orilla (Shore), CanCollide false.
+### 5.8 Selva entre los hábitats
+- Árboles de hojas anchas entre un hábitat y otro (X = -150, -75, 0, 75, 150; Z = ±140/±160) y detrás (Z = ±202).
+- Helechos y monsteras al borde de la pasarela (sin tapar las entradas) y luciérnagas.
 
 ---
 
-## 6. Bases de jugadores (8)
+## 6. Bases de jugadores (8) — Hábitats de selva
 
-> **Base v2:** cada base es una choza tiki de 3 pisos muy decorada (la arma `BaseBuilder.luau`, ~1000 piezas): pisos a Y = 2 / 14 / 26, estantes redondos al fondo, 2 escaleras exteriores, techo de paja de 3 capas, arco de entrada con el nombre del dueño, cerco, hamaca y cartel "BIGGER TOWER" (los pisos se abren renaciendo). Las medidas de abajo siguen valiendo para el terreno, la torre y los nidos.
+> Cada base es un **hábitat de selva** redondo (lo arma `HabitatBuilder.luau`, ~400 piezas). Las criaturas viven sueltas
+> adentro y pasean alrededor de su lugar (`CreatureWander.luau` en el cliente). **20 lugares por jugador desde el principio**
+> (`Config.Habitat.Capacity`): no hay pisos, estantes ni mejoras de espacio.
 
 ### 6.1 Ubicación
-Cada base ocupa un terreno (Plot) de **60 (X) × 44 (Z)**. El FRENTE de la base mira al centro del lobby.
+Cada hábitat ocupa un círculo de unos **70 de diámetro**. El FRENTE (la entrada) mira al centro del lobby.
 
-| Base | Centro del Plot | Frente mira hacia |
+| Base | Centro | Frente mira hacia |
 |---|---|---|
-| Base1 | (-117, 0, -148) | +Z |
-| Base2 | (-39, 0, -148) | +Z |
-| Base3 | (39, 0, -148) | +Z |
-| Base4 | (117, 0, -148) | +Z |
-| Base5 | (-117, 0, 148) | -Z |
-| Base6 | (-39, 0, 148) | -Z |
-| Base7 | (39, 0, 148) | -Z |
-| Base8 | (117, 0, 148) | -Z |
+| Base1 | (-112.5, 0, -165) | +Z |
+| Base2 | (-37.5, 0, -165) | +Z |
+| Base3 | (37.5, 0, -165) | +Z |
+| Base4 | (112.5, 0, -165) | +Z |
+| Base5 | (-112.5, 0, 165) | -Z |
+| Base6 | (-37.5, 0, 165) | -Z |
+| Base7 | (37.5, 0, 165) | -Z |
+| Base8 | (112.5, 0, 165) | -Z |
 
-Usá coordenadas **locales** dentro de cada base (el centro del Plot es (0,0,0) local; **+Z local = frente**) y rotá el modelo 180° para las bases del sur.
+Coordenadas **locales** mirando el hábitat desde el lobby: **-Z = adelante** (la entrada), +Z = atrás (la cascada), **+X = derecha**.
 
-### 6.2 Partes de la base (coordenadas locales)
-| Part | Tamaño | Posición local | Material/color |
-|---|---|---|---|
-| Plot (borde del terreno) | 60 × 0.3 × 44 | (0, 0.15, 0) | Grass #5DB33D (un poco más oscuro que la terraza) |
-| Tower (volumen total) | 40 × 36 × 20 | centro en (0, 18, -9) | — (es un Model) |
-| Floor1 | 40 × 1 × 20 | (0, 0.5, -9) | WoodPlanks #8B5A2B |
-| Floor2 | 40 × 1 × 20 | (0, 12.5, -9) | WoodPlanks |
-| Floor3 | 40 × 1 × 20 | (0, 24.5, -9) | WoodPlanks |
-| Posts (6) | Cylinder diámetro 2, alto 36 | X ∈ {-20, 0, 20}, Z ∈ {-19, 1}, Y = 18 | Wood #C9A24A, anillos oscuros cada 4 |
-| BackWall | 40 × 36 × 1 | (0, 18, -19) | Wood #E9C98A |
-| Roof | 2 WedgeParts formando techo a dos aguas, de Y = 36 a Y = 46, sobresale 3 por cada lado | — | Fabric #D9A441 |
-| RoofFringe | fila de Parts 1 × 3 × 0.5 cada 1.5 stud en el borde frontal | Y ≈ 35 | Fabric #C48A2C |
-| Ladder | 4 de ancho, de Y=0 a Y=25, en el costado derecho | (22, 12.5, -9) | Wood + TrussPart |
-| Sign | 18 × 4 × 1 | (0, 33, 1.5) | WoodPlanks; SurfaceGui con el nombre del dueño |
-| TikiMasks (2) | 3 × 4 × 1 | en los postes del frente, Y = 30 | Wood #A0522D + Decal |
-| Torches (2) | modelo TikiTorch | (-26, 0, 6) y (26, 0, 6) | — |
-| SpawnPoint | Part invisible 4 × 1 × 4 | (0, 1, 6) | para teletransportar al dueño |
+### 6.2 Partes del hábitat (coordenadas locales)
+| Parte | Dónde | Qué es |
+|---|---|---|
+| Plot (PrimaryPart) | (0, 0.1, 0) | invisible, mira al lobby |
+| Ground | disco de radio 33 | pasto, lomitas y un sendero de tierra de la entrada al centro |
+| Wall | anillo de 30 rocas en el radio 31 | bajas adelante (~6) y altas atrás (~24), con musgo, selva arriba y lianas; hueco de ±17° en la entrada, con brazos de roca que se abren hacia afuera |
+| Entrance | Z = -32 | 2 pilares de piedra con máscara tiki, antorchas, techito de paja, guirnalda de flores y el cartel `SignLabel` con el nombre del dueño |
+| Water | atrás y a la izquierda | acantilado (Z ≈ 29) con **cascada de 2 saltos** y niebla, pozo (3, 18), arroyo con **tronco de puente** y **lago** con arena, nenúfares y juncos en (-13, -6) |
+| Shelter | (-14, 13) | terraza de piedra con refugio de paja, cama de heno y farol; 2 comederos; tronco caído |
+| Grottos | en el muro, a -125° y 130° | arco de piedra con cortina de lianas: una con hongos que brillan y otra con cristales |
+| Jungle | adentro, cerca del muro | 3 árboles de copa ancha, 2 palmeras, hojas gigantes, monsteras, helechos, arbustos y hongos |
+| IncubatorSlots | a la derecha de la entrada | altar de piedra con los 3 nidos: Nest1 (11, -19), Nest2 (17.5, -10.5), Nest3 (21, -1.5) |
+| CreatureSlots | por el pasto | 20 lugares invisibles `Spot_1`…`Spot_20` (SlotIndex 1-20, a 4.5 o más uno de otro), lejos del agua, la terraza, los árboles y los nidos; cada uno con su `WanderRadius` (hasta 6) para pasear sin meterse al agua ni al muro |
+| InfoSign | (-12, -36) | cartel "🐾 7/20 · +$120/s" (`InfoLabel`, lo actualiza CreatureService) |
+| SpawnPoint | (0, 0.5, -25) | invisible, justo adentro de la entrada |
+| SafeZone | todo el hábitat | invisible, 68 × 60 × 68 |
 
-### 6.3 Estantes (Shelves) — donde van las criaturas
-- 5 estantes por piso, 15 en total. Cada estante es un pad de 6 × 0.5 × 6, color #FFE27A (desbloqueado) o #5B4AB8 (bloqueado).
-- Posición local X ∈ {-16, -8, 0, 8, 16}, Z = -13, Y = 1.25 / 13.25 / 25.25 según el piso.
-- Nombre: `Shelf_<piso>_<n>` (ej. `Shelf_1_3`). Atributo `Unlocked` (bool).
-- **Piso 1** desbloqueado desde el inicio. **Piso 2** con el 1er renacimiento. **Piso 3** con el 2º renacimiento.
-- Pisos bloqueados: pared frontal `LockBarrier` 40 × 11 × 0.5 en Z = 1, material ForceField, color #7FD6E8, CanCollide true, con un candado (BillboardGui 🔒 o Decal). Se elimina al desbloquear.
+### 6.3 Incubadoras (3 nidos)
+Cada nido (`Nest1`-`Nest3`) es un Model con:
+| Part | Tamaño | Material/color |
+|---|---|---|
+| Pedestal | 7 × 2 × 7 (atributo `SlotIndex`) | Slate #8E857A |
+| NestBase | Cylinder diámetro 6.5, alto 1.5 | WoodPlanks #704C2C |
+| NestRim | 10 bloques de paja en anillo, inclinados | Fabric #D9A441 / #C48A2C |
 
-### 6.4 Incubadoras (3, ADELANTE de la base) ⭐
-Están entre la torre y el lobby, a 10 studs del frente de la torre.
-
-| Incubadora | Posición local del centro |
-|---|---|
-| Incubator1 | (-14, 0, 15) |
-| Incubator2 | (0, 0, 15) |
-| Incubator3 | (14, 0, 15) |
-
-Cada incubadora es un Model:
-| Part | Tamaño | Posición local (respecto al centro de la incubadora) | Material/color |
-|---|---|---|---|
-| Pedestal | 8 × 2 × 8 | (0, 1, 0) | Slate #8E857A |
-| NestBase | Cylinder diámetro 7, alto 1.5 | (0, 2.75, 0) | WoodPlanks #7A4A1E |
-| NestRim | 10 Wedges pequeñas en anillo (radio 3.2), inclinadas hacia afuera | Y ≈ 3.6 | Fabric #E3B65A (paja) |
-| EggSlot | Attachment | (0, 4.5, 0) | donde se suelda el huevo |
-| GlowLight | PointLight | dentro de NestBase | color = rareza del huevo, Range 10; apagada si está vacía |
-| Sparkles | ParticleEmitter | en EggSlot | color = rareza, Rate 5; solo mientras incuba |
-| Prompt | ProximityPrompt | en Pedestal | ActionText "Poner huevo" / "Abrir"; KeyCode E; HoldDuration 0.5; MaxActivationDistance 10 |
-| TimerGui | BillboardGui | Adornee = EggSlot, StudsOffset (0, 4, 0), Size 6 × 2 | muestra "00:45", "¡LISTO!" o "VACÍO" |
-
-Atributos del Model: `State` = "Empty" | "Incubating" | "Ready", `EggRarity` (string), `EndTime` (número, os.time()).
+Lo demás lo agrega `IncubatorService` al armar la base: EggSlot, GlowLight, Sparkles, ProximityPrompt y el cartelito `TimerGui`
+("00:45" azul, "READY!" dorado, "EMPTY" gris; "🔒 LOCKED" en los que no compraste). Los mismos estados se ven en el HUD.
 
 Estados:
-- **Empty**: luz apagada, Billboard gris "VACÍO", prompt "Poner huevo" (solo si el jugador lleva huevo).
-- **Incubating**: huevo en el nido, luz y partículas de la rareza, Billboard azul oscuro (#0A1F4D) con cuenta regresiva.
-- **Ready**: el huevo se agrieta (cambiar a mesh agrietado o agregar Decal), Billboard dorado (#C98A00) "¡LISTO!", prompt "Abrir". Al abrir: explosión de confeti del color de la rareza, sonido "pop", la criatura va al primer Shelf libre.
+- **Empty**: luz apagada, "EMPTY", prompt "Place Egg" (solo si llevás un huevo).
+- **Incubating**: huevo en el nido, luz y partículas de la rareza, cuenta regresiva.
+- **Ready**: el huevo se agrieta, "READY!", prompt "Open". Al abrir: confeti del color de la rareza y la criatura aparece en el primer lugar libre del hábitat.
 
 Solo el dueño de la base puede usar sus incubadoras.
 
@@ -443,19 +452,20 @@ Usar sonidos libres de la Creator Store de Roblox.
 ## 12. Orden de construcción recomendado
 
 1. Lighting + agua (§4, §8.1).
-2. Piso del lobby y terrazas (§5.1).
+2. Piso del lobby, terrazas y plaza (§5.1).
 3. Altar + SpawnLocation (§5.2).
 4. Cañón: pisos, paredes con huecos, cuevas con SafeZone (§7.1–7.3).
-5. Bases 1–8 con torre, estantes e **incubadoras adelante** (§6).
-6. Puestos y portal (§5.3–5.5).
+5. Hábitats 1–8 con su muro de rocas, cascada, 20 lugares e **incubadoras adelante** (§6).
+6. Foso, puentes, puestos, caminos y portal (§5.3–5.7).
 7. Volcán y ola (§8.2–8.3).
-8. Props y decoración (§9, §5.6, §7.4).
+8. Rincones de la aldea, selva y decoración (§5.5, §5.8, §9, §7.4).
 9. EggSpawns y huevos (§10).
 10. Sonidos (§11).
 
 ## 13. Checklist para verificar
 
-- [ ] Las 8 bases miran al altar y cada una tiene **exactamente 3 incubadoras adelante**.
+- [ ] Los 8 hábitats miran al altar, cada uno con **3 nidos adelante** y **20 lugares** para criaturas adentro del muro.
+- [ ] La pasarela llega a la entrada de cada hábitat y nada sólido tapa los puentes ni los caminos.
 - [ ] Desde el SpawnLocation se ve el portal y, al fondo, el volcán.
 - [ ] La ola recorre de X = 1360 a X = 150 y nunca entra al lobby.
 - [ ] Parado dentro de cualquier cueva (incluida la VIP con pase), la ola no te afecta.

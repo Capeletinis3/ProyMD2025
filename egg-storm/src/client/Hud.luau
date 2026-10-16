@@ -260,7 +260,7 @@ local function build(gui: ScreenGui)
 	UIKit.Stroke(coinsLabel, 3.5, EDGE)
 	coinsScale = Instance.new("UIScale")
 	coinsScale.Parent = coinsLabel
-	incomeLabel = UIKit.Label(money, "+$0/s", UDim2.fromOffset(150, 44), UDim2.fromOffset(186, 46), 26, GREEN)
+	incomeLabel = UIKit.Label(money, "+$0/s", UDim2.fromOffset(200, 44), UDim2.fromOffset(186, 46), 26, GREEN)
 	UIKit.Stroke(incomeLabel, 3, EDGE)
 	coinsLabel:GetPropertyChangedSignal("TextBounds"):Connect(function()
 		incomeLabel.Position = UDim2.fromOffset(42 + math.max(80, coinsLabel.TextBounds.X) + 12, 46)

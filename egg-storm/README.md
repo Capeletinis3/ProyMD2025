@@ -23,37 +23,46 @@ egg-storm/
     │   ├── Main.server.luau                            arranca los servicios
     │   └── Services/
     │       ├── MapBuilder.luau                         arma el lobby, el cañón, las cuevas, las bases, el faro, el muelle...
-│       ├── IslandBuilder.luau                      la isla grande con Terrain (colinas, playas, arrecifes, volcán)
+    │       ├── IslandBuilder.luau                      la isla grande con Terrain (colinas, playas, arrecifes, volcán)
+    │       ├── VillageBuilder.luau                     el lobby "Aldea de la selva": foso, puentes, laguna, árbol gigante, fogón, jardín de huevos
+    │       ├── HabitatBuilder.luau                     arma cada base: hábitat de selva con 20 lugares, cascada, lago y 3 nidos
     │       ├── BaseService.luau                        asigna/libera bases
-│       ├── BaseBuilder.luau                        arma cada base: choza tiki de 3 pisos (~1000 piezas)
-    │       ├── BaseFloors.luau                         abre y cierra los pisos de la torre (candados)
     │       ├── PlayerDataService.luau                  datos de cada jugador y guardado (DataStore)
-    │       ├── EggService.luau                         huevos por zona (rareza + variante), meteoritos, agarrar y llevar
+    │       ├── EggService.luau                         huevos por zona (rareza + variante), meteoritos, lluvia, agarrar y llevar
+    │       ├── EggRainService.luau                     Lluvia de huevos cada 15 minutos
     │       ├── IncubatorService.luau                   nidos-incubadora: poner huevo, READY!, abrir
-    │       ├── CreatureService.luau                    mascotas en los estantes, plata por segundo y venta
+    │       ├── CreatureService.luau                    mascotas del hábitat (20 lugares), plata por segundo y venta
     │       ├── CreatureModels.luau                     modelos placeholder de las mascotas
-    │       ├── UpgradeService.luau                     compra y aplica las mejoras (Tienda del lobby)
+    │       ├── UpgradeService.luau                     compra y aplica las mejoras (x1, x10 o MAX)
+    │       ├── PotionService.luau                      pociones Luck x2 y Fast Nests (duran 10 min, se guardan)
     │       ├── WaveService.luau                        olas del volcán y cuevas-refugio
     │       ├── EventService.luau                       eventos especiales (Golden Rain, Lucky Storm...)
     │       ├── StallService.luau                       avisos de puestos del lobby sin sistema (hoy ninguno)
-│       ├── RebirthService.luau                     renacimiento (abre pisos de la torre, +25% de plata)
-│       ├── MerchantService.luau                    Comerciante misterioso (ofertas de huevos cada 10 min)
-│       ├── TradeService.luau                       intercambio de mascotas entre jugadores
-│       ├── VipService.luau                         pase VIP: ventajas, cueva VIP, huevo diario, corona y regalos
+    │       ├── RebirthService.luau                     renacimiento (+25% de plata para siempre)
+    │       ├── MerchantService.luau                    Comerciante v2 (6 ofertas por jugador con stock, Renew)
+    │       ├── TradeService.luau                       intercambio de mascotas entre jugadores
+    │       ├── VipService.luau                         pase VIP: ventajas, cueva VIP, huevo diario, corona y regalos
+    │       ├── SpinService.luau                        ruleta: 1 giro gratis por día y giros con Robux
+    │       ├── ReceiptService.luau                     cobra los Developer Products (regalo VIP y giros)
+    │       ├── FriendService.luau                      +10% de plata por amigo en el servidor (hasta +50%)
     │       ├── TutorialService.luau                    pasos del tutorial para jugadores nuevos
     │       └── LeaderboardService.luau                 tableros de récords (top 10 de todos los servidores)
     └── client/   → StarterPlayer.StarterPlayerScripts.Client (cada jugador)
         ├── Main.client.luau
-        ├── UIKit.luau                                  estilo común de la interfaz (colores, letra, ajuste a pantalla)
-        ├── Hud.luau                                    plata, plata por segundo y huevo que llevás
+        ├── UIKit.luau                                  estilo común de la interfaz (colores, letra, ajuste a pantalla, ruleta)
+        ├── Hud.luau                                    plata, velocidad, relojes, nidos, huevos que llevás, pociones, caminar lento, invitar
+        ├── SideMenu.luau                               botones del HUD (SPIN, Shop, Trade, Index, V.I.P, Rebirth, Invite, Mejoras, Comerciante)
         ├── Notifier.luau                               avisos en pantalla
         ├── HatchReveal.luau                            animación de apertura y cartel "You got..."
         ├── Tutorial.luau                               cartel del tutorial y flecha que guía
         ├── WelcomeBack.luau                            cartel "Welcome back!" con lo que ganaste mientras no estabas
         ├── IncubatorPrompts.luau                       muestra "Place Egg" / "Open" solo cuando corresponde
         ├── SellPrompts.luau                            el botón "Sell" de cada mascota solo lo ve su dueño
-        ├── UpgradePanel.luau                           ventana de mejoras
-        ├── SideMenu.luau                               botones del costado izquierdo (Rebirth, VIP)
+        ├── CreatureWander.luau                         hace pasear a las criaturas por su hábitat
+        ├── UpgradePanel.luau                           ventana de mejoras (Speed, Carry Eggs, Hatching, Luck, Extra Nest)
+        ├── IndexPanel.luau                             Índice de criaturas descubiertas
+        ├── SpinPanel.luau                              ventana de la ruleta
+        ├── ShopPanel.luau                              Tienda con Robux (giros, VIP, regalar VIP)
         ├── RebirthPanel.luau                           ventana de renacimiento
         ├── MerchantPanel.luau                          ventana del Comerciante
         ├── TradePanel.luau                             lista de jugadores, invitación y ventana de intercambio

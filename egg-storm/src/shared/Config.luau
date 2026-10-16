@@ -131,6 +131,37 @@ Config.Village = {
 	EggGarden = Vector3.new(100, 0, 74), -- jardín con los 6 huevos gigantes (abajo a la derecha)
 }
 
+-- ===== Ruleta (botón SPIN del HUD) =====
+-- Un giro gratis cada FreeInterval segundos; los giros extra se compran con Robux (Developer Product, ver PUBLICAR.md).
+-- Con ProductId = 0 el juego funciona igual, pero todavía no se pueden comprar giros.
+-- Los premios van en el orden de la ruleta (empezando arriba, en el sentido del reloj). Weight = qué tan seguido sale.
+export type SpinPrize = {
+	Id: string,
+	DisplayName: string,
+	Icon: string,
+	Color: Color3,
+	Weight: number,
+	IncomeSeconds: number?, -- monedas: lo que ganás en estos segundos...
+	MinCoins: number?, -- ...con este mínimo
+	Potion: string?, -- poción: "Luck" o "FastNest" (dura lo de Config.Potions)
+	RarityId: string?, -- huevo de esta rareza (va a un nido libre; si no hay, te da su precio en monedas)
+}
+Config.Spin = {
+	FreeInterval = 86400, -- un giro gratis por día
+	ProductId = 0, -- Developer Product de 1 giro (crealo en el Creator Dashboard y pegá el número acá)
+	PriceRobux = 25, -- solo para mostrarlo (el precio de verdad se pone en el Creator Dashboard)
+	SpinTime = 4, -- segundos que gira la ruleta en la pantalla antes de mostrar el premio
+	Cooldown = 1,
+	Prizes = {
+		{ Id = "Coins", DisplayName = "Coins", Icon = "💰", Color = Color3.fromRGB(255, 106, 26), Weight = 30, IncomeSeconds = 600, MinCoins = 1000 },
+		{ Id = "LegendaryEgg", DisplayName = "Legendary Egg", Icon = "🥚", Color = Color3.fromRGB(255, 212, 59), Weight = 5, RarityId = "Legendary" },
+		{ Id = "Luck", DisplayName = "Luck x2", Icon = "🍀", Color = Color3.fromRGB(46, 158, 68), Weight = 18, Potion = "Luck" },
+		{ Id = "FastNest", DisplayName = "Fast Nests", Icon = "⚡", Color = Color3.fromRGB(30, 155, 255), Weight = 18, Potion = "FastNest" },
+		{ Id = "EpicEgg", DisplayName = "Epic Egg", Icon = "🥚", Color = Color3.fromRGB(176, 38, 255), Weight = 11, RarityId = "Epic" },
+		{ Id = "RareEgg", DisplayName = "Rare Egg", Icon = "🥚", Color = Color3.fromRGB(255, 95, 162), Weight = 18, RarityId = "Rare" },
+	} :: { SpinPrize },
+}
+
 -- ===== Amigos (botón Invitar del HUD) =====
 Config.Friends = {
 	BonusPerFriend = 0.1, -- +10% de monedas por cada amigo tuyo que está en el mismo servidor...

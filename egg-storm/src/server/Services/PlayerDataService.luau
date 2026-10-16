@@ -51,6 +51,7 @@ export type Profile = {
 	FastNestPotion: number, -- segundos que le quedan a la poción de Nidos rápidos
 	LastFreeSpin: number, -- cuándo usó el último giro gratis de la ruleta (os.time)
 	SpinTokens: number, -- giros extra comprados con Robux (o ganados) que todavía no usó
+	Receipts: { string }, -- compras con Robux ya entregadas (las últimas), para no darlas dos veces
 	Creatures: { CreatureData },
 	Incubating: { IncubatingData }, -- se llena al salir (mientras jugás, los huevos viven en IncubatorService)
 }
@@ -98,6 +99,7 @@ local function newProfile(): Profile
 		FastNestPotion = 0,
 		LastFreeSpin = 0,
 		SpinTokens = 0,
+		Receipts = {},
 		Creatures = {},
 		Incubating = {},
 	}
@@ -214,6 +216,13 @@ local function profileFromData(data: any): Profile
 	profile.FastNestPotion = cleanNumber(data.FastNestPotion, 0, 0, maxPotion)
 	profile.LastFreeSpin = cleanNumber(data.LastFreeSpin, 0, 0, 1e12)
 	profile.SpinTokens = cleanNumber(data.SpinTokens, 0, 0, 100000)
+	if typeof(data.Receipts) == "table" then
+		for _, id in data.Receipts do
+			if typeof(id) == "string" and #profile.Receipts < 50 then
+				table.insert(profile.Receipts, id)
+			end
+		end
+	end
 	return profile
 end
 
@@ -271,6 +280,7 @@ local function dataFromProfile(profile: Profile, incubating: { IncubatingData })
 		FastNestPotion = math.floor(profile.FastNestPotion),
 		LastFreeSpin = profile.LastFreeSpin,
 		SpinTokens = profile.SpinTokens,
+		Receipts = table.clone(profile.Receipts),
 		Creatures = creatures,
 		Incubating = eggs,
 		SavedAt = os.time(),
@@ -431,6 +441,16 @@ end
 -- Guarda ya (en segundo plano). Por ejemplo, después de un intercambio.
 function PlayerDataService.SaveNow(player: Player)
 	saveOnline(player)
+end
+
+-- Guarda ya y espera a que termine. Devuelve true si quedó guardado (lo usan las compras con Robux).
+function PlayerDataService.SaveAndWait(player: Player): boolean
+	local profile = profiles[player]
+	if not profile or not canSave[player] then
+		return false
+	end
+	local incubating = if incubatingProvider then incubatingProvider(player) else profile.Incubating
+	return writeData(player.UserId, dataFromProfile(profile, incubating))
 end
 
 function PlayerDataService.SyncLevels(player: Player)

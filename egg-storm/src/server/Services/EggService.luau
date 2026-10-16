@@ -495,17 +495,20 @@ end
 
 -- Dónde se lleva el huevo: el 1.º en la mano derecha y el 2.º (VIP) en la izquierda (R15 o R6).
 -- Si no hay manos, arriba de la cabeza (uno arriba del otro).
+-- El 1 en la mano derecha, el 2 en la izquierda y del 3 en adelante, apilados arriba de la cabeza
 local function holdPoint(character: Model, index: number): (BasePart?, CFrame)
 	local hand = if index == 1
 		then character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
-		else character:FindFirstChild("LeftHand") or character:FindFirstChild("Left Arm")
+		elseif index == 2 then character:FindFirstChild("LeftHand") or character:FindFirstChild("Left Arm")
+		else nil
 	if hand and hand:IsA("BasePart") then
 		-- Adelante de la mano, como si lo llevara agarrado
 		return hand, CFrame.new(0, -hand.Size.Y / 2 - 0.4, -EGG_SIZE.Z / 2 - 0.2)
 	end
 	local head = character:FindFirstChild("Head")
 	if head and head:IsA("BasePart") then
-		return head, CFrame.new(0, head.Size.Y / 2 + EGG_SIZE.Y * (index - 0.5) + 0.5, 0)
+		local stacked = if index >= 3 then index - 2 else index
+		return head, CFrame.new(0, head.Size.Y / 2 + EGG_SIZE.Y * (stacked - 0.5) + 0.5, 0)
 	end
 	return nil, CFrame.new()
 end
