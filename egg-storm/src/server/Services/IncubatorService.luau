@@ -400,6 +400,39 @@ function IncubatorService.TryIncubate(player: Player, incubator: Incubator)
 	TutorialService.OnEvent(player, "Incubated")
 end
 
+-- Pone un huevo directamente en el primer nido libre (por ejemplo, uno comprado al Comerciante).
+-- Devuelve true si se pudo; si no, false y el motivo (en inglés, para mostrárselo al jugador).
+function IncubatorService.CanPlaceEgg(player: Player): (boolean, string?)
+	local free = false
+	for _, incubator in getIncubators(player) do
+		if incubator.State == "Empty" then
+			free = true
+			break
+		end
+	end
+	if not free then
+		return false, "You need an empty incubator in your base!"
+	end
+	if CreatureService.GetFreeSlotCount(player) - countIncubating(player) <= 0 then
+		return false, FULL_MESSAGE
+	end
+	return true, nil
+end
+
+function IncubatorService.PlaceEgg(player: Player, rarity: Rarity, variant: Variant): (boolean, string?)
+	local ok, reason = IncubatorService.CanPlaceEgg(player)
+	if not ok then
+		return false, reason
+	end
+	for _, incubator in getIncubators(player) do
+		if incubator.State == "Empty" then
+			startIncubation(incubator, rarity, variant)
+			return true, nil
+		end
+	end
+	return false, "You need an empty incubator in your base!"
+end
+
 -- "Open": abre un huevo listo. La pantalla del dueño hace temblar y explotar el huevo,
 -- y unos segundos después sale la mascota (así no aparece antes de la animación).
 function IncubatorService.TryOpen(player: Player, incubator: Incubator)

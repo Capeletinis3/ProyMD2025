@@ -456,7 +456,7 @@ local function buildStalls(lobby: Instance)
 			prompt:SetAttribute("Shared", true) -- lo ve cualquiera que tenga base (ver UpgradePanel en el cliente)
 			CollectionService:AddTag(prompt, "UpgradePrompt")
 		elseif info.Name == "Merchant" then
-			addPrompt(counter, "Open", "Mystery Merchant")
+			CollectionService:AddTag(addPrompt(counter, "Open", "Mystery Merchant"), "MerchantPrompt")
 		elseif info.Name == "Trading" then
 			addPrompt(counter, "Open", "Trading")
 		elseif info.Name == "Rankings" then

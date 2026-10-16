@@ -349,6 +349,19 @@ Config.Rebirth = {
 	Cooldown = 1, -- anti-spam
 }
 
+-- ===== Comerciante misterioso =====
+-- Cada RestockInterval segundos trae OfferCount huevos nuevos (los mismos para todo el servidor).
+-- Cada jugador puede comprar cada oferta una vez por tanda. El huevo va directo a un nido libre de su base.
+Config.Merchant = {
+	RestockInterval = 600,
+	OfferCount = 3,
+	PriceSeconds = 600, -- precio = la plata por segundo que daría su mascota × esta cantidad de segundos
+	RarityWeights = { Rare = 40, Epic = 30, Legendary = 18, Mythic = 9, Secret = 3 } :: { [string]: number },
+	VariantChance = 0.35, -- chance de que una oferta venga con variante (Silver, Golden...)
+	Distance = 14, -- distancia máxima al mostrador para comprar
+	Cooldown = 0.5,
+}
+
 -- ===== Ayudantes =====
 local raritiesById: { [string]: Rarity } = {}
 for _, rarity in Config.Rarities do

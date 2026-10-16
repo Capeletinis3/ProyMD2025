@@ -16,6 +16,7 @@ local TutorialService = require(Services.TutorialService)
 local LeaderboardService = require(Services.LeaderboardService)
 local StallService = require(Services.StallService)
 local RebirthService = require(Services.RebirthService)
+local MerchantService = require(Services.MerchantService)
 
 local map = MapBuilder.Build()
 
@@ -59,6 +60,7 @@ EventService.Init()
 
 -- Puestos del lobby y tableros de récords
 StallService.Init(map)
+MerchantService.Init(map)
 LeaderboardService.Init(map)
 
 print("[EggStorm] Server ready")

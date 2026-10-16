@@ -67,8 +67,7 @@ local stalls = map.Lobby.Stalls
 local shopPrompt = stalls.UpgradeShop.Counter.ProximityPrompt
 check(shopPrompt.ActionText == "Open" and shopPrompt:GetAttribute("Shared") == true, "the Upgrades shop has an Open button for everyone with a base")
 local alice = ADD_PLAYER("Alice", 601); SPAWN_CHARACTER(alice); ADVANCE(1)
-MOVE_TO(alice, stalls.Merchant.Counter.Position); stalls.Merchant.Counter.ProximityPrompt.Triggered:Fire(alice); ADVANCE(0.1)
-check(lastNotify(alice) == "The Mystery Merchant is coming soon!", "Mystery Merchant: coming soon")
+check(stalls.Merchant.Counter.ProximityPrompt.ObjectText == "Mystery Merchant", "the Mystery Merchant has its Open button (window on the client)")
 stalls.Trading.Counter.ProximityPrompt.Triggered:Fire(alice); ADVANCE(0.1)
 check(lastNotify(alice) == "Trading is coming soon!", "Trading: coming soon")
 local boards = stalls.Rankings.Leaderboards

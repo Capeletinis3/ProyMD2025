@@ -1,7 +1,7 @@
 --!strict
 -- StallService: los puestos del lobby que todavía no tienen su sistema.
--- El Comerciante misterioso (fase 3) y el Intercambio (fase 4) por ahora solo avisan "Coming soon!".
--- La Tienda de mejoras la maneja UpgradeService y los Rankings, LeaderboardService.
+-- El Intercambio (fase 4) por ahora solo avisa "Coming soon!".
+-- La Tienda de mejoras la maneja UpgradeService, el Comerciante MerchantService y los Rankings, LeaderboardService.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -10,7 +10,6 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local StallService = {}
 
 local COMING_SOON: { [string]: string } = {
-	Merchant = "The Mystery Merchant is coming soon!",
 	Trading = "Trading is coming soon!",
 }
 
