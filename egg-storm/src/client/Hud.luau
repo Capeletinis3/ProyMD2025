@@ -4,6 +4,7 @@
 --   * Arriba a la derecha: cuánto falta para el Súper tsunami, la Lluvia de huevos y las ofertas nuevas del Comerciante.
 --   * Abajo al medio: cómo están tus nidos ("Nest 1 00:45", "READY!", "Empty") y los casilleros de los huevos que llevás.
 --   * Abajo a la derecha: los mismos relojes con íconos (ola, lluvia de huevos, súper tsunami).
+--   * Arriba de la plata: las pociones que tenés activas y cuánto les queda.
 --   * Caminar lento: tecla T o la barra del menú (para cruzar con cuidado).
 --   * Invitar: abre la ventana de invitar amigos de Roblox; el botón muestra tu bonus por amigos.
 -- Lee los atributos que publica el servidor (Coins, Income, WalkSpeed, CarriedEggs, Nest1-3, FriendBonus...)
@@ -39,6 +40,7 @@ local speedLabel: TextLabel
 local coinsScale: UIScale
 local timerLines: { TextLabel } = {}
 local iconTimes: { TextLabel } = {}
+local buffChips: { [string]: TextLabel } = {}
 local nestChips: { Frame } = {}
 local nestTexts: { TextLabel } = {}
 type Slot = { Frame: Frame, Egg: Frame, Name: TextLabel, Lock: TextLabel }
@@ -208,6 +210,20 @@ local function updateTimers()
 		timerLines[2].TextColor3 = Color3.new(1, 1, 1)
 	end
 	timerLines[3].Text = if merchant then `Merchant in {clock(merchant)}` else ""
+	-- Pociones activas
+	local row = 0
+	for _, id in { "Luck", "FastNest" } do
+		local chip = buffChips[id]
+		local seconds = number(id .. "Potion")
+		chip.Visible = seconds > 0
+		if seconds > 0 then
+			local info = (Config.Potions :: any)[id]
+			chip.Text = `{info.Icon} {info.DisplayName} {clock(seconds)}`
+			chip.Position = UDim2.fromOffset(row * 170, 0)
+			row += 1
+		end
+	end
+
 	local wave = left("PhaseEndsAt")
 	iconTimes[1].Text = if wave then clock(wave) else "--:--"
 	iconTimes[2].Text = if rainEnds and rainEnds > 0 then "NOW!" elseif rain then clock(rain) else "--:--"
@@ -249,6 +265,25 @@ local function build(gui: ScreenGui)
 	coinsLabel:GetPropertyChangedSignal("TextBounds"):Connect(function()
 		incomeLabel.Position = UDim2.fromOffset(42 + math.max(80, coinsLabel.TextBounds.X) + 12, 46)
 	end)
+
+	-- Arriba de la plata: pociones activas
+	local buffs = Instance.new("Frame")
+	buffs.Name = "Potions"
+	buffs.AnchorPoint = Vector2.new(0, 1)
+	buffs.Position = UDim2.new(0, 10, 1, -108)
+	buffs.Size = UDim2.fromOffset(340, 28)
+	buffs.BackgroundTransparency = 1
+	buffs.Parent = gui
+	UIKit.HudScale(buffs)
+	for _, id in { "Luck", "FastNest" } do
+		local info = (Config.Potions :: any)[id]
+		local chip = UIKit.Outlined(buffs, "", UDim2.fromOffset(162, 28), UDim2.fromOffset(0, 0), 15, info.Color, 2)
+		chip.BackgroundTransparency = 0.15
+		chip.BackgroundColor3 = DARK
+		chip.Visible = false
+		UIKit.Corner(chip, 8)
+		buffChips[id] = chip
+	end
 
 	-- Arriba a la derecha: relojes en texto
 	local timers = Instance.new("Frame")

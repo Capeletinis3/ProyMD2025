@@ -20,6 +20,8 @@ local MerchantService = require(Services.MerchantService)
 local TradeService = require(Services.TradeService)
 local VipService = require(Services.VipService)
 local FriendService = require(Services.FriendService)
+local PotionService = require(Services.PotionService)
+local EggRainService = require(Services.EggRainService)
 
 local map = MapBuilder.Build()
 
@@ -42,6 +44,7 @@ BaseService.OnAssigned(function(player, base)
 		return
 	end
 	UpgradeService.SetupBase(player, base)
+	PotionService.SetupBase(player)
 	CreatureService.SetupBase(player, base)
 	IncubatorService.SetupBase(player, base)
 end)
@@ -57,9 +60,11 @@ end)
 -- Init de BaseService va al final: recién ahí empieza a repartir bases (y a llamar a lo de arriba).
 BaseService.Init(map)
 
--- Las olas del volcán y los eventos especiales
+-- Las olas del volcán, los eventos especiales, la lluvia de huevos y las pociones
 WaveService.Init(map)
 EventService.Init()
+EggRainService.Init()
+PotionService.Init()
 
 -- Puestos del lobby y tableros de récords
 StallService.Init(map)

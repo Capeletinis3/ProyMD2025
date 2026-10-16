@@ -1,13 +1,16 @@
 --!strict
--- MerchantService: el Comerciante misterioso del lobby.
--- Cada Config.Merchant.RestockInterval segundos trae ofertas nuevas: huevos especiales (Rare a Secret,
--- a veces con variante) que van directo a un nido libre de tu base. Cada jugador puede comprar cada
--- oferta una vez por tanda.
+-- MerchantService: el Comerciante misterioso v2 (se abre desde el HUD o en su puesto del lobby).
+-- Cada jugador tiene sus 6 ofertas, cada una con su stock ("Left 3"; con 0 queda SOLD OUT):
+--   [1] huevo  [2] huevo misterioso  [3] huevo  /  [4] poción Luck x2  [5] poción Fast Nests  [6] huevo
+-- Los huevos (Rare a Secret, a veces con variante) van directo a un nido libre de tu hábitat; el misterioso
+-- puede ser de cualquier rareza. Las pociones las maneja PotionService.
+-- Cada Config.Merchant.RestockInterval segundos todos reciben ofertas nuevas; también se pueden renovar pagando ("Renew").
 --
 -- Para el cliente se publica:
---   Workspace "MerchantOffers"  = "Rareza:Variante:Precio;..."   y   "MerchantRestockAt" (hora del servidor)
---   Player    "MerchantBought"  = "1,3" (qué ofertas ya compró en esta tanda)
--- El cliente solo pide "Buy" con el número de oferta: el servidor revisa todo.
+--   Workspace "MerchantRestockAt" (hora del servidor de la próxima tanda)
+--   Player    "MerchantOffers" = "Tipo:Rareza/Poción:Variante:Precio:Quedan;..." (6 ofertas)
+--   Player    "MerchantRenewPrice" (lo que cuesta renovar ahora)
+-- El cliente solo pide "Buy" con el número de oferta o "Renew": el servidor revisa todo.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,16 +21,24 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local IncubatorService = require(script.Parent.IncubatorService)
+local CreatureService = require(script.Parent.CreatureService)
+local PotionService = require(script.Parent.PotionService)
 
-export type Offer = { RarityId: string, VariantId: string, Price: number }
+export type OfferKind = "Egg" | "Mystery" | "Potion"
+export type Offer = {
+	Kind: OfferKind,
+	RarityId: string, -- en las pociones: "Luck" o "FastNest"
+	VariantId: string,
+	Price: number,
+	Left: number,
+}
 
 local MerchantService = {}
 
+local OFFER_COUNT = 6
 local random = Random.new()
-local offers: { Offer } = {}
-local bought: { [Player]: { [number]: boolean } } = {}
+local offersByPlayer: { [Player]: { Offer } } = {}
 local lastAttempt: { [Player]: number } = {}
-local counter: BasePart? = nil
 
 local notifyRemote = Remotes.Event("Notify")
 local merchantRemote = Remotes.Event("Merchant")
@@ -36,84 +47,114 @@ local function notify(player: Player, text: string)
 	notifyRemote:FireClient(player, text)
 end
 
--- Precio de un huevo: lo que daría su mascota en PriceSeconds segundos
-function MerchantService.PriceOf(rarity: Config.Rarity, variant: Config.Variant): number
-	return math.floor(Config.GetIncome(rarity, variant) * Config.Merchant.PriceSeconds)
-end
-
-local function rollOffer(): Offer
-	local weights = Config.Merchant.RarityWeights
+local function weighted(weights: { [string]: number }): Config.Rarity
 	local total = 0
 	for _, rarity in Config.Rarities do
 		total += weights[rarity.Id] or 0
 	end
 	local roll = random:NextNumber(0, total)
-	local chosen = Config.Rarities[2]
 	for _, rarity in Config.Rarities do
 		local weight = weights[rarity.Id] or 0
 		roll -= weight
 		if weight > 0 and roll <= 0 then
-			chosen = rarity
-			break
+			return rarity
 		end
 	end
-	local variant = Config.Variants[1]
-	if random:NextNumber() < Config.Merchant.VariantChance then
-		-- Una variante al azar (sin contar Normal), según sus pesos
-		local vTotal = 0
-		for i = 2, #Config.Variants do
-			vTotal += Config.Variants[i].Weight
-		end
-		local vRoll = random:NextNumber(0, vTotal)
-		for i = 2, #Config.Variants do
-			vRoll -= Config.Variants[i].Weight
-			if vRoll <= 0 then
-				variant = Config.Variants[i]
-				break
-			end
-		end
-	end
-	return { RarityId = chosen.Id, VariantId = variant.Id, Price = MerchantService.PriceOf(chosen, variant) }
+	return Config.Rarities[2]
 end
 
-local function publishBought(player: Player)
-	local list = {}
-	local mine: { [number]: boolean } = bought[player] or {}
-	for index in mine do
-		table.insert(list, tostring(index))
+local function rollVariant(): Config.Variant
+	if random:NextNumber() >= Config.Merchant.VariantChance then
+		return Config.Variants[1]
 	end
-	table.sort(list)
-	player:SetAttribute("MerchantBought", table.concat(list, ","))
+	-- Una variante al azar (sin contar Normal), según sus pesos
+	local total = 0
+	for i = 2, #Config.Variants do
+		total += Config.Variants[i].Weight
+	end
+	local roll = random:NextNumber(0, total)
+	for i = 2, #Config.Variants do
+		roll -= Config.Variants[i].Weight
+		if roll <= 0 then
+			return Config.Variants[i]
+		end
+	end
+	return Config.Variants[2]
 end
 
--- Trae ofertas nuevas (y todos pueden volver a comprar)
-function MerchantService.Restock()
-	offers = {}
+-- Precio de un huevo: lo que daría su mascota en PriceSeconds segundos
+function MerchantService.PriceOf(rarity: Config.Rarity, variant: Config.Variant): number
+	return math.floor(Config.GetIncome(rarity, variant) * Config.Merchant.PriceSeconds)
+end
+
+-- Precio de una poción o de renovar: lo que ganás en "seconds" (con un mínimo)
+local function incomePrice(player: Player, seconds: number, minimum: number): number
+	return math.max(minimum, math.floor(CreatureService.GetIncomePerSecond(player) * seconds))
+end
+
+function MerchantService.RenewPrice(player: Player): number
+	return incomePrice(player, Config.Merchant.RenewPriceSeconds, Config.Merchant.RenewMinPrice)
+end
+
+local function eggOffer(): Offer
+	local rarity = weighted(Config.Merchant.RarityWeights)
+	local variant = rollVariant()
+	return { Kind = "Egg", RarityId = rarity.Id, VariantId = variant.Id, Price = MerchantService.PriceOf(rarity, variant), Left = Config.Merchant.Stock[rarity.Id] or 1 }
+end
+
+local function potionOffer(player: Player, id: string): Offer
+	local info = (Config.Potions :: any)[id]
+	return { Kind = "Potion", RarityId = id, VariantId = "Normal", Price = incomePrice(player, info.PriceSeconds, info.MinPrice), Left = Config.Merchant.Stock[id] or 1 }
+end
+
+local function publish(player: Player)
+	local offers = offersByPlayer[player]
+	if not offers then
+		return
+	end
 	local parts = {}
-	for i = 1, Config.Merchant.OfferCount do
-		local offer = rollOffer()
-		offers[i] = offer
-		table.insert(parts, `{offer.RarityId}:{offer.VariantId}:{offer.Price}`)
+	for _, offer in offers do
+		table.insert(parts, `{offer.Kind}:{offer.RarityId}:{offer.VariantId}:{offer.Price}:{offer.Left}`)
 	end
-	Workspace:SetAttribute("MerchantOffers", table.concat(parts, ";"))
+	player:SetAttribute("MerchantOffers", table.concat(parts, ";"))
+	player:SetAttribute("MerchantRenewPrice", MerchantService.RenewPrice(player))
+end
+
+-- Ofertas nuevas para este jugador
+function MerchantService.Reroll(player: Player)
+	offersByPlayer[player] = {
+		eggOffer(),
+		{ Kind = "Mystery", RarityId = "Mystery", VariantId = "Normal", Price = Config.Merchant.MysteryPrice, Left = Config.Merchant.Stock.Mystery or 1 },
+		eggOffer(),
+		potionOffer(player, "Luck"),
+		potionOffer(player, "FastNest"),
+		eggOffer(),
+	}
+	publish(player)
+end
+
+-- Tanda nueva para todos
+function MerchantService.Restock()
 	Workspace:SetAttribute("MerchantRestockAt", Workspace:GetServerTimeNow() + Config.Merchant.RestockInterval)
-	bought = {}
 	for _, player in Players:GetPlayers() do
-		publishBought(player)
+		MerchantService.Reroll(player)
 	end
 end
 
-function MerchantService.GetOffers(): { Offer }
-	return offers
+function MerchantService.GetOffers(player: Player): { Offer }
+	return offersByPlayer[player] or {}
 end
 
-local function isNearCounter(player: Player): boolean
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not counter or not root or not root:IsA("BasePart") then
+local function placeEgg(player: Player, offer: Offer, rarity: Config.Rarity, variant: Config.Variant): boolean
+	if not PlayerDataService.SpendCoins(player, offer.Price) then
+		notify(player, `Not enough coins! You need {Format.Number(offer.Price)}.`)
 		return false
 	end
-	return (root.Position - counter.Position).Magnitude <= Config.Merchant.Distance + 5
+	if not IncubatorService.PlaceEgg(player, rarity, variant) then
+		PlayerDataService.AddCoins(player, offer.Price, true) -- devolución
+		return false
+	end
+	return true
 end
 
 function MerchantService.TryBuy(player: Player, index: number)
@@ -123,60 +164,107 @@ function MerchantService.TryBuy(player: Player, index: number)
 	end
 	lastAttempt[player] = now
 
-	local offer = offers[index]
-	local profile = PlayerDataService.Get(player)
-	if not offer or not profile or not isNearCounter(player) then
+	local offers = offersByPlayer[player]
+	local offer = offers and offers[index]
+	if not offer or not PlayerDataService.Get(player) then
 		return
 	end
-	local mine = bought[player] or {}
-	bought[player] = mine
-	if mine[index] then
-		notify(player, "You already bought this one! New stock soon.")
+	if offer.Left <= 0 then
+		notify(player, "Sold out! New offers soon.")
 		return
 	end
-	local rarity = Config.GetRarity(offer.RarityId)
-	local variant = Config.GetVariant(offer.VariantId)
-	if not rarity then
-		return
+
+	if offer.Kind == "Potion" then
+		local info = (Config.Potions :: any)[offer.RarityId]
+		if PotionService.TimeLeft(player, offer.RarityId :: any) + info.Duration > Config.Potions.MaxTime then
+			notify(player, `You already have plenty of {info.DisplayName}!`)
+			return
+		end
+		if not PlayerDataService.SpendCoins(player, offer.Price) then
+			notify(player, `Not enough coins! You need {Format.Number(offer.Price)}.`)
+			return
+		end
+		PotionService.Add(player, offer.RarityId :: any)
+		notify(player, `{info.Icon} {info.DisplayName} is active! ({info.Description})`)
+	else
+		local canPlace, reason = IncubatorService.CanPlaceEgg(player)
+		if not canPlace then
+			notify(player, reason or "You can't buy this right now.")
+			return
+		end
+		local rarity: Config.Rarity?, variant: Config.Variant
+		if offer.Kind == "Mystery" then
+			rarity = weighted(Config.Merchant.MysteryWeights)
+			variant = rollVariant()
+		else
+			rarity = Config.GetRarity(offer.RarityId)
+			variant = Config.GetVariant(offer.VariantId)
+		end
+		if not rarity then
+			return
+		end
+		local chosen: Config.Rarity = rarity
+		if not placeEgg(player, offer, chosen, variant) then
+			return
+		end
+		local eggName = Config.WithVariant(variant, chosen.DisplayName .. " Egg")
+		notify(player, if offer.Kind == "Mystery"
+			then `🎲 The Mystery Egg was a {eggName}! It's incubating in your habitat.`
+			else `You bought a {eggName}! It's incubating in your habitat.`)
 	end
-	local canPlace, reason = IncubatorService.CanPlaceEgg(player)
-	if not canPlace then
-		notify(player, reason or "You can't buy this right now.")
-		return
-	end
-	if not PlayerDataService.SpendCoins(player, offer.Price) then
-		notify(player, `Not enough coins! You need {Format.Number(offer.Price)}.`)
-		return
-	end
-	local placed = IncubatorService.PlaceEgg(player, rarity, variant)
-	if not placed then
-		PlayerDataService.AddCoins(player, offer.Price, true) -- devolución
-		return
-	end
-	mine[index] = true
-	publishBought(player)
-	notify(player, `You bought a {Config.WithVariant(variant, rarity.DisplayName .. " Egg")}! It's incubating in your base.`)
+	offer.Left -= 1
+	publish(player)
 end
 
-function MerchantService.Init(map: Folder)
-	local stalls = map:FindFirstChild("Stalls", true)
-	local stall = stalls and stalls:FindFirstChild("Merchant")
-	local part = stall and stall:FindFirstChild("Counter")
-	if part and part:IsA("BasePart") then
-		counter = part
+-- Ofertas nuevas ya, pagando
+function MerchantService.TryRenew(player: Player)
+	local now = os.clock()
+	if now - (lastAttempt[player] or 0) < Config.Merchant.Cooldown or not PlayerDataService.Get(player) then
+		return
 	end
+	lastAttempt[player] = now
+	local price = MerchantService.RenewPrice(player)
+	if not PlayerDataService.SpendCoins(player, price) then
+		notify(player, `Not enough coins! You need {Format.Number(price)}.`)
+		return
+	end
+	MerchantService.Reroll(player)
+	notify(player, "The merchant brought new offers!")
+end
 
+function MerchantService.Init(_map: Folder)
 	merchantRemote.OnServerEvent:Connect(function(player: Player, action: unknown, index: unknown)
 		-- Lo que manda el cliente no es confiable: revisamos tipo y rango
-		if action == "Buy" and typeof(index) == "number" and index == math.floor(index) and index >= 1 and index <= #offers then
+		if action == "Buy" and typeof(index) == "number" and index == math.floor(index) and index >= 1 and index <= OFFER_COUNT then
 			MerchantService.TryBuy(player, index)
+		elseif action == "Renew" then
+			MerchantService.TryRenew(player)
 		end
 	end)
-	Players.PlayerAdded:Connect(publishBought)
+	Players.PlayerAdded:Connect(MerchantService.Reroll)
 	Players.PlayerRemoving:Connect(function(player)
-		bought[player] = nil
+		offersByPlayer[player] = nil
 		lastAttempt[player] = nil
 	end)
+	-- El precio de renovar y de las pociones depende de lo que ganás: lo actualizamos cuando cambia
+	local function watchIncome(player: Player)
+		player:GetAttributeChangedSignal("Income"):Connect(function()
+			local offers = offersByPlayer[player]
+			if offers then
+				for _, offer in offers do
+					if offer.Kind == "Potion" then
+						local info = (Config.Potions :: any)[offer.RarityId]
+						offer.Price = incomePrice(player, info.PriceSeconds, info.MinPrice)
+					end
+				end
+				publish(player)
+			end
+		end)
+	end
+	Players.PlayerAdded:Connect(watchIncome)
+	for _, player in Players:GetPlayers() do
+		watchIncome(player)
+	end
 
 	MerchantService.Restock()
 	task.spawn(function()

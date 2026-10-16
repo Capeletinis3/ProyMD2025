@@ -513,16 +513,51 @@ Config.Rebirth = {
 }
 
 -- ===== Comerciante misterioso =====
--- Cada RestockInterval segundos trae OfferCount huevos nuevos (los mismos para todo el servidor).
--- Cada jugador puede comprar cada oferta una vez por tanda. El huevo va directo a un nido libre de su base.
+-- Comerciante v2: cada jugador tiene sus 6 ofertas (con stock propio). Se renuevan solas cada RestockInterval
+-- o pagando "Renew". Los huevos van directo a un nido libre; las pociones duran un rato (ver Config.Potions).
+-- Orden en la ventana: [1] huevo, [2] huevo misterioso, [3] huevo / [4] poción de Suerte, [5] Nidos rápidos, [6] huevo.
 Config.Merchant = {
 	RestockInterval = 600,
-	OfferCount = 3,
-	PriceSeconds = 600, -- precio = la plata por segundo que daría su mascota × esta cantidad de segundos
+	PriceSeconds = 600, -- precio de un huevo = la plata por segundo que daría su mascota × esta cantidad de segundos
 	RarityWeights = { Rare = 40, Epic = 30, Legendary = 18, Mythic = 9, Secret = 3 } :: { [string]: number },
-	VariantChance = 0.35, -- chance de que una oferta venga con variante (Silver, Golden...)
-	Distance = 14, -- distancia máxima al mostrador para comprar
+	VariantChance = 0.35, -- chance de que un huevo venga con variante (Silver, Golden...)
 	Cooldown = 0.5,
+	-- Nombre y frase de los huevos según su rareza
+	EggNames = {
+		Rare = { Name = "Coral Egg", Description = "Found deep in the reef" },
+		Epic = { Name = "Storm Egg", Description = "Crackles with lightning" },
+		Legendary = { Name = "Sun Egg", Description = "Shines even at night" },
+		Mythic = { Name = "Lava Egg", Description = "Fresh out of the volcano" },
+		Secret = { Name = "Crystal Egg", Description = "The rarest on the island" },
+	} :: { [string]: { Name: string, Description: string } },
+	-- Cuántos hay de cada cosa en cada tanda (por jugador)
+	Stock = { Rare = 8, Epic = 6, Legendary = 5, Mythic = 3, Secret = 1, Mystery = 10, Luck = 5, FastNest = 8 } :: { [string]: number },
+	-- Huevo misterioso: puede salir cualquier rareza
+	MysteryPrice = 25000,
+	MysteryWeights = { Common = 40, Rare = 30, Epic = 18, Legendary = 8, Mythic = 3, Secret = 1 } :: { [string]: number },
+	-- "Renew": ofertas nuevas ya, pagando (lo que ganás en RenewPriceSeconds, con un mínimo)
+	RenewPriceSeconds = 300,
+	RenewMinPrice = 5000,
+}
+
+-- Pociones (se compran al Comerciante). El tiempo solo corre mientras jugás y se guarda.
+-- Comprar otra mientras dura suma más tiempo (hasta MaxTime).
+Config.Potions = {
+	Luck = { DisplayName = "Luck x2", Description = "Lasts 10 minutes", Icon = "🍀", Color = Color3.fromRGB(108, 255, 77),
+		Multiplier = 2, MinChance = 0.05, Duration = 600, PriceSeconds = 300, MinPrice = 2500 },
+	FastNest = { DisplayName = "Fast Nests", Description = "Hatch x2 for 10 min", Icon = "⚡", Color = Color3.fromRGB(77, 184, 255),
+		Multiplier = 2, Duration = 600, PriceSeconds = 600, MinPrice = 4000 },
+	MaxTime = 3600,
+}
+
+-- Lluvia de huevos: cada Interval segundos, durante Duration caen huevos del cielo por todo el cañón
+Config.EggRain = {
+	Interval = 900, -- cada 15 minutos
+	Duration = 45,
+	DropEvery = 0.3, -- segundos entre huevo y huevo
+	VariantBoost = 3, -- la chance de cada variante (no Normal) se multiplica por esto
+	EggLifetime = 90, -- si nadie lo agarra, desaparece después de esto
+	MaxEggs = 60, -- máximo de huevos de la lluvia en el piso a la vez
 }
 
 -- ===== Intercambio entre jugadores =====
@@ -659,8 +694,12 @@ function Config.LuckChance(player: Player, rarityId: string): number
 	local levels = Config.Upgrades.Luck
 	local base = levels[math.clamp(if typeof(level) == "number" then level else 1, 1, #levels)].Chance
 	local boost = player:GetAttribute("LuckBoost")
+	local multiplier = if typeof(boost) == "number" then boost else 1
+	if multiplier > 1 then
+		base = math.max(base, Config.Potions.Luck.MinChance) -- la poción sirve aunque no tengas la mejora
+	end
 	local factor = Config.Upgrades.LuckByRarity[Config.RarityRank(rarityId)] or 0
-	return math.min(0.9, base * (if typeof(boost) == "number" then boost else 1) * factor)
+	return math.min(0.9, base * multiplier * factor)
 end
 
 -- Cuántos huevos puede llevar a la vez: 1 + la mejora "Llevar huevos" + el VIP (se suman)

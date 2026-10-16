@@ -20,6 +20,7 @@ local PlayerDataService = require(script.Parent.PlayerDataService)
 local EggService = require(script.Parent.EggService)
 local CreatureService = require(script.Parent.CreatureService)
 local TutorialService = require(script.Parent.TutorialService)
+local PotionService = require(script.Parent.PotionService)
 local Creatures = require(ReplicatedStorage.Shared.Creatures)
 
 type Base = BaseService.Base
@@ -583,14 +584,22 @@ end
 
 function IncubatorService.Init()
 	-- Reloj de las incubadoras: actualiza las cuentas regresivas y marca los huevos que terminaron.
+	-- Con la poción Fast Nests, el huevo avanza más rápido: le adelantamos la hora de terminar.
 	task.spawn(function()
+		local last = os.clock()
 		while true do
 			task.wait(0.25)
 			local now = os.clock()
-			for _, list in incubatorsByPlayer do
+			local dt = now - last
+			last = now
+			for player, list in incubatorsByPlayer do
+				local extra = (PotionService.HatchMultiplier(player) - 1) * dt
 				for _, incubator in list do
 					local egg = incubator.Egg
 					if egg and incubator.State == "Incubating" then
+						if extra > 0 then
+							egg.HatchAt -= extra
+						end
 						local remaining = egg.HatchAt - now
 						if remaining <= 0 then
 							setReady(incubator)

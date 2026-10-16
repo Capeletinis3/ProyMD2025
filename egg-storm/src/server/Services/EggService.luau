@@ -44,6 +44,7 @@ export type SpawnOptions = {
 	Variant: Variant?,
 	Position: Vector3?,
 	Meteor: boolean?,
+	Rain: boolean?, -- de la Lluvia de huevos: cae derecho del cielo y desaparece si nadie lo agarra
 	Zone: number?,
 	Spot: number?,
 }
@@ -135,9 +136,10 @@ local function rollMeteorRarity(): Rarity
 	return Config.Rarities[#Config.Rarities]
 end
 
-local function rollVariant(): Variant
+local function rollVariant(boost: number?): Variant
 	local function weightOf(variant: Variant): number
-		return variant.Weight * EventService.VariantMultiplier(variant.Id)
+		local extra = if variant.Id ~= "Normal" then boost or 1 else 1
+		return variant.Weight * EventService.VariantMultiplier(variant.Id) * extra
 	end
 	local total = 0
 	for _, variant in Config.Variants do
@@ -153,8 +155,8 @@ local function rollVariant(): Variant
 	return Config.Variants[1]
 end
 
--- Un punto al azar en cualquier parte del cañón (para los meteoritos)
-local function randomCanyonPosition(): Vector3
+-- Un punto al azar en cualquier parte del cañón (para los meteoritos y la lluvia de huevos)
+function EggService.RandomCanyonPosition(): Vector3
 	local map = Config.Map
 	local halfWidth = map.CanyonWidth / 2 - map.SpawnWallMargin
 	local x = random:NextNumber(map.CanyonStartX + 20, map.CanyonStartX + map.CanyonLength - 10)
@@ -385,11 +387,16 @@ function EggService.SpawnEgg(options: SpawnOptions?): Egg
 	local meteor = opts.Meteor == true
 	local zoneIndex = opts.Zone
 	local zoneInfo = if zoneIndex then Config.Zones[zoneIndex] else nil
-	local target = opts.Position or randomCanyonPosition()
+	local rain = opts.Rain == true
+	local target = opts.Position or EggService.RandomCanyonPosition()
 	local landing = Vector3.new(target.X, FLOOR_Y + EGG_SIZE.Y / 2 + 0.3, target.Z)
+	local landingZone = if rain then Config.ZoneAt(target.X) else nil
 	local rarity = opts.Rarity
-		or (if meteor then rollMeteorRarity() elseif zoneInfo then EggService.RollZoneRarity(zoneInfo) else Config.Rarities[1])
-	local variant = opts.Variant or rollVariant()
+		or (if meteor then rollMeteorRarity()
+			elseif zoneInfo then EggService.RollZoneRarity(zoneInfo)
+			elseif landingZone then EggService.RollZoneRarity(landingZone)
+			else Config.Rarities[1])
+	local variant = opts.Variant or rollVariant(if rain then Config.EggRain.VariantBoost else nil)
 
 	nextEggId += 1
 	local part, prompt = createEggPart(nextEggId, rarity, variant)
@@ -428,6 +435,16 @@ function EggService.SpawnEgg(options: SpawnOptions?): Egg
 		fire.Parent = part
 		marker = createLandingMarker(landing, Color3.fromRGB(255, 60, 40), 12)
 		fallTime = METEOR_FALL_TIME
+	elseif rain then
+		-- Lluvia de huevos: cae derecho desde el cielo, con un circulito dorado donde va a caer
+		part.CFrame = CFrame.new(landing + Vector3.new(0, Config.Eggs.FallHeight * 0.6, 0)) * spin
+		marker = createLandingMarker(landing, Color3.fromRGB(255, 212, 59), 6)
+		fallTime = METEOR_FALL_TIME * 0.8
+		task.delay(fallTime + Config.EggRain.EggLifetime, function()
+			if eggs[egg.Id] == egg and egg.State == "Ground" then
+				destroyEgg(egg)
+			end
+		end)
 	else
 		part.CFrame = CFrame.new(landing + Vector3.new(0, POP_HEIGHT, 0)) * spin
 	end
